@@ -10,4 +10,8 @@
     <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
   </PropertyGroup>
 
+  <Target Name="CopyToBuiltBin" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="../../../wwwroot/bin" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

@@ -1,7 +1,7 @@
 @echo off
 
-@echo Cleanup
-call git clean -fdX
+REM @echo Cleanup...
+REM call git clean -fdX
 
 for %%s in (
     "src\DNA\corlib"
@@ -21,10 +21,7 @@ for %%s in (
     if ERRORLEVEL 1 goto :fail
 )
 
-@echo Copy binaries
-call copydll.cmd
-
-@echo Build scripts
+@echo Building scripts...
 call npm install
 call npm run build
 

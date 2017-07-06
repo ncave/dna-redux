@@ -1,5 +1,10 @@
 import * as interop from "./interop";
 
+// const entrypoint: string = "testfs";
+// const references: string[] = ["FSharp.Core"];
+// interop.StartApplication(entrypoint, references).then(async () => {
+// });
+
 const entrypoint: string = "appcs";
 const references: string[] = ["libcs"];
 interop.StartApplication(entrypoint, references).then(async () => {
