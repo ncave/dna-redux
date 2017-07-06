@@ -55,9 +55,9 @@ globalRef["browser.js"] = {
 
     const xhr = new XMLHttpRequest();
     xhr.open("GET", url);
-    xhr.onreadystatechange = async () => {
+    xhr.onreadystatechange = () => {
       if (xhr.readyState === 4) {
-        await InvokeStaticAsync("corlib", "System.Net.Http", "HttpClient", "OnFetchCompleted", {
+        InvokeStatic("corlib", "System.Net.Http", "HttpClient", "OnFetchCompleted", {
           asyncResultAddress: parsed.asyncResultAddress,
           response: { statusCode: xhr.status, bodyText: xhr.response },
         });
@@ -148,12 +148,12 @@ export function StartApplication(entryPoint: string, references: string[]) {
         });
       },
       postRun: () => {
-        console.log("postRun");
+        // console.log("postRun");
         // InvokeStatic("JS.Interop", "JS.Interop", "Startup", "EnsureAssembliesLoaded", preloadAssemblies);
         resolve();
       },
       onRuntimeInitialized: () => {
-        console.log("onRuntimeInitialized");
+        // console.log("onRuntimeInitialized");
       },
     };
     // Can't load dna.js until Module is configured

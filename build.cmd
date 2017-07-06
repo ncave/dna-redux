@@ -1,7 +1,7 @@
 @echo off
 
-REM @echo Cleanup...
-REM call git clean -fdX
+@echo Cleanup...
+call git clean -fdX
 
 for %%s in (
     "src\DNA\corlib"
@@ -11,8 +11,6 @@ for %%s in (
     "src\libfs"
     "src\appcs"
     "src\appfs"
-    "src\testcs"
-    "src\testfs"
 ) do (
     dotnet restore %%s
     if ERRORLEVEL 1 goto :fail

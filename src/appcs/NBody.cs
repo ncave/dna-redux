@@ -1,8 +1,9 @@
 ﻿using System;
 
 class NBody {
-    public static void Main(String[] args) {
-        int n = args.Length > 0 ? Int32.Parse(args[0]) : 50_000; //_000;
+    public static void Run(String[] args) {
+        int n = args.Length > 0 ? Int32.Parse(args[0]) : 50_000; //50_000_000;
+        Console.WriteLine("Calculating N-Body for {0} iterations", n);
         NBodySystem bodies = new NBodySystem();
         Console.WriteLine("{0:f9}", bodies.Energy());
 

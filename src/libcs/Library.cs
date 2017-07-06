@@ -2,7 +2,7 @@
     using System;
     using JS.Interop;
 
-    public static class Lib {
+    public static class Library {
         private static double sqr(double x) => x * x;
         private static double inv(double x) => 1 / x;
 

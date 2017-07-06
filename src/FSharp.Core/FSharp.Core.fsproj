@@ -22,12 +22,12 @@
     FX_NO_DELEGATE_DYNAMIC_METHOD;
     FX_PORTABLE_OR_NETSTANDARD;
     FX_NO_REFLECTION_ONLY;
+    FX_NO_LAZY;
     FX_NO_TUPLE;
     FX_NO_CONCURRENT_DICTIONARY;
     FX_NO_MONITOR_REPORTS_LOCKTAKEN;
     </DefineConstants>
     <OtherFlags>$(OtherFlags) --warnon:1182 --compiling-fslib --compiling-fslib-40 --maxerrors:20 --extraoptimizationloops:1</OtherFlags>
-    <!--<DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>-->
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
