@@ -1,0 +1,22 @@
+{
+  "name": "dotnet-js",
+  "version": "0.0.1",
+  "description": "dotnet-js",
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "tslint -p wwwroot/ts",
+    "build": "tsc -p wwwroot/ts",
+    "postbuild": "rollup -c",
+    "rollup": "rollup -c",
+    "start": "http-server -c-1 ./wwwroot -p 5000"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/emscripten": "^0.0.30",
+    "@types/node": "^8.0.7",
+    "http-server": "^0.10.0",
+    "rollup": "^0.43.0"
+  }
+}
