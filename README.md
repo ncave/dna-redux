@@ -14,5 +14,11 @@ Notes:
 - F# support is still a work in progress (quite a few things are missing).
 - the BCL (corlib) implementation is quite minimal, so it will have to be extended to fully support FSharp.Core.
 
+Changes vs stock DNA/Blazor:
+- Razor/SPA removed for clarity.
+- some JIT updates.
+- some corlib updates.
+- initial stab at F# support.
+
 Disclaimer:
 - This is just an playground to see how far can this be taken without too much effort.
