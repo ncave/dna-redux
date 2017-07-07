@@ -9,6 +9,10 @@
     <Compile Include="Library.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../JS.Interop/JS.Interop.csproj" />
+  </ItemGroup>
+
   <Target Name="CopyToBuiltBin" AfterTargets="Build">
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="../../wwwroot/bin" SkipUnchangedFiles="true" />
   </Target>

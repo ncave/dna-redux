@@ -3,7 +3,10 @@ import * as interop from "./interop";
 const entrypoint: string = "appfs";
 const references: string[] = ["FSharp.Core", "libfs"];
 interop.StartApplication(entrypoint, references).then(async () => {
-    console.log("Done.");
+
+    console.log("--- JS interop starts here ---");
+    const x = await interop.InvokeStaticAsync("libfs", "LibFS", "Library", "Sqr", 5);
+    console.log("sqr(5) = " + x);
 });
 
 // const entrypoint: string = "appcs";

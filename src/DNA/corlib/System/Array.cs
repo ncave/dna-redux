@@ -431,6 +431,17 @@ namespace System {
 		}
 
 		#endregion
+
+		public static void ForEach<T> (T[] array, Action <T> action) {
+			if (array == null)
+				throw new ArgumentNullException ("array");
+			if (action == null)
+				throw new ArgumentNullException ("action");
+			
+			foreach (T t in array)
+				action (t);
+		}
+
 	}
 
 }

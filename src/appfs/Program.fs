@@ -8,7 +8,7 @@ module Program =
         LibFS.Library.hello "World"
         let n = 30;
         // note: printfn is not working yet
-        Console.WriteLine("sqr({0}) = {1}", n, sqr n)
+        Console.WriteLine("sqr({0}) = {1}", n, sqr (double n))
         Console.WriteLine("fastFib({0}) = {1}", n, fastFib n)
         Console.WriteLine("slowFib({0}) = {1}", n, slowFib n)
         Console.WriteLine("memoizedFib({0}) = {1}", n, memoizedFib n)

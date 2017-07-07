@@ -8,7 +8,13 @@ module Library =
         Console.WriteLine("Hello {0} from F#!", name)
         // printfn "Hello %s from F#!" name // this is still WIP (crashing)
 
-    let sqr x = x * x
+    let sqr (x: double) = x * x
+
+    let Sqr descriptor =
+        JS.Interop.Promise.From (descriptor, fun arg ->
+            let x = arg :?> double
+            sqr x
+        )
 
     let fastFib (n: int) : int =
       let sqrt5 = sqrt 5.0
