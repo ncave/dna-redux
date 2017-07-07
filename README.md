@@ -1,6 +1,6 @@
 # dotnet-js
 
-Running C#/F# code in Node.js or Browser.
+Playground for running C#/F# code in Node.js or Browser.
 
 Entirely based on the excellent works of:
 - @chrisdunelm https://github.com/chrisdunelm/DotNetAnywhere
@@ -8,7 +8,11 @@ Entirely based on the excellent works of:
 - and contributors
 
 Notes:
-- F# support is still a work in progress (some things are crashing).
-- using dotnet core 2.0 preview 2 (2.0 needed for F#, can go lower for C#)
-- use build.cmd to build, VSCode to edit/run (optional)
-- runs in Node.js or browser (`npm start` starts a server for browser)
+- using dotnet core 2.0 preview 2 (2.0 needed for F#, can go lower for C#).
+- use build.cmd to build, VSCode to edit/run (optional).
+- runs in Node.js or browser (`npm start` starts a server for browser).
+- F# support is still a work in progress (quite a few things are missing).
+- the BCL (corlib) implementation is quite minimal, so it will have to be extended to fully support FSharp.Core.
+
+Disclaimer:
+- This is just an playground to see how far can this be taken without too much effort.

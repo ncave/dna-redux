@@ -148,6 +148,7 @@ static tInternalCall internalCalls[] = {
 	{ NULL, NULL, "Sqrt", System_Math_Sqrt, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
 	{ NULL, NULL, "Ceiling", System_Math_Ceiling, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
 	{ NULL, NULL, "Floor", System_Math_Floor, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
+	{ NULL, NULL, "Round", System_Math_Round, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
 
 	{"System.Threading", "Thread", ".ctor", System_Threading_Thread_ctor, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_THREADSTART}},
 	{NULL,               NULL,     ".ctor", System_Threading_Thread_ctorParam, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_PARAMETERIZEDTHREADSTART}},

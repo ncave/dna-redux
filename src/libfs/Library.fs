@@ -1,6 +1,7 @@
+// #nowarn "40"
 namespace LibFS
 open System
-// open System.Collections.Generic
+open System.Collections.Generic
 
 module Library =
     let hello (name: string) =
@@ -13,28 +14,28 @@ module Library =
       let sqrt5 = sqrt 5.0
       let a = (1.0 + sqrt5) / 2.0
       let b = (1.0 - sqrt5) / 2.0
-      let power = float n
+      let power = float (n+1)
       let result = ((a ** power) - (b ** power)) / sqrt5
       int (round result)
 
-    // let rec slowFib n =
-    //     match n with
-    //     | 0 -> 1
-    //     | 1 -> 1
-    //     | _ -> slowFib (n - 1) + slowFib (n - 2)
+    let rec slowFib n =
+        match n with
+        | 0 -> 1
+        | 1 -> 1
+        | _ -> slowFib (n - 1) + slowFib (n - 2)
 
-    // let memoizedFib =
-    //     let dict = new Dictionary<int, int>()
-    //     fun n ->
-    //       if dict.ContainsKey n then dict.[n]
-    //       else
-    //         let result = slowFib n
-    //         dict.Add(n, result)
-    //         result
+    let memoizedFib =
+        let dict = new Dictionary<int, int>()
+        fun n ->
+          if dict.ContainsKey n then dict.[n]
+          else
+            let result = slowFib n
+            dict.Add(n, result)
+            result
 
-    // let rec sequenceFib = seq {
+    // let rec fibSequence = seq {
     //   yield! [0; 1]
-    //   yield! sequenceFib
+    //   yield! fibSequence
     //          |> Seq.pairwise
     //          |> Seq.map (fun (prev, next) -> prev + next)
     // }

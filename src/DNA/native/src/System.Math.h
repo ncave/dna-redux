@@ -30,5 +30,6 @@ tAsyncCall* System_Math_Pow(PTR pThis_, PTR pParams, PTR pReturnValue);
 tAsyncCall* System_Math_Sqrt(PTR pThis_, PTR pParams, PTR pReturnValue);
 tAsyncCall* System_Math_Ceiling(PTR pThis_, PTR pParams, PTR pReturnValue);
 tAsyncCall* System_Math_Floor(PTR pThis_, PTR pParams, PTR pReturnValue);
+tAsyncCall* System_Math_Round(PTR pThis_, PTR pParams, PTR pReturnValue);
 
 #endif
