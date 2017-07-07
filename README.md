@@ -21,4 +21,4 @@ Changes vs stock DNA/Blazor:
 - initial stab at F# support.
 
 Disclaimer:
-- This is just an playground to see how far can this be taken without too much effort.
+- This is just an experiment to see how far can this be taken without too much effort and what the performance looks like.
