@@ -1,6 +1,6 @@
 # dotnet-js
 
-Playground for running C#/F# code in Node.js or Browser.
+Playground for running C#/F# code in Node.js or Browser (on a portable .NET runtime called DotNetAnywhere (DNA) compiled to WebAssembly with emscripten).
 
 Entirely based on the excellent works of:
 - @chrisdunelm https://github.com/chrisdunelm/DotNetAnywhere
