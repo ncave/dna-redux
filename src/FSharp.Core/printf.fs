@@ -998,7 +998,7 @@ module internal PrintfImpl =
     /// First it recursively consumes format string up to the end, then during unwinding builds printer using PrintfBuilderStack as storage for arguments.
     /// idea of implementation is very simple: every step can either push argument to the stack (if current block of 5 format specifiers is not yet filled) 
     //  or grab the content of stack, build intermediate printer and push it back to stack (so it can later be consumed by as argument) 
-    type private PrintfBuilder<'S, 'Re, 'Res>() =
+    type private PrintfBuilder<'S, 'Re, 'Res, 'T>() =
     
         let mutable count = 0
 #if DEBUG
@@ -1115,7 +1115,7 @@ module internal PrintfImpl =
 
         let ContinuationOnStack = -1
 
-        let buildPlain numberOfArgs prefix = 
+        let buildPlain numberOfArgs (prefix: string) = 
             let n = numberOfArgs * 2
             let hasCont = builderStack.HasContinuationOnStack numberOfArgs
 
@@ -1244,7 +1244,7 @@ module internal PrintfImpl =
                 else
                     buildPlain n prefix
                             
-        member __.Build<'T>(s : string) : PrintfFactory<'S, 'Re, 'Res, 'T> * int = 
+        member __.Build(s : string) : PrintfFactory<'S, 'Re, 'Res, 'T> * int = 
             parseFormatString s typeof<'T> :?> _, (2 * count + 1) // second component is used in SprintfEnv as value for internal buffer
 
     /// Type of element that is stored in cache 
@@ -1256,7 +1256,7 @@ module internal PrintfImpl =
     /// printf is called in tight loop
     /// 2nd level is global dictionary that maps format string to the corresponding PrintfFactory
     type Cache<'T, 'State, 'Residue, 'Result>() =
-        static let generate(fmt) = PrintfBuilder<'State, 'Residue, 'Result>().Build<'T>(fmt)        
+        static let generate(fmt) = PrintfBuilder<'State, 'Residue, 'Result, 'T>().Build(fmt)
 #if FX_NO_CONCURRENT_DICTIONARY
         static let mutable map = Dictionary<string, CachedItem<'T, 'State, 'Residue, 'Result>>()
 #else

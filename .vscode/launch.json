@@ -14,7 +14,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "Launch Node.js",
       "program": "${workspaceRoot}/wwwroot/out/bundle.js",
       "args": [],
       "runtimeArgs": [

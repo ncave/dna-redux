@@ -144,9 +144,10 @@ module ExtraTopLevelOperators =
     [<CompiledName("LazyPattern")>]
     val (|Lazy|) : input:Lazy<'T> -> 'T
 
-        
+#if !NO_QUERY_BUILDER
     /// <summary>Builds a query using query syntax and operators.</summary>
     val query : Microsoft.FSharp.Linq.QueryBuilder
+#endif
 
 
 namespace Microsoft.FSharp.Core.CompilerServices

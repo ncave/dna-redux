@@ -1,5 +1,7 @@
-// import { ModuleFunc } from "../js/asmjs/dna";
+// switch between these two lines if need to run asmjs
+// what works: browser (wasm, asmjs), node (wasm only)
 import { ModuleFunc } from "../js/wasm/dna";
+// import { ModuleFunc } from "../js/asmjs/dna";
 
 let callbackIdGen = 0;
 const callbackMap = new Map<number, any>();
@@ -131,12 +133,9 @@ export function StartApplication(entryPoint: string, references: string[]) {
     const root = isNode ? "./wwwroot/" : "/";
     const moduleArgs: any = {
       wasmBinaryFile: root + "js/wasm/dna.wasm",
-      // wasmBinaryFile: root + "js/asmjs/dna.wasm",
-      // asmjsCodeFile: root + "js/asmjs/dna.asm.js",
-      // memoryInitializerPrefixURL: root + "js/asmjs/",
+      asmjsCodeFile: root + "js/asmjs/dna.asm.js",
+      memoryInitializerPrefixURL: root + "js/asmjs/",
       arguments: [entryPoint + ".dll"],
-      // noInitialRun: true,
-      // calledRun: true,
       preloadPlugins: [],
       preRun: () => {
         // Preload corlib.dll and other assemblies

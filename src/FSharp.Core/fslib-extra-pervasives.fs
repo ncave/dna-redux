@@ -210,16 +210,18 @@ module ExtraTopLevelOperators =
     [<assembly: AutoOpen("Microsoft.FSharp.Core")>]
     [<assembly: AutoOpen("Microsoft.FSharp.Collections")>]
     [<assembly: AutoOpen("Microsoft.FSharp.Control")>]
+#if !NO_QUERY_BUILDER
     [<assembly: AutoOpen("Microsoft.FSharp.Linq.QueryRunExtensions.LowPriority")>]
     [<assembly: AutoOpen("Microsoft.FSharp.Linq.QueryRunExtensions.HighPriority")>]
+#endif
     do()
 
     [<CompiledName("LazyPattern")>]
     let (|Lazy|) (x:Lazy<_>) = x.Force()
 
-
+#if !NO_QUERY_BUILDER
     let query = Microsoft.FSharp.Linq.QueryBuilder()
-
+#endif
 
 namespace Microsoft.FSharp.Core.CompilerServices
 

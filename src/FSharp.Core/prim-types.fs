@@ -654,8 +654,9 @@ namespace Microsoft.FSharp.Core
 #if INLINE_STRING_RESOURCES
         //-------------------------------------------------------------------------
         // Load string resources
-        Array.ForEach(SR.Resources.res_pairs,
-            fun pair -> SR.Resources.resources.Add(pair))
+        
+        for pair in SR.Resources.res_pairs do
+            SR.Resources.resources.Add(pair)
         //-------------------------------------------------------------------------
 #endif
 

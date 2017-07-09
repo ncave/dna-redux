@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netstandard1.3</TargetFramework>
     <AssemblyName>FSharp.Core</AssemblyName>
     <NoWarn>$(NoWarn);45;55;62;75;1204</NoWarn>
     <AllowCrossTargeting>true</AllowCrossTargeting>
@@ -12,26 +12,32 @@
     <DefineConstants>$(DefineConstants);
       INLINE_STRING_RESOURCES;
       NO_ASYNC_BUILDER;
+      NO_QUERY_BUILDER;
       FSHARP_CORE;
       FX_NO_ARRAY_LONG_LENGTH;
       FX_NO_BEGINEND_READWRITE;
+      FX_NO_BIGINT;
       FX_NO_BINARY_SERIALIZATION;
       FX_NO_CONCURRENT_DICTIONARY;
       FX_NO_CONVERTER;
       FX_NO_DEBUG_DISPLAYS;
       FX_NO_DEFAULT_DEPENDENCY_TYPE;
       FX_NO_DELEGATE_DYNAMIC_METHOD;
+      FX_NO_EXIT;
       FX_NO_LAZY;
       FX_NO_MONITOR_REPORTS_LOCKTAKEN;
       FX_NO_REFLECTION_METADATA_TOKENS;
       FX_NO_REFLECTION_ONLY;
       FX_NO_SECURITY_PERMISSIONS;
+      FX_NO_SYSTEM_BINDINGFLAGS;
       FX_NO_THREAD;
       FX_NO_THREAD_STATIC;
       FX_NO_THREADABORT;
       FX_NO_TPL_PARALLEL;
       FX_NO_TUPLE;
+      FX_NO_TYPECODE;
       FX_PORTABLE_OR_NETSTANDARD;
+      FX_RESHAPED_REFLECTION;
     </DefineConstants>
     <OtherFlags>$(OtherFlags) --warnon:1182 --compiling-fslib --compiling-fslib-40 --maxerrors:20 --extraoptimizationloops:1</OtherFlags>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
@@ -137,9 +143,9 @@
     <Compile Include="set.fs">
       <Link>Collections/set.fs</Link>
     </Compile>
-    <!--<Compile Include="..\..\utils\reshapedreflection.fs">
+    <Compile Include="utils/reshapedreflection.fs">
       <Link>Reflection/reshapedreflection.fs</Link>
-    </Compile>-->
+    </Compile>
     <Compile Include="reflect.fsi">
       <Link>Reflection/reflect.fsi</Link>
     </Compile>
@@ -152,22 +158,22 @@
     <Compile Include="event.fs">
       <Link>Event/event.fs</Link>
     </Compile>
-    <Compile Include="math\n.fsi">
+    <Compile Include="math/n.fsi">
       <Link>Numerics/n.fsi</Link>
     </Compile>
-    <Compile Include="math\n.fs">
+    <Compile Include="math/n.fs">
       <Link>Numerics/n.fs</Link>
     </Compile>
-    <Compile Include="math\z.fsi">
+    <Compile Include="math/z.fsi">
       <Link>Numerics/z.fsi</Link>
     </Compile>
-    <Compile Include="math\z.fs">
+    <Compile Include="math/z.fs">
       <Link>Numerics/z.fs</Link>
     </Compile>
-    <Compile Include="utils\sformat.fsi">
+    <Compile Include="utils/sformat.fsi">
       <Link>Printf/sformat.fsi</Link>
     </Compile>
-    <Compile Include="utils\sformat.fs">
+    <Compile Include="utils/sformat.fs">
       <Link>Printf/sformat.fs</Link>
     </Compile>
     <Compile Include="printf.fsi">
@@ -206,12 +212,12 @@
     <Compile Include="QueryExtensions.fs">
       <Link>Queries/QueryExtensions.fs</Link>
     </Compile>
-    <Compile Include="Query.fsi">
+    <!--<Compile Include="Query.fsi">
       <Link>Queries/Query.fsi</Link>
-    </Compile>
-    <Compile Include="Query.fs">
+    </Compile>-->
+    <!--<Compile Include="Query.fs">
       <Link>Queries/Query.fs</Link>
-    </Compile>
+    </Compile>-->
     <Compile Include="SI.fs">
       <Link>Units/SI.fs</Link>
     </Compile>
@@ -221,7 +227,7 @@
     <Compile Include="fslib-extra-pervasives.fs">
       <Link>Extras/fslib-extra-pervasives.fs</Link>
     </Compile>
-    <!--<Compile Include="..\..\assemblyinfo\assemblyinfo.FSharp.Core.dll.fs">
+    <!--<Compile Include="../../assemblyinfo/assemblyinfo.FSharp.Core.dll.fs">
       <Link>assemblyinfo.FSharp.Core.dll.fs</Link>
     </Compile>-->
   </ItemGroup>

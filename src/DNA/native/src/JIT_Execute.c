@@ -1139,7 +1139,7 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		pCurrentMethodState->pReflectionInvokeReturnType = pCallMethod->pReturnType;
 
 		// Get the 'this' pointer for the call and the params array
-		PTR invocationThis = *(tMethodBase**)(pCurEvalStack + sizeof(HEAP_PTR));
+		PTR invocationThis = *(PTR*)(*(tMethodBase**)(pCurEvalStack + sizeof(HEAP_PTR)));
 		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));		
 
 		// Put the new 'this' on the stack
@@ -1151,7 +1151,7 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 			U32 invocationParamsArrayLength = SystemArray_GetLength(invocationParamsArray);
 			PTR invocationParamsArrayElements = SystemArray_GetElements(invocationParamsArray);
 			for (U32 paramIndex = 0; paramIndex < invocationParamsArrayLength; paramIndex++) {
-				HEAP_PTR currentParam = ((U32*)(invocationParamsArrayElements))[paramIndex];
+				HEAP_PTR currentParam = *(HEAP_PTR*)((U32*)(invocationParamsArrayElements))[paramIndex];
 				if (currentParam == NULL) {
 					PUSH_O(NULL);
 				} else {
