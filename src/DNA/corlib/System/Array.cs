@@ -330,10 +330,40 @@ namespace System {
 
 		public static void Sort<T>(T[] array)
 		{
+			Sort(array, 0, array.Length);
+		}
+
+		public static void Sort<T>(T[] array, int index, int length)
+		{
+			var comparer = Comparer<T>.Default;
+			int newGap(int gap) {
+				gap = gap * 8 / 10; // 1.25 gap reduction
+				if (gap == 9 || gap == 10) gap = 11;
+				return gap < 1 ? 1 : gap;
+			}
+			void combSort(T[] a, int start, int count) {
+				int gap = count;
+				bool swapped;
+				T temp;
+				do {
+					swapped = false;
+					gap = newGap(gap);
+					for (int i=start; i < count-gap; ++i) {
+						if (comparer.Compare(a[i], a[i+gap]) > 0) {
+							swapped = true;
+							temp = a[i]; 
+							a[i] = a[i+gap];
+							a[i+gap] = temp;
+						}
+					}
+				} while (gap > 1 || swapped);
+			}
+			combSort(array, index, length);
 		}
 
 		public static void Sort<TKey, TValue>(TKey[] keys, TValue[] items, IComparer<TKey> comparer)
 		{
+			// throw new NotImplementedException();
 		}
 
 		[MethodImpl(MethodImplOptions.InternalCall)]

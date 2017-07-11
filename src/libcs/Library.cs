@@ -1,4 +1,4 @@
-﻿namespace LibCS {
+namespace LibCS {
     using System;
     using JS.Interop;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 class NBody {
     public static void Run(String[] args) {

@@ -184,6 +184,10 @@ namespace System.Collections.Generic {
 			}
 		}
 
+		public void Sort() {
+			Array.Sort(this.items, 0, this.size);
+		}
+
 		public T[] ToArray() {
 			T[] array = new T[this.size];
 			Array.Copy(this.items, array, this.size);
