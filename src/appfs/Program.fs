@@ -5,6 +5,9 @@ open LibFS.Library
 module Program =
     [<EntryPoint>]
     let main argv =
+        let sum = [1;2;3] |> List.fold (+) 0
+        Console.WriteLine("sum = {0}", sum)
+
         hello "World"
         // note: printfn is not working yet
         // printfn "Hello from %s" "Space!"
@@ -14,4 +17,5 @@ module Program =
         Console.WriteLine("slowFib({0}) = {1}", n, slowFib n)
         Console.WriteLine("memoizedFib({0}) = {1}", n, memoizedFib n)
         // Console.WriteLine("fibSequence({0}) = {1}", n, fibSequence |> Seq.item n)
+        //let colors = RayTrace.computeScene 100 100
         0 // return an integer exit code

@@ -337,7 +337,7 @@ namespace System {
 		{
 			var comparer = Comparer<T>.Default;
 			int newGap(int gap) {
-				gap = gap * 8 / 10; // 1.25 gap reduction
+				gap = gap * 4 / 5; // 1.25 gap reduction
 				if (gap == 9 || gap == 10) gap = 11;
 				return gap < 1 ? 1 : gap;
 			}

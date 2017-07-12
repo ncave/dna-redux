@@ -79,14 +79,17 @@ static tMD_MethodDef* FindMethodInType(tMD_TypeDef *pTypeDef, STRING name, tMeta
 	U32 i;
 	tMD_TypeDef *pLookInType = pTypeDef;
 
-	do {
+	// printf("Find method %s in type %s.%s\n", name, pTypeDef->nameSpace, pTypeDef->name);
+
+	while (pLookInType != NULL) {
 		for (i=0; i<pLookInType->numMethods; i++) {
-			if (MetaData_CompareNameAndSig(name, sigBlob, pSigMetaData, ppClassTypeArgs, ppMethodTypeArgs, pLookInType->ppMethods[i], pLookInType->ppClassTypeArgs, NULL)) {
+			if (pLookInType->ppMethods[i] != NULL &&
+				MetaData_CompareNameAndSig(name, sigBlob, pSigMetaData, ppClassTypeArgs, ppMethodTypeArgs, pLookInType->ppMethods[i], pLookInType->ppClassTypeArgs, NULL)) {
 				return pLookInType->ppMethods[i];
 			}
 		}
 		pLookInType = pLookInType->pParent;
-	} while (pLookInType != NULL);
+	}
 
 	{
 		// Error reporting!!

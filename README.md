@@ -20,7 +20,7 @@ Changes vs stock DNA/Blazor:
 - Razor/SPA removed for clarity.
 - some JIT updates.
 - some corlib updates.
-- some js interop updates.
+- some JS interop updates.
 - initial stab at F# support.
 
 Disclaimer:

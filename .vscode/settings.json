@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "metadatatables.h": "c",
+        "types.h": "c",
+        "clifile.h": "c",
+        "methodstate.h": "c"
+    }
+}
