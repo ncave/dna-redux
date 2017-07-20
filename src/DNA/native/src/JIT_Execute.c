@@ -43,59 +43,62 @@ tJITCodeInfo jitCodeInfo[JIT_OPCODE_MAXNUM];
 tJITCodeInfo jitCodeGoNext;
 
 // Get the next op-code
-#define GET_OP() *(pCurOp++)
+#define GET_OP() (*(pCurOp++))
+//#define GET_OP() (dprintfn("GETOP : stackOfs = %d", (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack)), *(pCurOp++))
+
+// PUSH/POP returns nothing - it just alters the stack offset correctly
+#define PUSH(numBytes) (pCurEvalStack += numBytes) //, dprintfn("PUSH %d: stackOfs = %d", numBytes, (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack)), pCurEvalStack)
+#define POP(numBytes) (pCurEvalStack -= numBytes) //, dprintfn("POP  %d: stackOfs = %d", numBytes, (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack)), pCurEvalStack)
 
 // Push a PTR value on the top of the stack
-#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); pCurEvalStack += sizeof(void*)
+#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*))
 // Push an arbitrarily-sized value-type onto the top of the stack
-#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); pCurEvalStack += stackInc
+#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); PUSH(stackInc)
 // Push a U32 value on the top of the stack
-#define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); pCurEvalStack += 4
+#define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); PUSH(4)
 // Push a U64 value on the top of the stack
-#define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); pCurEvalStack += 8
+#define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); PUSH(8)
 // Push a float value on the top of the stack
-#define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); pCurEvalStack += 4;
+#define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4)
 // Push a double value on the top of the stack
-#define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); pCurEvalStack += 8;
+#define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8)
 // Push a 4-byte heap pointer on to the top of the stack
-#define PUSH_O(pHeap) *(void**)pCurEvalStack = (void*)(pHeap); pCurEvalStack += sizeof(void*)
+#define PUSH_O(pHeap) *(void**)pCurEvalStack = (void*)(pHeap); PUSH(sizeof(void*))
 // DUP4() duplicates the top 4 bytes on the eval stack
-#define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); pCurEvalStack += 4
+#define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); PUSH(4)
 // DUP8() duplicates the top 4 bytes on the eval stack
-#define DUP8() *(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); pCurEvalStack += 8
+#define DUP8() *(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); PUSH(8)
 // DUP() duplicates numBytes bytes from the top of the stack
-#define DUP(numBytes) memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); pCurEvalStack += numBytes
+#define DUP(numBytes) memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); PUSH(numBytes)
 // Pop a U32 value from the stack
-#define POP_U32() (*(U32*)(pCurEvalStack -= 4))
+#define POP_U32() (*(U32*)(POP(4)))
 // Pop a U64 value from the stack
-#define POP_U64() (*(U64*)(pCurEvalStack -= 8))
+#define POP_U64() (*(U64*)(POP(8)))
 // Pop a float value from the stack
-#define POP_FLOAT() (*(float*)(pCurEvalStack -= 4))
+#define POP_FLOAT() (*(float*)(POP(4)))
 // Pop a double value from the stack
-#define POP_DOUBLE() (*(double*)(pCurEvalStack -= 8))
+#define POP_DOUBLE() (*(double*)(POP(8)))
 // Pop 2 U32's from the stack
-#define POP_U32_U32(v1,v2) pCurEvalStack -= 8; v1 = *(U32*)pCurEvalStack; v2 = *(U32*)(pCurEvalStack + 4)
+#define POP_U32_U32(v1,v2) POP(8); v1 = *(U32*)pCurEvalStack; v2 = *(U32*)(pCurEvalStack + 4)
 // Pop 2 U64's from the stack
-#define POP_U64_U64(v1,v2) pCurEvalStack -= 16; v1 = *(U64*)pCurEvalStack; v2 = *(U64*)(pCurEvalStack + 8)
+#define POP_U64_U64(v1,v2) POP(16); v1 = *(U64*)pCurEvalStack; v2 = *(U64*)(pCurEvalStack + 8)
 // Pop 2 F32's from the stack
-#define POP_F32_F32(v1,v2) pCurEvalStack -= 8; v1 = *(float*)pCurEvalStack; v2 = *(float*)(pCurEvalStack + 4)
+#define POP_F32_F32(v1,v2) POP(8); v1 = *(float*)pCurEvalStack; v2 = *(float*)(pCurEvalStack + 4)
 // Pop 2 F64's from the stack
-#define POP_F64_F64(v1,v2) pCurEvalStack -= 16; v1 = *(double*)pCurEvalStack; v2 = *(double*)(pCurEvalStack + 8)
+#define POP_F64_F64(v1,v2) POP(16); v1 = *(double*)pCurEvalStack; v2 = *(double*)(pCurEvalStack + 8)
 // Pop a PTR value from the stack
-#define POP_PTR() (*(PTR*)(pCurEvalStack -= sizeof(void*)))
+#define POP_PTR() (*(PTR*)(POP(sizeof(void*))))
 // Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
-#define POP_VALUETYPE(ptr, valueSize, stackDec) memcpy(ptr, pCurEvalStack -= stackDec, valueSize)
+#define POP_VALUETYPE(ptr, valueSize, stackDec) memcpy(ptr, POP(stackDec), valueSize)
 // Pop a Object (heap) pointer value from the stack
-#define POP_O() (*(HEAP_PTR*)(pCurEvalStack -= 4))
-// POP() returns nothing - it just alters the stack offset correctly
-#define POP(numBytes) pCurEvalStack -= numBytes
+#define POP_O() (*(HEAP_PTR*)(POP(4)))
 // POP_ALL() empties the evaluation stack
 #define POP_ALL() pCurEvalStack = pCurrentMethodState->pEvalStack
 
 #define STACK_ADDR(type) *(type*)(pCurEvalStack - sizeof(type))
 // General binary ops
 #define BINARY_OP(returnType, type1, type2, op) \
-	pCurEvalStack -= sizeof(type1) + sizeof(type2) - sizeof(returnType); \
+	POP(sizeof(type1) + sizeof(type2) - sizeof(returnType)); \
 	*(returnType*)(pCurEvalStack - sizeof(returnType)) = \
 	*(type1*)(pCurEvalStack - sizeof(returnType)) op \
 	*(type2*)(pCurEvalStack - sizeof(returnType) + sizeof(type1))
@@ -105,7 +108,7 @@ tJITCodeInfo jitCodeGoNext;
 // Set the new method state (for use when the method state changes - in calls mainly)
 #define SAVE_METHOD_STATE() \
 	pCurrentMethodState->stackOfs = (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack); \
-	pCurrentMethodState->ipOffset = (U32)(pCurOp - pOps)
+	pCurrentMethodState->ipOffset = (U32)(pCurOp - pOps); \
 
 #define LOAD_METHOD_STATE() \
 	pCurrentMethodState = pThread->pCurrentMethodState; \
@@ -113,7 +116,7 @@ tJITCodeInfo jitCodeGoNext;
 	pCurEvalStack = pCurrentMethodState->pEvalStack + pCurrentMethodState->stackOfs; \
 	pJIT = pCurrentMethodState->pJIT; \
 	pOps = pJIT->pOps; \
-	pCurOp = pOps + pCurrentMethodState->ipOffset
+	pCurOp = pOps + pCurrentMethodState->ipOffset; \
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \
 	SAVE_METHOD_STATE(); \
@@ -178,7 +181,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #else
 
-#define OPCODE_USE(op)
+#define OPCODE_USE(op) // dprintfn("JIT op: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op))
 
 #endif
 
@@ -1031,7 +1034,7 @@ JIT_CALL_NATIVE_end:
 
 JIT_RETURN_start:
 	OPCODE_USE(JIT_RETURN);
-	//printf("Returned from %s() to %s()\n", pCurrentMethodState->pMethod->name, (pCurrentMethodState->pCaller)?pCurrentMethodState->pCaller->pMethod->name:"<none>");
+	// dprintfn("Returned from %s() to %s()", pCurrentMethodState->pMethod->name, (pCurrentMethodState->pCaller)?pCurrentMethodState->pCaller->pMethod->name:(STRING)"<none>");
 	if (pCurrentMethodState->pCaller == NULL) {
 		// End of thread!
 		if (pCurrentMethodState->pMethod->pReturnType == types[TYPE_SYSTEM_INT32]) {
@@ -1056,7 +1059,7 @@ JIT_RETURN_start:
 		// Copy return value to callers evaluation stack
 		if (u32Value > 0) {
 			memmove(pCurEvalStack, pMem, u32Value);
-			pCurEvalStack += u32Value;
+			PUSH(u32Value);
 		}
 		// Delete the current method state and go back to callers method state
 		MethodState_Delete(pThread, &pOldMethodState);
@@ -1081,7 +1084,7 @@ JIT_INVOKE_DELEGATE_start:
 			pDelegateMethod = (tMD_MethodDef*)GET_OP();
 			// Take the params off the stack. This is the pointer to the tDelegate & params
 			//pCurrentMethodState->stackOfs -= pDelegateMethod->parameterStackSize;
-			pCurEvalStack -= pDelegateMethod->parameterStackSize;
+			POP(pDelegateMethod->parameterStackSize);
 			// Allocate memory for delegate params
 			pCurrentMethodState->pDelegateParams = malloc(pDelegateMethod->parameterStackSize - sizeof(void*));
 			memcpy(
@@ -1094,7 +1097,7 @@ JIT_INVOKE_DELEGATE_start:
 		} else {
 			pDelegateMethod = Delegate_GetMethod(pCurrentMethodState->pNextDelegate);
 			if (pDelegateMethod->pReturnType != NULL) {
-				pCurEvalStack -= pDelegateMethod->pReturnType->stackSize;
+				POP(pDelegateMethod->pReturnType->stackSize);
 			}
 			// Get the actual delegate heap pointer
 			pDelegate = pCurrentMethodState->pNextDelegate;
@@ -1127,7 +1130,7 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		tMD_MethodDef *pInvokeMethod = (tMD_MethodDef*)GET_OP();
 
 		// Take the MethodBase.Invoke params off the stack.
-		pCurEvalStack -= pInvokeMethod->parameterStackSize;
+		POP(pInvokeMethod->parameterStackSize);
 
 		// Get a pointer to the MethodBase instance (e.g., a MethodInfo or ConstructorInfo),
 		// and from that, determine which method we're going to invoke
@@ -1213,7 +1216,7 @@ JIT_CALL_O_start:
 JIT_CALL_INTERFACE_start:
 	op = JIT_CALL_INTERFACE;
 allCallStart:
-	OPCODE_USE(JIT_CALL_O);
+	OPCODE_USE(op);
 	{
 		tMD_MethodDef *pCallMethod;
 		tMethodState *pCallMethodState;
@@ -1250,7 +1253,8 @@ allCallStart:
 			}
 			pThisType = Heap_GetType(heapPtr);
 			if (METHOD_ISVIRTUAL(pCallMethod)) {
-				pCallMethod = pThisType->pVTable[pCallMethod->vTableOfs];
+				// old version: pCallMethod = pThisType->pVTable[pCallMethod->vTableOfs];
+				pCallMethod = FindVirtualOverriddenMethod(pThisType, pCallMethod);
 			}
 		} else if (op == JIT_CALL_INTERFACE) {
 			tMD_TypeDef *pInterface, *pThisType;
@@ -1280,7 +1284,7 @@ allCallStart:
 			pCallMethod = pThisType->pVTable[vIndex];
 		}
 callMethodSet:
-		//printf("Calling method: %s\n", Sys_GetMethodDesc(pCallMethod));
+		// dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 		// Set up the new method state for the called method
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
 		// Set up the parameter stack for the method being called
@@ -2578,7 +2582,7 @@ JIT_NEWOBJECT_VALUETYPE_start:
 		CreateParameters(pCallMethodState->pParamsLocals, pConstructorDef, &pTempPtr, pMem);
 		pCurEvalStack = pTempPtr;
 		// Set the stack state so it's correct for the constructor return
-		pCurEvalStack += pConstructorDef->pParentType->stackSize;
+		PUSH(pConstructorDef->pParentType->stackSize);
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 		// Run any pending Finalizers
@@ -2738,7 +2742,7 @@ JIT_LOAD_ELEMENT_start:
 		U32 size = GET_OP(); // size of type on stack
 		*(U32*)pCurEvalStack = 0; // This is required to zero out the stack for types that are stored in <4 bytes in arrays
 		SystemArray_LoadElement(heapPtr, idx, pCurEvalStack);
-		pCurEvalStack += size;
+		PUSH(size);
 	}
 JIT_LOAD_ELEMENT_end:
 	GO_NEXT();
@@ -2842,7 +2846,7 @@ JIT_STOREFIELD_VALUETYPE_start:
 		PTR pMem;
 
 		pFieldDef = (tMD_FieldDef*)GET_OP();
-		pCurEvalStack -= pFieldDef->memSize;
+		POP(pFieldDef->memSize);
 		pMem = pCurEvalStack;
 		heapPtr = POP_O();
 		memcpy(heapPtr + pFieldDef->memOffset, pMem, pFieldDef->memSize);
@@ -2889,7 +2893,7 @@ JIT_LOADFIELD_VALUETYPE_start:
 		// My guess is that at some point they refactored from using 'pEvalStack' to 'pCurEvalStack', but
 		// didn't update this method (because nothing in corlib reads fields from structs).
 		// I think the following line moves the stack pointer along correctly instead:
-		pCurEvalStack -= u32Value;
+		POP(u32Value);
 		
 		//pMem = pEvalStack + pCurrentMethodState->stackOfs + pFieldDef->memOffset;
 		pMem = pCurEvalStack + pFieldDef->memOffset;
@@ -3113,7 +3117,7 @@ JIT_BOX_NULLABLE_start:
 		tMD_TypeDef *pType = (tMD_TypeDef*)GET_OP();
 
 		// Take the nullable type off the stack. The +4 is because the of the HasValue field (Bool, size = 4 bytes)
-		pCurEvalStack -= pType->stackSize + 4;
+		POP(pType->stackSize + 4);
 		// If .HasValue
 		if (*(U32*)pCurEvalStack) {
 			// Box the underlying type
@@ -3152,7 +3156,7 @@ JIT_UNBOX_NULLABLE_start:
 			PUSH_U32(0);
 			// And increase the stack pointer by the size of the underlying type
 			// (the contents don't matter)
-			pCurEvalStack += pTypeDef->stackSize;
+			PUSH(pTypeDef->stackSize);
 		} else {
 			// Push .HasValue (= true)
 			PUSH_U32(1);

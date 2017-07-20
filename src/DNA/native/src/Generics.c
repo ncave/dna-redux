@@ -166,8 +166,7 @@ tMD_TypeDef* Generics_GetGenericTypeFromCoreType(tMD_TypeDef *pCoreType, U32 num
 	pTypeDef->nameSpace = pCoreType->nameSpace;
 	pTypeDef->name = (STRING)mallocForever((U32)strlen(name)+1);
 	strcpy(pTypeDef->name, name);
-	printf("Instantiated type %s.%s\n", pTypeDef->nameSpace, pTypeDef->name);
-
+	// dprintfn("Instantiated type %s.%s", pTypeDef->nameSpace, pTypeDef->name);
 	pTypeDef->ppClassTypeArgs = pInst->pTypeArgs;
 	pTypeDef->extends = pCoreType->extends;
 	pTypeDef->tableIndex = pCoreType->tableIndex;

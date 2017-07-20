@@ -143,7 +143,7 @@ void MetaData_Fill_MethodDef(tMD_TypeDef *pParentType, tMD_MethodDef *pMethodDef
 // This is to get the correct vTable offset for the method.
 // This must search the MethodImpl table to see if the default inheritence rules are being overridden.
 // Return NULL if this method does not override anything.
-static tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_MethodDef *pMethodDef) {
+tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_MethodDef *pMethodDef) {
 	U32 i;
 
 	do {
