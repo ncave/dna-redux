@@ -328,37 +328,27 @@ namespace System {
 			return output;
 		}
 
-		public static void Sort<T>(T[] array)
+		public static void Sort<T>(T[] array) where T: IComparable, IComparable<T>
 		{
 			Sort(array, 0, array.Length);
 		}
 
-		public static void Sort<T>(T[] array, int index, int length)
-		{
-			var comparer = Comparer<T>.Default;
-			int newGap(int gap) {
-				gap = gap * 4 / 5; // 1.25 gap reduction
-				if (gap == 9 || gap == 10) gap = 11;
-				return gap < 1 ? 1 : gap;
-			}
-			void combSort(T[] a, int start, int count) {
-				int gap = count;
-				bool swapped;
-				T temp;
-				do {
-					swapped = false;
-					gap = newGap(gap);
-					for (int i=start; i < count-gap; ++i) {
-						if (comparer.Compare(a[i], a[i+gap]) > 0) {
-							swapped = true;
-							temp = a[i]; 
-							a[i] = a[i+gap];
-							a[i+gap] = temp;
-						}
+		public static void Sort<T>(T[] array, int index, int length) where T: IComparable, IComparable<T> {
+			int gap = length;
+			bool swapped;
+			do {
+				swapped = false;
+				gap = gap * 4 / 5; // 80% gap reduction
+				gap = gap < 1 ? 1 : (gap == 9 || gap == 10) ? 11 : gap;
+				for (int i = index; i < length - gap; ++i) {
+					if (array[i].CompareTo(array[i + gap]) > 0) {
+						swapped = true;
+						T temp = array[i];
+						array[i] = array[i + gap];
+						array[i + gap] = temp;
 					}
-				} while (gap > 1 || swapped);
-			}
-			combSort(array, index, length);
+				}
+			} while (gap > 1 || swapped);
 		}
 
 		public static void Sort<TKey, TValue>(TKey[] keys, TValue[] items, IComparer<TKey> comparer)

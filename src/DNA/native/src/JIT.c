@@ -551,7 +551,7 @@ cilLdInd:
 				{
 					tMD_MethodDef *pCallMethod;
 					tMD_TypeDef *pBoxCallType;
-					U32 derefRefType;
+					U32 derefRefType = 0;
 					U8 dynamicallyBoxReturnValue = 0;
 
 					u32Value2 = 0;
@@ -559,6 +559,7 @@ cilLdInd:
 cilCallVirtConstrained:
 					pBoxCallType = NULL;
 					derefRefType = 0;
+					dynamicallyBoxReturnValue = 0;
 
 					u32Value = GetUnalignedU32(pCIL, &cilOfs);
 					pCallMethod = MetaData_GetMethodDefFromDefRefOrSpec(pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
