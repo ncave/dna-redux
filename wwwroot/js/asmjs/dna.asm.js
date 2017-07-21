@@ -15641,7 +15641,16 @@ function _PInvoke_Call(i1, i16, i27, i2) {
    i25 = 4;
    break;
   }
-  if ((i28 | 0) == (HEAP32[i1 + 88 >> 2] | 0)) i25 = 8; else if ((i28 | 0) == (HEAP32[i1 + 92 >> 2] | 0)) i25 = 8; else {
+  if ((i28 | 0) == (HEAP32[i1 + 88 >> 2] | 0)) {
+   HEAPF64[i27 >> 3] = 0.0;
+   i25 = 8;
+   break;
+  }
+  if ((i28 | 0) == (HEAP32[i1 + 92 >> 2] | 0)) {
+   HEAPF64[i27 >> 3] = 0.0;
+   i25 = 8;
+   break;
+  } else {
    HEAP32[i29 >> 2] = HEAP32[i28 + 12 >> 2];
    _Crash(16810, i29);
   }

@@ -50,7 +50,7 @@ type Camera(pos : Vector, lookAt : Vector) =
 
 type Ray =
     { Start: Vector;
-      Dir: Vector}
+      Dir: Vector }
 
 type Surface =
     abstract Diffuse: Vector -> Color;
@@ -61,7 +61,7 @@ type Surface =
 type Intersection =
     { Thing: SceneObject;
       Ray: Ray;
-      Dist: double}
+      Dist: double }
 
 and SceneObject =
     abstract Surface : Surface

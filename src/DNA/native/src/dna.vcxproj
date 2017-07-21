@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -14,17 +14,18 @@
     <ProjectGuid>{888AAA01-F58E-4E41-8BBB-78294D9DABF7}</ProjectGuid>
     <RootNamespace>dna</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -38,7 +39,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <_ProjectFileVersion>11.0.60315.1</_ProjectFileVersion>
+    <_ProjectFileVersion>15.0.26430.15</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
@@ -53,7 +54,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;DEBUG_PRINT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -112,6 +113,7 @@
     <ClCompile Include="InternalCall.c" />
     <ClCompile Include="JIT.c" />
     <ClCompile Include="JIT_Execute.c" />
+    <ClCompile Include="JSInterop.c" />
     <ClCompile Include="MetaData.c" />
     <ClCompile Include="MetaData_Fill.c" />
     <ClCompile Include="MetaData_Search.c" />
@@ -119,8 +121,6 @@
     <ClCompile Include="PInvoke.c" />
     <ClCompile Include="RVA.c" />
     <ClCompile Include="Sys.c" />
-    <ClCompile Include="Thread.c" />
-    <ClCompile Include="Type.c" />
     <ClCompile Include="System.Array.c" />
     <ClCompile Include="System.Char.c" />
     <ClCompile Include="System.Console.c" />
@@ -143,6 +143,8 @@
     <ClCompile Include="System.Type.c" />
     <ClCompile Include="System.ValueType.c" />
     <ClCompile Include="System.WeakReference.c" />
+    <ClCompile Include="Thread.c" />
+    <ClCompile Include="Type.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CIL_OpCodes.h" />
@@ -157,6 +159,7 @@
     <ClInclude Include="InternalCall.h" />
     <ClInclude Include="JIT.h" />
     <ClInclude Include="JIT_OpCodes.h" />
+    <ClInclude Include="JSInterop.h" />
     <ClInclude Include="MetaData.h" />
     <ClInclude Include="MetaDataTables.h" />
     <ClInclude Include="MethodState.h" />
@@ -165,9 +168,6 @@
     <ClInclude Include="PInvoke_TypeDef.h" />
     <ClInclude Include="RVA.h" />
     <ClInclude Include="Sys.h" />
-    <ClInclude Include="Thread.h" />
-    <ClInclude Include="Type.h" />
-    <ClInclude Include="Types.h" />
     <ClInclude Include="System.Array.h" />
     <ClInclude Include="System.Char.CaseConversion.h" />
     <ClInclude Include="System.Char.h" />
@@ -192,6 +192,9 @@
     <ClInclude Include="System.Type.h" />
     <ClInclude Include="System.ValueType.h" />
     <ClInclude Include="System.WeakReference.h" />
+    <ClInclude Include="Thread.h" />
+    <ClInclude Include="Type.h" />
+    <ClInclude Include="Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

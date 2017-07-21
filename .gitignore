@@ -15,6 +15,10 @@ jspm_packages
 # Binaries
 bin
 obj
+Debug
+Release
+.vs
+*.vcxproj.filters
 
 # Output
 out

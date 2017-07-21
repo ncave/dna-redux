@@ -18,7 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if WIN32
+#else
 #include <sys/time.h>
+#endif
 
 #include "Compat.h"
 #include "Sys.h"

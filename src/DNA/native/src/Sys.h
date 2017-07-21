@@ -34,13 +34,12 @@ void* mallocTrace(int s, char *pFile, int line);
 #define Assert(cond)
 #endif
 
-#define DEBUG_PRINT
 #ifdef DEBUG_PRINT
-#define dprintf(format, args...) printf(format, args)
-#define dprintfn(format, args...) printf(format "\n", args)
+#define dprintf(format, ...) printf(format, __VA_ARGS__)
+#define dprintfn(format, ...) printf(format "\n", __VA_ARGS__)
 #else
-#define dprintf(format, args...) 0
-#define dprintfn(format, args...) 0
+#define dprintf(format, ...) 0
+#define dprintfn(format, ...) 0
 #endif
 
 #define FAKE_RETURN exit(101)
