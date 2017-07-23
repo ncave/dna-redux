@@ -71,6 +71,10 @@ namespace System {
             return this.FullName;
         }
 
+        public virtual bool Equals (Type o) {
+            return Object.Equals(this, o);
+        }
+
         public virtual Type[] GenericTypeArguments {
             get {
                 if (IsGenericType && !IsGenericTypeDefinition) {

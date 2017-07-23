@@ -29,7 +29,7 @@
 U32 MetaData_CompareNameAndSig(STRING name, BLOB_ sigBlob, tMetaData *pSigMetaData, tMD_TypeDef **ppSigClassTypeArgs, tMD_TypeDef **ppSigMethodTypeArgs, tMD_MethodDef *pMethod, tMD_TypeDef **ppMethodClassTypeArgs, tMD_TypeDef **ppMethodMethodTypeArgs) {
 	if (strcmp(name, pMethod->name) == 0) {
 		SIG sig, thisSig;
-		U32 e, thisE, paramCount, i;
+		U32 e, thisE, paramCount, i, isGeneric;
 
 		sig = MetaData_GetBlob(sigBlob, NULL);
 		thisSig = MetaData_GetBlob(pMethod->signature, NULL);
@@ -42,7 +42,8 @@ U32 MetaData_CompareNameAndSig(STRING name, BLOB_ sigBlob, tMetaData *pSigMetaDa
 		}
 
 		// If method has generic arguments, check the generic type argument count
-		if (e & SIG_METHODDEF_GENERIC) {
+		isGeneric = e & SIG_METHODDEF_GENERIC;
+		if (isGeneric) {
 			e = MetaData_DecodeSigEntry(&sig);
 			thisE = MetaData_DecodeSigEntry(&thisSig);
 			// Generic argument count
@@ -79,15 +80,21 @@ static tMD_MethodDef* FindMethodInType(tMD_TypeDef *pTypeDef, STRING name, tMeta
 	U32 i;
 	tMD_TypeDef *pLookInType = pTypeDef;
 
-	// printf("Find method %s in type %s.%s\n", name, pTypeDef->nameSpace, pTypeDef->name);
+	// dprintfn("Find method %s in type %s.%s", name, pTypeDef->nameSpace, pTypeDef->name);
 
 	while (pLookInType != NULL) {
 		for (i=0; i<pLookInType->numMethods; i++) {
-			if (pLookInType->ppMethods[i] != NULL &&
-				MetaData_CompareNameAndSig(name, sigBlob, pSigMetaData, ppClassTypeArgs, ppMethodTypeArgs, pLookInType->ppMethods[i], pLookInType->ppClassTypeArgs, NULL)) {
-				return pLookInType->ppMethods[i];
+			tMD_MethodDef *pMethodDef = pLookInType->ppMethods[i];
+			if (MetaData_CompareNameAndSig(name, sigBlob, pSigMetaData, ppClassTypeArgs, ppMethodTypeArgs, pMethodDef, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs)) {
+				return pMethodDef;
 			}
 		}
+		//for (i = pLookInType->numVirtualMethods - 1; i != 0xffffffff; i--) {
+		//	tMD_MethodDef *pMethodDef = pLookInType->pVTable[i];
+		//	if (MetaData_CompareNameAndSig(name, sigBlob, pSigMetaData, ppClassTypeArgs, ppMethodTypeArgs, pMethodDef, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs)) {
+		//		return pMethodDef;
+		//	}
+		//}
 		pLookInType = pLookInType->pParent;
 	}
 

@@ -144,24 +144,18 @@ void MetaData_Fill_MethodDef(tMD_TypeDef *pParentType, tMD_MethodDef *pMethodDef
 // This must search the MethodImpl table to see if the default inheritence rules are being overridden.
 // Return NULL if this method does not override anything.
 tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_MethodDef *pMethodDef) {
-	U32 i;
-
 	do {
 		// Search MethodImpl table
-		for (i=pTypeDef->pMetaData->tables.numRows[MD_TABLE_METHODIMPL]; i>0; i--) {
-			tMD_MethodImpl *pMethodImpl;
-
-			pMethodImpl = (tMD_MethodImpl*)MetaData_GetTableRow(pTypeDef->pMetaData, MAKE_TABLE_INDEX(MD_TABLE_METHODIMPL, i));
+		U32 top = pTypeDef->pMetaData->tables.numRows[MD_TABLE_METHODIMPL];
+		for (U32 i=top; i>0; i--) {
+			tMD_MethodImpl *pMethodImpl = (tMD_MethodImpl*)MetaData_GetTableRow(pTypeDef->pMetaData, MAKE_TABLE_INDEX(MD_TABLE_METHODIMPL, i));
+			U32 cl = TABLE_OFS(pMethodImpl->class_);
+			U32 ti = TABLE_OFS(pTypeDef->tableIndex);
 			if (pMethodImpl->class_ == pTypeDef->tableIndex) {
-				tMD_MethodDef *pMethodDeclDef;
-
-				pMethodDeclDef = MetaData_GetMethodDefFromDefRefOrSpec(pTypeDef->pMetaData, pMethodImpl->methodDeclaration, pTypeDef->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
+				tMD_MethodDef *pMethodDeclDef = MetaData_GetMethodDefFromDefRefOrSpec(pTypeDef->pMetaData, pMethodImpl->methodDeclaration, pTypeDef->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
 				if (pMethodDeclDef->tableIndex == pMethodDef->tableIndex) {
-					IDX_TABLE methodToken;
-					tMD_MethodDef *pMethod;
-
-					methodToken = pMethodImpl->methodBody;
-					pMethod = (tMD_MethodDef*)MetaData_GetTableRow(pTypeDef->pMetaData, methodToken);
+					IDX_TABLE methodToken = pMethodImpl->methodBody;
+					tMD_MethodDef *pMethod = (tMD_MethodDef*)MetaData_GetTableRow(pTypeDef->pMetaData, methodToken);
 					return pMethod;
 				}
 			}
@@ -169,7 +163,7 @@ tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_MethodDef 
 
 		// Use normal inheritence rules
 		// It must be a virtual method that's being overridden.
-		for (i=pTypeDef->numVirtualMethods - 1; i != 0xffffffff; i--) {
+		for (U32 i=pTypeDef->numVirtualMethods - 1; i != 0xffffffff; i--) {
 			if (MetaData_CompareNameAndSig(pMethodDef->name, pMethodDef->signature, pMethodDef->pMetaData, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs, pTypeDef->pVTable[i], pTypeDef->ppClassTypeArgs, NULL)) {
 				return pTypeDef->pVTable[i];
 			}
@@ -241,8 +235,14 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 					tMD_MethodDef *pVirtualOveriddenMethod;
 
 					pVirtualOveriddenMethod = FindVirtualOverriddenMethod(pTypeDef->pParent, pMethodDef);
-					Assert(pVirtualOveriddenMethod != NULL);
-					pMethodDef->vTableOfs = pVirtualOveriddenMethod->vTableOfs;
+					if (pVirtualOveriddenMethod != NULL) {
+						//Assert(pVirtualOveriddenMethod != NULL);
+						pMethodDef->vTableOfs = pVirtualOveriddenMethod->vTableOfs;
+					}
+					else {
+						// perhaps virtual methods in abstract classes?
+						pMethodDef->vTableOfs = virtualOfs++;
+					}
 				}
 			} else {
 				// Dummy value - make it obvious it's not valid!

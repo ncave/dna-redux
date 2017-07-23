@@ -67,39 +67,27 @@ static tMD_GenericParam* FindGenericParam(tMD_TypeDef *pCoreType, U32 typeArgInd
 	tMD_GenericParam *pGenericParam = (tMD_GenericParam*)MetaData_GetTableRow(pCoreType->pMetaData, MAKE_TABLE_INDEX(MD_TABLE_GENERICPARAM, 1));
 	IDX_TABLE value = pCoreType->tableIndex;
 
+	// binary search in GenericParams table
 	int lo = 0;
 	int hi = rows - 1;
 	while (lo <= hi) {
 		int i = lo + ((hi - lo) >> 1);
-		if (pGenericParam[i].owner < value) { lo = i + 1; } 
-		else if (pGenericParam[i].owner > value) { hi = i - 1; }
+		if (pGenericParam[i].owner < value) { lo = i + 1; }
 		else {
-			tMD_GenericParam *p = pGenericParam;
-			while (pGenericParam[i].owner == value) {
-				if (pGenericParam[i].number < typeArgIndex) { ++i; }
-				else if (pGenericParam[i].number > typeArgIndex) { --i; }
-				else return (pGenericParam + i);
+			if (pGenericParam[i].owner > value) { hi = i - 1; }
+			else {
+				while (pGenericParam[i].owner == value) {
+					if (pGenericParam[i].number < typeArgIndex) { ++i; }
+					else {
+						if (pGenericParam[i].number > typeArgIndex) { --i; }
+						else { return (pGenericParam + i); }
+					}
+				}
 			}
 		}
 	}
 	return NULL;
 }
-
-// // TODO: This is not the most efficient way of doing this, as it has to search through all the
-// // entries in the GenericParams table for all lookups. This can be improved.
-// static tMD_GenericParam* FindGenericParam(tMD_TypeDef *pCoreType, U32 typeArgIndex) {
-// 	tMD_GenericParam *pGenericParam;
-// 	U32 i;
-
-// 	pGenericParam = (tMD_GenericParam*)MetaData_GetTableRow(pCoreType->pMetaData, MAKE_TABLE_INDEX(MD_TABLE_GENERICPARAM, 1));
-
-// 	for (i=0; i<pCoreType->pMetaData->tables.numRows[MD_TABLE_GENERICPARAM]; i++, pGenericParam++) {
-// 		if (pGenericParam->owner == pCoreType->tableIndex && pGenericParam->number == typeArgIndex) {
-// 			return pGenericParam;
-// 		}
-// 	}
-// 	return NULL;
-// }
 
 tMD_TypeDef* Generics_GetGenericTypeFromCoreType(tMD_TypeDef *pCoreType, U32 numTypeArgs, tMD_TypeDef **ppTypeArgs) {
 	tGenericInstance *pInst;
@@ -191,7 +179,10 @@ tMD_MethodDef* Generics_GetMethodDefFromSpec
 	U32 argCount, i;
 	tMD_TypeDef **ppTypeArgs;
 
-	pCoreMethod = MetaData_GetMethodDefFromDefRefOrSpec(pMethodSpec->pMetaData, pMethodSpec->method, NULL, NULL);//ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
+	pCoreMethod = MetaData_GetMethodDefFromDefRefOrSpec(pMethodSpec->pMetaData, pMethodSpec->method, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
+	if (pCoreMethod->pParentType == NULL) {
+		pCoreMethod->pParentType = MetaData_GetTypeDefFromMethodDef(pCoreMethod);
+	}
 
 	//ppClassTypeArgs = pCoreMethod->pParentType->ppClassTypeArgs;
 	sig = MetaData_GetBlob(pMethodSpec->instantiation, NULL);

@@ -12,7 +12,7 @@ namespace AppCS {
             Random rnd = new Random();
             var a = new int[N];
             for (int i = 0; i < N; ++i) { a[i] = rnd.Next(); }
-            Console.WriteLine("Sorting {0} integers", N);
+            Console.WriteLine("Sorting {0} numbers", N);
             Measure(() => { Array.Sort(a); });
         }
 

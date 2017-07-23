@@ -1432,7 +1432,8 @@ cilLeave:
 					break;
 
 				case CILX_LOADFUNCTION:
-					{
+				case CILX_LOADVIRTFN:
+				{
 						tMD_MethodDef *pFuncMethodDef;
 
 						u32Value = GetUnalignedU32(pCIL, &cilOfs);

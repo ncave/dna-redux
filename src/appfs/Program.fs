@@ -8,7 +8,8 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
-        let sum = run (+) 5 6
+        // let sum = run (+) 5 6
+        // let sum = [5;6;7] |> List.fold (+) 0
         // Console.WriteLine("sum = {0}", sum)
 
         // hello "World"
@@ -20,6 +21,6 @@ module Program =
         // Console.WriteLine("slowFib({0}) = {1}", n, slowFib n)
         // Console.WriteLine("memoizedFib({0}) = {1}", n, memoizedFib n)
         // // Console.WriteLine("fibSequence({0}) = {1}", n, fibSequence |> Seq.item n)
-        // // let colors = measure RayTrace.computeScene 100 100
+        let colors = measure RayTrace.computeScene 100 100
 
         0 // return an integer exit code
