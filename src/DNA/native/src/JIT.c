@@ -92,6 +92,7 @@ static U32 Translate(U32 op, U32 getDynamic) {
 #define PushFloat(v) convFloat.f=(float)(v); PushU32_(&ops, convFloat.u32)
 #define PushDouble(v) convDouble.d=(double)(v); PushU32_(&ops, convDouble.u32.a); PushU32_(&ops, convDouble.u32.b)
 #define PushPTR(ptr) PushU32_(&ops, (U32)(ptr))
+//#define PushOp(op) dprintfn("PushOp JIT OP: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op)); PushU32_(&ops, Translate((U32)(op), 0))
 #define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0))
 #define PushOpParam(op, param) PushOp(op); PushU32_(&ops, (U32)(param))
 #endif
@@ -296,6 +297,8 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 
 		op = pCIL[cilOfs++];
 		//printf("Opcode: 0x%02x\n", op);
+		// U32 op2 = (op == CIL_EXTENDED) ? 0x100 + pCIL[cilOfs] : op;
+		// dprintfn("opcode: 0x%02x (%s)", op2, Sys_CIL_OpCodeName(op2));
 
 		switch (op) {
 			case CIL_NOP:
@@ -548,7 +551,7 @@ cilLdInd:
 				{
 					tMD_MethodDef *pCallMethod;
 					tMD_TypeDef *pBoxCallType;
-					U32 derefRefType;
+					U32 derefRefType = 0;
 					U8 dynamicallyBoxReturnValue = 0;
 
 					u32Value2 = 0;
@@ -556,6 +559,7 @@ cilLdInd:
 cilCallVirtConstrained:
 					pBoxCallType = NULL;
 					derefRefType = 0;
+					dynamicallyBoxReturnValue = 0;
 
 					u32Value = GetUnalignedU32(pCIL, &cilOfs);
 					pCallMethod = MetaData_GetMethodDefFromDefRefOrSpec(pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
@@ -607,7 +611,7 @@ cilCallVirtConstrained:
 
 					// Pop stack type for each argument. Don't actually care what these are,
 					// except the last one which will be the 'this' object type of a non-static method
-					//printf("Call %s() - popping %d stack args\n", pCallMethod->name, pCallMethod->numberOfParameters);
+					// dprintfn("Call %s() - popping %d stack args", pCallMethod->name, pCallMethod->numberOfParameters);
 					for (i=0; i<pCallMethod->numberOfParameters; i++) {
 						pStackType = PopStackType();
 					}
@@ -1428,7 +1432,8 @@ cilLeave:
 					break;
 
 				case CILX_LOADFUNCTION:
-					{
+				case CILX_LOADVIRTFN:
+				{
 						tMD_MethodDef *pFuncMethodDef;
 
 						u32Value = GetUnalignedU32(pCIL, &cilOfs);

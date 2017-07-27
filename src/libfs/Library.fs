@@ -4,6 +4,13 @@ open System
 open System.Collections.Generic
 
 module Library =
+
+    let measure f x y =
+        let dtStart = DateTime.UtcNow
+        let res = f x y
+        let elapsed = DateTime.UtcNow - dtStart
+        res, elapsed.TotalSeconds
+
     let hello (name: string) =
         Console.WriteLine("Hello {0} from F#!", name)
         // printfn "Hello %s from F#!" name // this is still WIP (crashing)
@@ -16,7 +23,7 @@ module Library =
             sqr x
         )
 
-    let fastFib (n: int) : int =
+    let fastFib n =
       let sqrt5 = sqrt 5.0
       let a = (1.0 + sqrt5) / 2.0
       let b = (1.0 - sqrt5) / 2.0

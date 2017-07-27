@@ -7,10 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="RayTracer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <!--<ProjectReference Include="../FSharp.Core/FSharp.Core.fsproj" />-->
     <ProjectReference Include="../libfs/libfs.fsproj" />
   </ItemGroup>
 
