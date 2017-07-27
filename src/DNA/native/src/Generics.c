@@ -175,28 +175,22 @@ tMD_MethodDef* Generics_GetMethodDefFromSpec
 	(tMD_MethodSpec *pMethodSpec, tMD_TypeDef **ppCallingClassTypeArgs, tMD_TypeDef **ppCallingMethodTypeArgs) {
 
 	tMD_MethodDef *pCoreMethod, *pMethod;
-	SIG sig;
-	U32 argCount, i;
-	tMD_TypeDef **ppTypeArgs;
-
+	
 	pCoreMethod = MetaData_GetMethodDefFromDefRefOrSpec(pMethodSpec->pMetaData, pMethodSpec->method, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
 	if (pCoreMethod->pParentType == NULL) {
 		pCoreMethod->pParentType = MetaData_GetTypeDefFromMethodDef(pCoreMethod);
 	}
 
-	//ppClassTypeArgs = pCoreMethod->pParentType->ppClassTypeArgs;
-	sig = MetaData_GetBlob(pMethodSpec->instantiation, NULL);
+	SIG sig = MetaData_GetBlob(pMethodSpec->instantiation, NULL);
 	MetaData_DecodeSigEntry(&sig); // always 0x0a
-	argCount = MetaData_DecodeSigEntry(&sig);
-	ppTypeArgs = malloc(argCount * sizeof(tMD_TypeDef*));
-
-	for (i=0; i<argCount; i++) {
-		tMD_TypeDef *pArgType;
-
-		pArgType = Type_GetTypeFromSig(pMethodSpec->pMetaData, &sig, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
+	U32 argCount = MetaData_DecodeSigEntry(&sig);
+	tMD_TypeDef **ppTypeArgs = malloc(argCount * sizeof(tMD_TypeDef*));
+	for (U32 i = 0; i<argCount; i++) {
+		tMD_TypeDef *pArgType = Type_GetTypeFromSig(pMethodSpec->pMetaData, &sig, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
 		ppTypeArgs[i] = pArgType;
 	}
 
+	//ppClassTypeArgs = pCoreMethod->pParentType->ppClassTypeArgs;
 	pMethod = Generics_GetMethodDefFromCoreMethod(pCoreMethod, pCoreMethod->pParentType, argCount, ppTypeArgs);
 	free(ppTypeArgs);
 

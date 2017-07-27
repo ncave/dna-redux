@@ -460,7 +460,7 @@ U32 Type_IsMethod(tMD_MethodDef *pMethod, STRING name, tMD_TypeDef *pReturnType,
 
 	sig = MetaData_GetBlob(pMethod->signature, &sigLen);
 	i = MetaData_DecodeSigEntry(&sig); // Don't care about this
-	if (i & SIG_METHODDEF_GENERIC) {
+	if (i & SIG_CALLCONV_GENERIC) {
 		MetaData_DecodeSigEntry(&sig);
 	}
 	numSigParams = MetaData_DecodeSigEntry(&sig);
