@@ -9,8 +9,7 @@ module Library =
         let dtStart = DateTime.UtcNow
         let res = f x y
         let elapsed = DateTime.UtcNow - dtStart
-        Console.WriteLine("Elapsed {0:f3} sec", elapsed.TotalSeconds)
-        res
+        res, elapsed.TotalSeconds
 
     let hello (name: string) =
         Console.WriteLine("Hello {0} from F#!", name)
