@@ -107,6 +107,7 @@ static tInternalCall internalCalls[] = {
 	{NULL, NULL,   "EnsureAssemblyLoaded", System_Type_EnsureAssemblyLoaded, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_STRING}},
 	{NULL, NULL,   "GetMethodInternal", System_Type_GetMethod, TYPE_SYSTEM_OBJECT, 1, {TYPE_SYSTEM_STRING}},
 	{NULL, NULL,   "GetProperties", System_Type_GetProperties, TYPE_SYSTEM_ARRAY_NO_TYPE, 0},
+	{NULL, NULL,   "GetMethods", System_Type_GetMethods, TYPE_SYSTEM_ARRAY_NO_TYPE, 0},
 	{NULL, NULL,   "GetType", System_Type_GetTypeFromName, TYPE_SYSTEM_TYPE, 3, {TYPE_SYSTEM_STRING, TYPE_SYSTEM_STRING, TYPE_SYSTEM_STRING}},
 	{NULL, NULL,   "get_IsValueType", System_Type_get_IsValueType, TYPE_SYSTEM_BOOLEAN, 0},
 
@@ -145,10 +146,10 @@ static tInternalCall internalCalls[] = {
 	{NULL, NULL,   "Cos", System_Math_Cos, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
 	{NULL, NULL,   "Tan", System_Math_Tan, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
 	{NULL, NULL,   "Pow", System_Math_Pow, TYPE_SYSTEM_DOUBLE, 2, {TYPE_SYSTEM_DOUBLE, TYPE_SYSTEM_DOUBLE}},
-	{ NULL, NULL, "Sqrt", System_Math_Sqrt, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
-	{ NULL, NULL, "Ceiling", System_Math_Ceiling, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
-	{ NULL, NULL, "Floor", System_Math_Floor, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
-	{ NULL, NULL, "Round", System_Math_Round, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE } },
+	{NULL, NULL, "Sqrt", System_Math_Sqrt, TYPE_SYSTEM_DOUBLE, 1, { TYPE_SYSTEM_DOUBLE}},
+	{NULL, NULL, "Ceiling", System_Math_Ceiling, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
+	{NULL, NULL, "Floor", System_Math_Floor, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
+	{NULL, NULL, "Round", System_Math_Round, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
 
 	{"System.Threading", "Thread", ".ctor", System_Threading_Thread_ctor, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_THREADSTART}},
 	{NULL,               NULL,     ".ctor", System_Threading_Thread_ctorParam, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_PARAMETERIZEDTHREADSTART}},
@@ -171,6 +172,8 @@ static tInternalCall internalCalls[] = {
 	{NULL,        NULL,           "GetCurrentDirectory", System_IO_FileInternal_GetCurrentDirectory, TYPE_SYSTEM_STRING, 1, {TYPE_SYSTEM_INTPTR}},
 	{NULL,        NULL,           "GetFileAttributes", System_IO_FileInternal_GetFileAttributes, TYPE_SYSTEM_IO_FILESYSTEMATTRIBUTES, 2, {TYPE_SYSTEM_STRING, TYPE_SYSTEM_INTPTR}},
 	{NULL,        NULL,           "GetFileSystemEntries", System_IO_FileInternal_GetFileSystemEntries, TYPE_SYSTEM_ARRAY_STRING, 5, {TYPE_SYSTEM_STRING, TYPE_SYSTEM_STRING, TYPE_SYSTEM_IO_FILESYSTEMATTRIBUTES, TYPE_SYSTEM_IO_FILESYSTEMATTRIBUTES, TYPE_SYSTEM_INTPTR}},
+
+	{"System.Reflection", "MethodInfo", "MakeGenericMethod", System_Reflection_MethodInfo_MakeGenericMethod, TYPE_SYSTEM_REFLECTION_METHODINFO, 1, {TYPE_SYSTEM_ARRAY_TYPE}},
 
 	{"System.Runtime.CompilerServices", "RuntimeHelpers", "InitializeArray", System_Runtime_CompilerServices_InitializeArray, TYPE_SYSTEM_VOID, 2, {TYPE_SYSTEM_ARRAY_NO_TYPE, TYPE_SYSTEM_RUNTIMEFIELDHANDLE}},
 
@@ -222,6 +225,6 @@ fnInternalCall InternalCall_Map(tMD_MethodDef *pMethod) {
 		}
 
 	}
-	Crash("InternalCall_Map(): Cannot map [%s]%s.%s", pMethod->pParentType->nameSpace, pMethod->pParentType->name, pMethod->name);
+	Crash("InternalCall_Map(): Cannot map %s.%s.%s", pMethod->pParentType->nameSpace, pMethod->pParentType->name, pMethod->name);
 	FAKE_RETURN;
 }

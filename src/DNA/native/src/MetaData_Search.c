@@ -80,7 +80,7 @@ U32 MetaData_CompareNameAndSig(STRING name, BLOB_ sigBlob, tMetaData *pSigMetaDa
 
 tMD_MethodDef* FindMethodInType(tMD_TypeDef *pTypeDef, STRING name, tMetaData *pSigMetaData, BLOB_ sigBlob, tMD_TypeDef **ppClassTypeArgs, tMD_TypeDef **ppMethodTypeArgs) {
 
-	// dprintfn("Find method %s in type %s.%s", name, pTypeDef->nameSpace, pTypeDef->name);
+	//dprintfn("Find method %s in type %s.%s", name, pTypeDef->nameSpace, pTypeDef->name);
 
 	tMD_TypeDef *pLookInType = pTypeDef;
 	while (pLookInType != NULL) {
@@ -141,7 +141,7 @@ tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_MethodDef 
 	do {
 		// Search MethodImpl table
 		U32 top = pTypeDef->pMetaData->tables.numRows[MD_TABLE_METHODIMPL];
-		for (U32 i = top; i>0; i--) {
+		for (U32 i = top; i > 0; i--) {
 			tMD_MethodImpl *pMethodImpl = (tMD_MethodImpl*)MetaData_GetTableRow(pTypeDef->pMetaData, MAKE_TABLE_INDEX(MD_TABLE_METHODIMPL, i));
 			if (pMethodImpl->class_ == pTypeDef->tableIndex) {
 				tMD_MethodDef *pMethodDeclDef = MetaData_GetMethodDefFromDefRefOrSpec(pTypeDef->pMetaData, pMethodImpl->methodDeclaration, pTypeDef->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);

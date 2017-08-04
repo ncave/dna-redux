@@ -18,18 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if !defined(__SYSTEM_TYPE_H)
-#define __SYSTEM_TYPE_H
+#if !LOCALTEST
 
-#include "Types.h"
-#include "MetaData.h"
+namespace System.Reflection {
 
-tAsyncCall* System_Type_GetTypeFromHandle(PTR pThis_, PTR pParams, PTR pReturnValue);
-tAsyncCall* System_Type_get_IsValueType(PTR pThis_, PTR pParams, PTR pReturnValue);
-tAsyncCall* System_Type_GetTypeFromName(PTR pThis_, PTR pParams, PTR pReturnValue);
-tAsyncCall* System_Type_EnsureAssemblyLoaded(PTR pThis_, PTR pParams, PTR pReturnValue);
-tAsyncCall* System_Type_GetProperties(PTR pThis_, PTR pParams, PTR pReturnValue);
-tAsyncCall* System_Type_GetMethods(PTR pThis_, PTR pParams, PTR pReturnValue);
-tAsyncCall* System_Type_GetMethod(PTR pThis_, PTR pParams, PTR pReturnValue);
+	public class AmbiguousMatchException : SystemException {
+
+		public AmbiguousMatchException() : base("Ambiguous matching in method resolution.") { }
+
+		public AmbiguousMatchException(string message) : base(message) { }
+
+		public AmbiguousMatchException(string message, Exception inner) : base(message, inner) { }
+
+	}
+}
 
 #endif

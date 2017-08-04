@@ -20,6 +20,8 @@
 
 #define CIL_NOP			0x00
 
+#define CIL_BREAK		0x01
+
 #define CIL_LDARG_0		0x02
 #define CIL_LDARG_1		0x03
 #define CIL_LDARG_2		0x04
@@ -222,6 +224,9 @@
 #define CILX_CLT_UN		0x05
 #define CILX_LOADFUNCTION 0x06
 #define CILX_LOADVIRTFN 0x07
+
+#define CILX_LDLOC		0x0c
+#define CILX_STLOC		0x0e
 
 #define CILX_INITOBJ	0x15
 #define CILX_CONSTRAINED 0x16
