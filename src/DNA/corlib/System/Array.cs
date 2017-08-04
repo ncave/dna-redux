@@ -328,8 +328,7 @@ namespace System {
 			return output;
 		}
 
-		public static void Sort<T>(T[] array) where T: IComparable, IComparable<T>
-		{
+		public static void Sort<T>(T[] array) where T: IComparable, IComparable<T> {
 			Sort(array, 0, array.Length);
 		}
 
@@ -350,18 +349,15 @@ namespace System {
 			} while (gap > 1 || swapped);
 		}
 
-		public static void Sort<T>(T[] array, Comparison<T> comparison)
-		{
+		public static void Sort<T>(T[] array, Comparison<T> comparison) {
 			Sort(array, 0, array.Length, comparison);
 		}
 
-		public static void Sort<T>(T[] array, IComparer<T> comparer)
-		{
+		public static void Sort<T>(T[] array, IComparer<T> comparer) {
 			Sort(array, 0, array.Length, comparer ?? Comparer<T>.Default);
 		}
 
-		public static void Sort<T>(T[] array, int index, int count, Comparison<T> comparison)
-		{
+		public static void Sort<T>(T[] array, int index, int count, Comparison<T> comparison) {
 			Sort(array, index, count, Comparer<T>.Create(comparison));
 		}
 
@@ -382,13 +378,11 @@ namespace System {
 			} while (gap > 1 || swapped);
 		}
 
-		public static void Sort<TKey, TValue>(TKey[] keys, TValue[] items, IComparer<TKey> comparer)
-		{
+		public static void Sort<TKey, TValue>(TKey[] keys, TValue[] items, IComparer<TKey> comparer) {
 			Sort(keys, items, 0, keys.Length, comparer ?? Comparer<TKey>.Default);
 		}
 
-		public static void Sort<TKey, TValue>(TKey[] keys, TValue[] items, int index, int count, IComparer<TKey> comparer)
-		{
+		public static void Sort<TKey, TValue>(TKey[] keys, TValue[] items, int index, int count, IComparer<TKey> comparer) {
 			void swap<V>(V[] a, int i, int j) { V t = a[i]; a[i] = a[j]; a[j] = t; }
 			int gap = count;
 			bool swapped;
@@ -404,6 +398,10 @@ namespace System {
 					}
 				}
 			} while (gap > 1 || swapped);
+		}
+
+		public static T[] Empty<T>() {
+			return (T[])CreateInstance(typeof(T), 0);
 		}
 
 		[MethodImpl(MethodImplOptions.InternalCall)]

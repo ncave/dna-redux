@@ -1,11 +1,29 @@
 namespace AppCS {
     using System;
+    using System.Reflection;
+    using static LibCS.Library;
+
+    public class Example {
+        public void GenericInstanceMethod<T1, T2>(T1 t1, T2 t2) {
+            Console.WriteLine("The answer is: {0}{1}", t1, t2);
+        }
+    }
 
     static class Program {
+
         static void Main(string[] args) {
-            LibCS.Library.hello("World");
+            hello("World");
             NBody.Run(args);
             TestSort(50000);
+            TestGeneric();
+        }
+
+        static void TestGeneric() {
+            var example = new Example();
+            MethodInfo mi = example.GetType().GetMethod("GenericInstanceMethod");
+            MethodInfo miSpecialized = mi.MakeGenericMethod(typeof(int), typeof(string));
+            object[] args = { 4, "2" };
+            miSpecialized.Invoke(example, args);
         }
 
         static void TestSort(int N) {

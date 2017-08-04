@@ -183,6 +183,9 @@
     <ClInclude Include="System.Net.Dns.h" />
     <ClInclude Include="System.Net.Sockets.Socket.h" />
     <ClInclude Include="System.Object.h" />
+    <ClInclude Include="System.Reflection.MethodBase.h" />
+    <ClInclude Include="System.Reflection.MethodInfo.h" />
+    <ClInclude Include="System.Reflection.PropertyInfo.h" />
     <ClInclude Include="System.Runtime.CompilerServices.RuntimeHelpers.h" />
     <ClInclude Include="System.RuntimeType.h" />
     <ClInclude Include="System.String.h" />

@@ -41,23 +41,20 @@ void Generic_GetHeapRoots(tHeapRoots *pHeapRoots, tMD_TypeDef *pTypeDef) {
 
 tMD_TypeDef* Generics_GetGenericTypeFromSig
 	(tMetaData *pMetaData, SIG *pSig, tMD_TypeDef **ppCallingClassTypeArgs, tMD_TypeDef **ppCallingMethodTypeArgs) {
-	tMD_TypeDef *pCoreType, *pRet;
-	U32 numTypeArgs, i;
-	tMD_TypeDef **ppTypeArgs;
 
-	pCoreType = Type_GetTypeFromSig(pMetaData, pSig, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
-	MetaData_Fill_TypeDef(pCoreType, ppCallingClassTypeArgs, ppCallingMethodTypeArgs); //NULL, NULL);
+	tMD_TypeDef *pCoreType = Type_GetTypeFromSig(pMetaData, pSig, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
+	MetaData_Fill_TypeDef(pCoreType, NULL, NULL);
 
-	numTypeArgs = MetaData_DecodeSigEntry(pSig);
-	ppTypeArgs = (tMD_TypeDef**)malloc(numTypeArgs * sizeof(tMD_TypeDef*));
-	for (i=0; i<numTypeArgs; i++) {
+	U32 numTypeArgs = MetaData_DecodeSigEntry(pSig);
+	tMD_TypeDef **ppTypeArgs = (tMD_TypeDef**)malloc(numTypeArgs * sizeof(tMD_TypeDef*));
+	for (U32 i=0; i < numTypeArgs; i++) {
 		ppTypeArgs[i] = Type_GetTypeFromSig(pMetaData, pSig, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
 		if (ppTypeArgs[i] != NULL) {
 			MetaData_Fill_TypeDef(ppTypeArgs[i], NULL, NULL);
 		}
 	}
 
-	pRet = Generics_GetGenericTypeFromCoreType(pCoreType, numTypeArgs, ppTypeArgs);
+	tMD_TypeDef *pRet = Generics_GetGenericTypeFromCoreType(pCoreType, numTypeArgs, ppTypeArgs);
 	free(ppTypeArgs);
 	return pRet;
 }

@@ -26,7 +26,9 @@ namespace System {
 		public static readonly string TrueString = "True";
 		public static readonly string FalseString = "False";
 
+#pragma warning disable 0169, 0649
 		internal bool m_value;
+#pragma warning restore 0169, 0649
 
 		public override string ToString() {
 			return this.m_value ? TrueString : FalseString;

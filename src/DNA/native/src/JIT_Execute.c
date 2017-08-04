@@ -181,7 +181,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #else
 
-#define OPCODE_USE(op) // dprintfn("JIT op: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op))
+#define OPCODE_USE(op) //dprintfn("JIT op: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op))
 
 #endif
 
@@ -1142,30 +1142,22 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		pCurrentMethodState->pReflectionInvokeReturnType = pCallMethod->pReturnType;
 
 		// Get the 'this' pointer for the call and the params array
-		PTR invocationThis = *(PTR*)(*(tMethodBase**)(pCurEvalStack + sizeof(HEAP_PTR)));
-		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));		
+		PTR invocationThis = *(PTR*)(pCurEvalStack + sizeof(HEAP_PTR));
+		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));
 
 		// Put the new 'this' on the stack
 		PTR pPrevEvalStack = pCurEvalStack;
-		PUSH_PTR(invocationThis);
+		if (invocationThis != NULL) {
+			PUSH_PTR(invocationThis);
+		}
 
 		// Put any other params on the stack
 		if (invocationParamsArray != NULL) {
 			U32 invocationParamsArrayLength = SystemArray_GetLength(invocationParamsArray);
-			PTR invocationParamsArrayElements = SystemArray_GetElements(invocationParamsArray);
+			HEAP_PTR* invocationParamsArrayElements = (HEAP_PTR*)SystemArray_GetElements(invocationParamsArray);
 			for (U32 paramIndex = 0; paramIndex < invocationParamsArrayLength; paramIndex++) {
-				HEAP_PTR currentParam = *(HEAP_PTR*)((U32*)(invocationParamsArrayElements))[paramIndex];
-				if (currentParam == NULL) {
-					PUSH_O(NULL);
-				} else {
-					tMD_TypeDef *currentParamType = Heap_GetType(currentParam);
-
-					if (Type_IsValueType(currentParamType)) {
-						PUSH_VALUETYPE(currentParam, currentParamType->stackSize, currentParamType->stackSize);
-					} else {
-						PUSH_O(currentParam);
-					}
-				}
+				HEAP_PTR currentParam = invocationParamsArrayElements[paramIndex];
+				PUSH_O(currentParam);
 			}
 		}
 		pCurEvalStack = pPrevEvalStack;
@@ -1227,6 +1219,7 @@ allCallStart:
 		}
 
 		pCallMethod = (tMD_MethodDef*)GET_OP();
+		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 		heapPtr = NULL;
 
 		if (op == JIT_BOX_CALLVIRT) {
@@ -1253,38 +1246,36 @@ allCallStart:
 			}
 			pThisType = Heap_GetType(heapPtr);
 			if (METHOD_ISVIRTUAL(pCallMethod)) {
-				// old version: pCallMethod = pThisType->pVTable[pCallMethod->vTableOfs];
-				pCallMethod = FindVirtualOverriddenMethod(pThisType, pCallMethod);
+				pCallMethod = pThisType->pVTable[pCallMethod->vTableOfs];
+				//dprintfn("Calling virtual method: %s", pCallMethod->name);
 			}
 		} else if (op == JIT_CALL_INTERFACE) {
 			tMD_TypeDef *pInterface, *pThisType;
-			U32 vIndex;
-			I32 i;
-
 			pInterface = pCallMethod->pParentType;
 			// Get the actual object that is becoming 'this'
 			heapPtr = *(HEAP_PTR*)(pCurEvalStack - pCallMethod->parameterStackSize);
 			pThisType = Heap_GetType(heapPtr);
+
 			// Find the interface mapping on the 'this' type.
-			vIndex = 0xffffffff;
 			// This must be searched backwards so if an interface is implemented more than
 			// once in the type hierarchy, the most recent definition gets called
-			for (i=(I32)pThisType->numInterfaces-1; i >= 0; i--) {
+			for (I32 i=(I32)pThisType->numInterfaces-1; i >= 0; i--) {
 				if (pThisType->pInterfaceMaps[i].pInterface == pInterface) {
 					// Found the right interface map
 					if (pThisType->pInterfaceMaps[i].pVTableLookup != NULL) {
-						vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
-						break;
+						U32 vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
+						pCallMethod = pThisType->pVTable[vIndex];
+					} else {
+						pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
 					}
-					pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
+					//dprintfn("Calling interface method: %s", pCallMethod->name);
 					goto callMethodSet;
 				}
 			}
-			Assert(vIndex != 0xffffffff);
-			pCallMethod = pThisType->pVTable[vIndex];
+			Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
+			//dprintfn("Calling interface method: %s", pCallMethod->name);
 		}
 callMethodSet:
-		// dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 		// Set up the new method state for the called method
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
 		// Set up the parameter stack for the method being called
@@ -3277,6 +3268,7 @@ finallyUnwindStack:
 		// Set the IP to the catch handler
 		pCurrentMethodState->ipOffset = pThread->pCatchExceptionHandler->handlerStart;
 		// Set the current method state
+		pThread->pCurrentMethodState = pCurrentMethodState;
 		LOAD_METHOD_STATE();
 		// Push onto this stack-frame's evaluation stack the opject thrown
 		POP_ALL();

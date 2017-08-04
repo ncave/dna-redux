@@ -129,6 +129,9 @@ namespace System {
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern public PropertyInfo[] GetProperties();
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        extern public MethodInfo[] GetMethods();
+
         public MethodInfo GetMethod(string name) {
             return (MethodInfo)GetMethodInternal(name);
         }

@@ -56,6 +56,7 @@ static STRING assembliesMappedToDnaCorlib[] = {
 	"System.Reflection",
 	"System.Reflection.Extensions",
 	"System.Reflection.Primitives",
+	"System.Reflection.TypeExtensions",
 	"System.Runtime",
 	"System.Runtime.Extensions",
 	"System.Runtime.InteropServices",
