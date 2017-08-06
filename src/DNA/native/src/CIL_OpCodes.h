@@ -228,6 +228,7 @@
 #define CILX_LDLOC		0x0c
 #define CILX_STLOC		0x0e
 
+#define CILX_TAIL		0x14
 #define CILX_INITOBJ	0x15
 #define CILX_CONSTRAINED 0x16
 

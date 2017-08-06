@@ -15,7 +15,7 @@ for %%s in (
     dotnet restore %%s
     if ERRORLEVEL 1 goto :fail
 
-    dotnet build %%s
+    dotnet build %%s -c Release
     if ERRORLEVEL 1 goto :fail
 )
 

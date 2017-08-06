@@ -31,7 +31,9 @@ namespace System {
 		public const double NegativeInfinity = -1.0d / 0.0d;
 		public const double PositiveInfinity = 1.0d / 0.0d;
 
+#pragma warning disable 0169, 0649
 		internal double m_value;
+#pragma warning restore 0169, 0649
 
 		public static bool IsNaN(double d) {
 #pragma warning disable 1718
@@ -61,9 +63,9 @@ namespace System {
 			return ((double)o) == this.m_value;
 		}
 
-		public override unsafe int GetHashCode() {
+		public override int GetHashCode() {
 			double d = m_value;
-			return (*((long*)&d)).GetHashCode();
+			return BitConverter.DoubleToInt64Bits(d).GetHashCode();
 		}
 
 		public override string ToString() {
