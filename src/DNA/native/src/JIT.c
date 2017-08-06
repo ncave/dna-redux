@@ -718,17 +718,21 @@ cilBr:
 			case CIL_BRFALSE_S:
 			case CIL_BRTRUE_S:
 				u32Value = (I8)pCIL[cilOfs++];
-				u32Value2 = JIT_BRANCH_FALSE + (op - CIL_BRFALSE_S);
+				u32Value2 = (op - CIL_BRFALSE_S);
 				goto cilBrFalseTrue;
 
 			case CIL_BRFALSE:
 			case CIL_BRTRUE:
 				u32Value = GetUnalignedU32(pCIL, &cilOfs);
-				u32Value2 = JIT_BRANCH_FALSE + (op - CIL_BRFALSE);
+				u32Value2 = (op - CIL_BRFALSE);
 cilBrFalseTrue:
-				PopStackTypeDontCare(); // Don't care what it is
+				pStackType = PopStackType();
+				if (pStackType->stackSize > 8) {
+					Crash("JITit(): Cannot perform branch operation on type: %s", pStackType->name);
+				}
 				// Put a temporary CIL offset value into the JITted code. This will be updated later
 				u32Value = cilOfs + (I32)u32Value;
+				u32Value2 = (pStackType->stackSize == 4 ? JIT_BRANCH_FALSE : JIT_BRANCH64_FALSE) + u32Value2;
 				MayCopyTypeStack();
 				PushOp(u32Value2);
 				PushBranch();
@@ -766,8 +770,7 @@ cilBrCond:
 				pTypeA = PopStackType();
 				u32Value = cilOfs + (I32)u32Value;
 				MayCopyTypeStack();
-				if ((pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32) ||
-					(pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O)) {
+				if (pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32) {
 					PushOp(JIT_BEQ_I32I32 + (op - u32Value2));
 				} else if (pTypeA->stackType == EVALSTACK_INT64 && pTypeB->stackType == EVALSTACK_INT64) {
 					PushOp(JIT_BEQ_I64I64 + (op - u32Value2));
@@ -775,6 +778,10 @@ cilBrCond:
 					PushOp(JIT_BEQ_F32F32 + (op - u32Value2));
 				} else if (pTypeA->stackType == EVALSTACK_F64 && pTypeB->stackType == EVALSTACK_F64) {
 					PushOp(JIT_BEQ_F64F64 + (op - u32Value2));
+				} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
+					//pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_INT32 ||
+					//pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_O) {
+					PushOp(JIT_BEQ_I32I32 + (op - u32Value2));
 				} else {
 					Crash("JITit(): Cannot perform conditional branch on stack types: %d and %d", pTypeA->stackType, pTypeB->stackType);
 				}
@@ -804,21 +811,24 @@ cilBrCond:
 cilBinaryArithOp:
 				pTypeB = PopStackType();
 				pTypeA = PopStackType();
-				if (pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32) {
+				if ((pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32)) {
 					PushOp(JIT_ADD_I32I32 + (op - CIL_ADD) - u32Value);
-					PushStackType(types[TYPE_SYSTEM_INT32]);
 				} else if (pTypeA->stackType == EVALSTACK_INT64 && pTypeB->stackType == EVALSTACK_INT64) {
 					PushOp(JIT_ADD_I64I64 + (op - CIL_ADD) - u32Value);
-					PushStackType(types[TYPE_SYSTEM_INT64]);
 				} else if (pTypeA->stackType == EVALSTACK_F32 && pTypeB->stackType == EVALSTACK_F32) {
 					PushOp(JIT_ADD_F32F32 + (op - CIL_ADD) - u32Value);
-					PushStackType(pTypeA);
 				} else if (pTypeA->stackType == EVALSTACK_F64 && pTypeB->stackType == EVALSTACK_F64) {
 					PushOp(JIT_ADD_F64F64 + (op - CIL_ADD) - u32Value);
-					PushStackType(pTypeA);
+				} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
+					//pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_INT32 ||
+					//pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_O) {
+					PushOp(JIT_ADD_I32I32 + (op - CIL_ADD) - u32Value);
+				} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_INT32 && (op == CIL_ADD || op == CIL_SUB)) {
+					PushOp((sizeof(void*) == 4 ? JIT_ADD_I32I32 : JIT_ADD_I64I64) + (op - CIL_ADD));
 				} else {
 					Crash("JITit(): Cannot perform binary numeric operand on stack types: %d and %d", pTypeA->stackType, pTypeB->stackType);
 				}
+				PushStackType(pTypeA);
 				break;
 
 			case CIL_NEG:
@@ -1460,10 +1470,7 @@ cilLeave:
 				case CILX_CLT_UN:
 					pTypeB = PopStackType();
 					pTypeA = PopStackType();
-					if ((pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32) ||
-						(pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) ||
-						// Next line: only on 32-bit
-						(pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_PTR)) {
+					if (pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32) {
 						PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
 					} else if (pTypeA->stackType == EVALSTACK_INT64 && pTypeB->stackType == EVALSTACK_INT64) {
 						PushOp(JIT_CEQ_I64I64 + (op - CILX_CEQ));
@@ -1471,6 +1478,10 @@ cilLeave:
 						PushOp(JIT_CEQ_F32F32 + (op - CILX_CEQ));
 					} else if (pTypeA->stackType == EVALSTACK_F64 && pTypeB->stackType == EVALSTACK_F64) {
 						PushOp(JIT_CEQ_F64F64 + (op - CILX_CEQ));
+					} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
+						PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
+					} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_PTR) {
+						PushOp((sizeof(void*) == 4 ? JIT_CEQ_I32I32 : JIT_CEQ_I64I64) + (op - CILX_CEQ));
 					} else {
 						Crash("JITit(): Cannot perform comparison operand on stack types: %s and %s", pTypeA->name, pTypeB->name);
 					}
@@ -1496,6 +1507,10 @@ cilLeave:
 
 				case CILX_READONLY:
 					// Do nothing
+					break;
+
+				case CILX_TAIL:
+					// Do nothing. TODO: implement
 					break;
 
 				default:

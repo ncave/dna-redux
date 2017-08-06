@@ -63,7 +63,7 @@ tJITCodeInfo jitCodeGoNext;
 // Push a double value on the top of the stack
 #define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8)
 // Push a 4-byte heap pointer on to the top of the stack
-#define PUSH_O(pHeap) *(void**)pCurEvalStack = (void*)(pHeap); PUSH(sizeof(void*))
+#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(4)
 // DUP4() duplicates the top 4 bytes on the eval stack
 #define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); PUSH(4)
 // DUP8() duplicates the top 4 bytes on the eval stack
@@ -485,6 +485,8 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 
 		GET_LABELS(JIT_BRANCH_FALSE);
 		GET_LABELS(JIT_BRANCH_TRUE);
+		GET_LABELS(JIT_BRANCH64_FALSE);
+		GET_LABELS(JIT_BRANCH64_TRUE);
 		GET_LABELS(JIT_LOADTOKEN_TYPE);
 		
 		GET_LABELS(JIT_LOADTOKEN_FIELD);
@@ -1343,6 +1345,30 @@ JIT_BRANCH_FALSE_start:
 		}
 	}
 JIT_BRANCH_FALSE_end:
+	GO_NEXT_CHECK();
+
+JIT_BRANCH64_TRUE_start:
+	OPCODE_USE(JIT_BRANCH64_TRUE);
+	{
+		U64 value = POP_U64();
+		U32 ofs = GET_OP();
+		if (value != 0) {
+			pCurOp = pOps + ofs;
+		}
+	}
+JIT_BRANCH64_TRUE_end:
+	GO_NEXT_CHECK();
+
+JIT_BRANCH64_FALSE_start:
+	OPCODE_USE(JIT_BRANCH64_FALSE);
+	{
+		U64 value = POP_U64();
+		U32 ofs = GET_OP();
+		if (value == 0) {
+			pCurOp = pOps + ofs;
+		}
+	}
+JIT_BRANCH64_FALSE_end:
 	GO_NEXT_CHECK();
 
 JIT_BEQ_I32I32_start:

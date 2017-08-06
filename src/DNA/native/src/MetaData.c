@@ -176,7 +176,7 @@ static char* tableDefs[] = {
 	// 0x0F
 	"ssxsi*\x02*",
 	// 0x10
-	NULL,
+	"i*\x04*",
 	// 0x11
 	"B*",
 	// 0x12
