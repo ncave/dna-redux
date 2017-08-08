@@ -65,7 +65,26 @@ struct tTables_ {
 };
 
 typedef struct tMetaData_ tMetaData;
+typedef struct tDebugMetaData_ tDebugMetaData;
+typedef struct tDebugMetaDataEntry_ tDebugMetaDataEntry;
+
+struct tDebugMetaDataEntry_ {
+    char* pModuleName;
+    char* pNamespaceName;
+    char* pClassName;
+    char* pMethodName;
+    char* pID;
+    int sequencePointsCount;
+    int sequencePoints[100];
+    tDebugMetaDataEntry* next;
+};
+
+struct tDebugMetaData_ {
+    tDebugMetaDataEntry* entries;
+};
+
 struct tMetaData_ {
+    tDebugMetaData* debugMetadata;
 	tMetaDataStrings strings;
 	tMetaDataBlobs blobs;
 	tMetaDataUserStrings userStrings;
@@ -157,6 +176,7 @@ struct tInterfaceMap_ {
 // static functions
 void MetaData_Init();
 unsigned int MetaData_DecodeSigEntry(SIG *pSig);
+unsigned int MetaData_DecodeSigEntryExt(SIG *pSig, int coerceFFToZero);
 IDX_TABLE MetaData_DecodeSigEntryToken(SIG *pSig);
 unsigned int MetaData_DecodeHeapEntryLength(unsigned char **ppHeapEntry);
 

@@ -49,6 +49,7 @@
 #include "System.Math.h"
 #include "System.Reflection.MethodInfo.h"
 #include "Delegate.h"
+#include "Reflection.h"
 
 #include "JSInterop.h"
 
@@ -150,6 +151,8 @@ static tInternalCall internalCalls[] = {
 	{NULL, NULL, "Ceiling", System_Math_Ceiling, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
 	{NULL, NULL, "Floor", System_Math_Floor, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
 	{NULL, NULL, "Round", System_Math_Round, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
+
+	{"System.Reflection", "MemberInfo", "GetCustomAttributes", Reflection_MemberInfo_GetCustomAttributes, TYPE_SYSTEM_ARRAY_NO_TYPE, 0},
 
 	{"System.Threading", "Thread", ".ctor", System_Threading_Thread_ctor, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_THREADSTART}},
 	{NULL,               NULL,     ".ctor", System_Threading_Thread_ctorParam, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_PARAMETERIZEDTHREADSTART}},

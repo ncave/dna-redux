@@ -6,13 +6,12 @@ set sourceFiles=
 for /f "delims=" %%a in ('dir /b src\*.c') do set sourceFiles=!sourceFiles! src\%%a
 
 set emccOptions=%sourceFiles% ^
-	-DJS_INTEROP ^
 	-Wno-pointer-sign ^
 	-Oz ^
 	-s NO_EXIT_RUNTIME=1 ^
 	-s RESERVED_FUNCTION_POINTERS=20 ^
 	-s ASSERTIONS=1 ^
-	-s EXPORTED_FUNCTIONS="['_main', '_JSInterop_CallDotNet']" ^
+	-s EXPORTED_FUNCTIONS="['_main', '_JSInterop_CallDotNet', '_Debugger_Continue', '_Debugger_SetBreakPoint', '_Debugger_Step', '_Debugger_Reset', '_Debugger_Clear_BreakPoints']" ^
 	-s WASM=1 ^
 	-s MODULARIZE=1 ^
 	-s EXPORT_NAME='ModuleFunc' ^

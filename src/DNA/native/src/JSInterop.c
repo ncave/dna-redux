@@ -13,6 +13,8 @@ int JSInterop_CallDotNet(char* assemblyName, char* namespace, char* className, c
 	// TODO: Can't we reuse threads? Need to reset their state somehow.
 	tThread *pThread = Thread();
 
+    log_f(1, "JSInterop_CallDotNet(%s, %s, %s, %s, %s)\n", assemblyName, namespace, className, methodName, stringArg);
+
 	HEAP_PTR arg = SystemString_FromCharPtrASCII(stringArg);
 	Heap_MakeUndeletable(arg);
 
@@ -42,7 +44,7 @@ int JSInterop_CallDotNet(char* assemblyName, char* namespace, char* className, c
 
 tAsyncCall* Framework_JSInterop_ToHeapRef(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	HEAP_PTR obj = ((HEAP_PTR*)pParams)[0];
-	*(U32*)pReturnValue = *(U32*)obj;
+	*(HEAP_PTR*)pReturnValue = obj;
 	return NULL;
 }
 

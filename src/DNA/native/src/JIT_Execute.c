@@ -36,6 +36,7 @@
 #include "System.String.h"
 #include "System.Array.h"
 #include "System.Reflection.MethodBase.h"
+#include "System.Diagnostics.Debugger.h"
 
 // Global array which stores the absolute addresses of the start and end of all JIT code
 // fragment machine code.
@@ -116,7 +117,8 @@ tJITCodeInfo jitCodeGoNext;
 	pCurEvalStack = pCurrentMethodState->pEvalStack + pCurrentMethodState->stackOfs; \
 	pJIT = pCurrentMethodState->pJIT; \
 	pOps = pJIT->pOps; \
-	pCurOp = pOps + pCurrentMethodState->ipOffset; \
+	pOpSequencePoints = pJIT->pOpSequencePoints; \
+	pCurOp = pOps + pCurrentMethodState->ipOffset;
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \
 	SAVE_METHOD_STATE(); \
@@ -128,6 +130,16 @@ tJITCodeInfo jitCodeGoNext;
 #define PARAMLOCAL_U64(offset) *(U64*)(pParamsLocals + offset)
 
 #define THROW(exType) heapPtr = Heap_AllocType(exType); goto throwHeapPtr
+
+static void CheckIfCurrentInstructionHasBreakpoint(tMethodState* pMethodState, U32 opOffset, I32* pOpSequencePoints)
+{
+	if (pOpSequencePoints != NULL) {
+		I32 currentOpSequencePoint = pOpSequencePoints[opOffset];
+		if (currentOpSequencePoint >= 0) {
+			CheckIfSequencePointIsBreakpoint(pMethodState, currentOpSequencePoint);
+		}
+	}
+}
 
 // Note: newObj is only set if a constructor is being called
 static void CreateParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR *ppCurEvalStack, HEAP_PTR newObj) {
@@ -185,20 +197,26 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #endif
 
+#define CHECK_FOR_BREAKPOINT() \
+	CheckIfCurrentInstructionHasBreakpoint(pCurrentMethodState, pCurOp - pOps, pOpSequencePoints);
+
 #ifdef __GNUC__
 
 #define GET_LABEL(var, label) var = &&label
 
-#define GO_NEXT() goto **(void**)(pCurOp++)
+#define GO_NEXT() \
+	CHECK_FOR_BREAKPOINT(); \
+	goto **(void**)(pCurOp++)
 
 #else
-#ifdef WIN32
+#ifdef _WIN32
 
 #define GET_LABEL(var, label) \
 	{ __asm mov edi, label \
 	__asm mov var, edi }
 
 #define GO_NEXT() \
+	CHECK_FOR_BREAKPOINT(); \
 	{ __asm mov edi, pCurOp \
 	__asm add edi, 4 \
 	__asm mov pCurOp, edi \
@@ -235,6 +253,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 	// Local copies of thread state variables, to speed up execution
 	// Pointer to next op-code
 	U32 *pOps;
+	I32 *pOpSequencePoints;
 	register U32 *pCurOp;
 	// Pointer to eval-stack position
 	register PTR pCurEvalStack;
