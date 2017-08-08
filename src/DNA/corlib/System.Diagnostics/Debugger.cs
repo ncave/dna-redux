@@ -28,6 +28,10 @@ namespace System.Diagnostics {
 		extern public static void Break();
 
 		public static bool Launch() { Break(); return false; }
+
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern private static void Internal_BreakPoint(int method, int offset);
+
 	}
 }
 

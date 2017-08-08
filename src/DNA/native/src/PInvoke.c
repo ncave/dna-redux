@@ -18,11 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if WIN32
-#else
-#include <dlfcn.h>
-#endif
-
 #include "Compat.h"
 #include "Sys.h"
 
@@ -66,7 +61,7 @@ static tLoadedLib* GetLib(STRING name) {
 	}
 	// Not loaded, so load it
 	sprintf(strchr(libName, 0), ".%s", LIB_SUFFIX);
-#if WIN32
+#if _WIN32
 	pNativeLib = LoadLibraryA(libName);
 #else
 	pNativeLib = dlopen(libName, RTLD_LAZY); //DL_LAZY);
@@ -74,7 +69,7 @@ static tLoadedLib* GetLib(STRING name) {
 	if (pNativeLib == NULL) {
 		// Failed to load library
 		printf("Failed to load library: %s\n", libName);
-#ifndef WIN32
+#ifndef _WIN32
 		{
 			char *pError;
 			pError = dlerror();
@@ -93,26 +88,27 @@ static tLoadedLib* GetLib(STRING name) {
 	return pLib;
 }
 
-extern char* invokeJsFunc(STRING libName, STRING funcName, STRING arg0);
-
 fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap) {
-	STRING libName = MetaData_GetModuleRefName(pMetaData, pImplMap->importScope);
-#if JS_INTEROP
+	tLoadedLib *pLib;
+	STRING libName;
+	void *pProc;
+
+	libName = MetaData_GetModuleRefName(pMetaData, pImplMap->importScope);
+
+#ifndef _WIN32
 	return (fnPInvoke)invokeJsFunc;
-#else
-	tLoadedLib *pLib = GetLib(libName);
+#else 
+	
+	pLib = GetLib(libName);
 	if (pLib == NULL) {
 		// Library not found, so we can't find the function
 		return NULL;
 	}
 
-#if WIN32
-	void *pProc = GetProcAddress(pLib->pLib, pImplMap->importName);
-#else
-	void *pProc = dlsym(pLib->pLib, pImplMap->importName);
+	pProc = GetProcAddress(pLib->pLib, pImplMap->importName);
 #endif
 	return pProc;
-#endif
+
 }
 
 static void* ConvertStringToANSI(HEAP_PTR pHeapEntry) {

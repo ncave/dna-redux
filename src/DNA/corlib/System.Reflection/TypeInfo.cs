@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
 
 namespace System.Reflection {
+
     public class TypeInfo {
+
         private readonly Type _type;
 
-        internal TypeInfo(Type type) {
+        internal TypeInfo(Type type)
+        {
             _type = type;
         }
 

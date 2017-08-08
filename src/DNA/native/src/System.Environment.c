@@ -42,7 +42,7 @@ tAsyncCall* System_Environment_GetOSVersionString(PTR pThis_, PTR pParams, PTR p
 	static HEAP_PTR versionString = NULL;
 	if (versionString == NULL) {
 		char ver[64];
-#ifdef WIN32
+#ifdef _WIN32
 		OSVERSIONINFO osVer;
 		osVer.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 		GetVersionEx(&osVer);
@@ -58,7 +58,7 @@ tAsyncCall* System_Environment_GetOSVersionString(PTR pThis_, PTR pParams, PTR p
 }
 
 tAsyncCall* System_Environment_get_Platform(PTR pThis_, PTR pParams, PTR pReturnValue) {
-#ifdef WIN32
+#ifdef _WIN32
 	OSVERSIONINFO osVer;
 	osVer.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	GetVersionEx(&osVer);

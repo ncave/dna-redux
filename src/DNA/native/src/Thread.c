@@ -27,12 +27,29 @@
 #include "Heap.h"
 #include "Type.h"
 
+int releaseBreakPoint = 0;
+int waitingOnBreakPoint = 0;
+int alwaysBreak = 0;
+
 static tThread *pAllThreads = NULL;
 static tThread *pCurrentThread;
+
+U32 Internal_Debugger_Resume_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAsyncCall *pAsync) {
+    if (releaseBreakPoint) {
+        log_f(1, "Resetting breakpoint state.\n");
+
+        releaseBreakPoint = 0;
+        waitingOnBreakPoint = 0;
+        return 1;
+    }
+    return 0;
+}
+
 
 tThread* Thread() {
 	static U32 threadID = 0;
 	tThread *pThis;
+    tThread *pThread;
 
 	// Create thread and initial method state. This is allocated on the managed heap, and
 	// mark as undeletable. When the thread exits, it was marked as deletable.
@@ -54,9 +71,25 @@ tThread* Thread() {
 	pThis->pThreadStack->ofs = 0;
 	pThis->pThreadStack->pNext = NULL;
 
+    pThread = pAllThreads;
+
+    log_f(1, "Creating thread %d.\n", (int)pThis->threadID);
+
+    // FIFO
+    /*if (pThread == NULL) {
+        pAllThreads = pThis;
+    }
+    else {
+        while (pThread->pNextThread != NULL) {
+            pThread = pThread->pNextThread;
+        }
+        pThread->pNextThread = pThis;
+    }*/
+
+    // LIFO
 	// Add to list of all thread
-	pThis->pNextThread = pAllThreads;
-	pAllThreads = pThis;
+	 pThis->pNextThread = pAllThreads;
+	 pAllThreads = pThis;
 
 	return pThis;
 }
@@ -123,11 +156,13 @@ I32 Thread_Execute() {
 		U32 minSleepTime = 0xffffffff;
 		I32 threadExitValue;
 
-		status = JIT_Execute(pThread, 100);
+        log_f(1, "Executing thread %d.\n", (int)pThread->threadID);
+        status = JIT_Execute(pThread, 100);
+
 		switch (status) {
 		case THREAD_STATUS_EXIT:
 			threadExitValue = pThread->threadExitValue;
-			log_f(1, "Thread ID#%d exited. Return value: %d\n", (int)pThread->threadID, (int)threadExitValue);
+			log_f(1, "Thread ID#:%d exited. Return value: %d\n", (int)pThread->threadID, (int)threadExitValue);
 			// Remove the current thread from the running threads list.
 			// Note that this list may have changed since before the call to JIT_Execute().
 			{
@@ -160,6 +195,7 @@ I32 Thread_Execute() {
 					pThread = pThread->pNextThread;
 				}
 				if (canExit) {
+                    log_f(1, "No more threads to run. Quitting.\n");
 					return threadExitValue;
 				}
 			}
@@ -203,7 +239,27 @@ I32 Thread_Execute() {
 					if ((U32)msSleepRemaining < minSleepTime) {
 						minSleepTime = msSleepRemaining;
 					}
-				} else {
+				}
+                else if (pThread->pAsync->checkFn == Internal_Debugger_Resume_Check) {
+                    U32 unblocked;
+
+                    // Forced debugger break
+                    unblocked = pAsync->checkFn(NULL, NULL, NULL, pAsync);
+                    if (unblocked) {
+                        // The IO has unblocked, and the return value is ready.
+                        // So delete the async object.
+                        // TODO: The async->state object needs to be deleted somehow (maybe)
+                        free(pAsync);
+                        // And remove it from the thread
+                        pThread->pAsync = NULL;
+                        break;
+                    }
+
+                    log_f(1, "Thread ID#%d is blocked on the debugger. Exiting the loop.\n", (int)pThread->threadID);
+
+                    return 0;
+                }
+                else {
 					// This is blocking IO, or a lock
 					tMethodState *pMethodState = pThread->pCurrentMethodState;
 					PTR pThis;
@@ -234,9 +290,13 @@ I32 Thread_Execute() {
 				break;
 			}
 			if (pThread == pPrevThread) {
+                log_f(1, "All threads blocked exiting exec loop.\n");
 				// When it gets here, it means that all threads are currently blocked.
-				//printf("All blocked; sleep(%d)\n", minSleepTime);
-				SleepMS(minSleepTime);
+				// printf("All blocked; sleep(%d)\n", minSleepTime);
+                // Execution needs to unwind if everything is blocked in javascript or it will
+                // hang the browser's main thread, we need to schedule a call back into this method at a later time
+                return minSleepTime;
+				// SleepMS(minSleepTime);
 			}
 		}
 	}

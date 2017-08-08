@@ -25,6 +25,7 @@ using System.Reflection;
 using System.Collections.Generic;
 
 namespace System {
+#pragma warning disable 0660, 0661
     public abstract class Type : MemberInfo {
 
         private static IDictionary<string, Type> typesByNameCache = new Dictionary<string, Type>();
@@ -144,7 +145,18 @@ namespace System {
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern private object GetMethodInternal(string name);
+
+        public static bool operator ==(Type t1, Type t2)
+        {
+            return t1?.FullName.Equals(t2?.FullName) == true;
+        }
+
+        public static bool operator !=(Type t1, Type t2)
+        {
+            return t1?.FullName.Equals(t2?.FullName) == false;
+        }
     }
+#pragma warning restore 0660, 0661
 }
 
 #endif
