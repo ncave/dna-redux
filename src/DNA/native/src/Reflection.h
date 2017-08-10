@@ -1,5 +1,5 @@
 #if !defined(__REFLECTION_H)
-#define __REFLECTION
+#define __REFLECTION_H
 
 #include "Types.h"
 

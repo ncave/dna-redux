@@ -9,9 +9,11 @@ module Program =
 
         hello "World" // using Console.Write
 
+        Console.WriteLine("GC.CollectionCount={0}, TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
         let x,y = 100,100
         let colors, elapsed = measure RayTrace.computeScene x y
         Console.WriteLine("RayTrace({0},{1}) = {2:f3} sec (to compute)", x, y, elapsed)
+        Console.WriteLine("GC.CollectionCount={0}, TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
 
         let n = 30;
         let sum = [1..n] |> List.fold (+) 0
@@ -24,5 +26,7 @@ module Program =
 
         // printfn works!!!
         printfn "Hello from %s %s %d" "Deep" "Space" 9
+
+        Console.WriteLine("GC.CollectionCount={0}, TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
 
         0 // return an integer exit code
