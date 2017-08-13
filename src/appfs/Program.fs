@@ -6,27 +6,32 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
+        let cw (fmt: string) f x =
+            let result, elapsed = measure f x
+            Console.Write(fmt, x, result)
+            Console.WriteLine(", elapsed: {0:f3} sec", elapsed)
+
+        GC.Collect()
+        Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
 
         hello "World" // using Console.Write
 
-        Console.WriteLine("GC.CollectionCount={0}, TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
-        let x,y = 100,100
-        let colors, elapsed = measure RayTrace.computeScene x y
-        Console.WriteLine("RayTrace({0},{1}) = {2:f3} sec (to compute)", x, y, elapsed)
-        Console.WriteLine("GC.CollectionCount={0}, TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
-
         let n = 30;
-        let sum = [1..n] |> List.fold (+) 0
-        Console.WriteLine("sum(1..{0}) = {1}", n, sum)
-        Console.WriteLine("sqr({0}) = {1}", n, sqr (double n))
-        Console.WriteLine("fastFib({0}) = {1}", n, fastFib n)
-        Console.WriteLine("slowFib({0}) = {1}", n, slowFib n)
-        Console.WriteLine("memoFib({0}) = {1}", n, memoizedFib n)
-        // Console.WriteLine("fibSequence({0}) = {1}", n, fibSequence |> Seq.item n)
+        let sum n = [1..n] |> List.fold (+) 0
+        cw "sum(1..{0}) = {1}" sum n
+        cw "sqr({0}) = {1}" sqr (double n)
+        cw "fastFib({0}) = {1}" fastFib n
+        cw "slowFib({0}) = {1}" slowFib n
+        cw "memoFib({0}) = {1}" memoizedFib n
+        // cw "fibSequence({0}) = {1}" (fun i -> fibSequence |> Seq.item i) n
 
-        // printfn works!!!
+        let x,y = 100,100
+        cw "RayTrace {0} = {1}" (fun (x,y) -> RayTrace.computeScene x y) (x,y)
+
+        GC.Collect()
+        Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
+
+        // printfn works too !!!
         printfn "Hello from %s %s %d" "Deep" "Space" 9
-
-        Console.WriteLine("GC.CollectionCount={0}, TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
 
         0 // return an integer exit code
