@@ -5,15 +5,15 @@ open System.Collections.Generic
 
 module Library =
 
-    let measure f x y =
+    let measure f x =
         let dtStart = DateTime.UtcNow
-        let res = f x y
+        let result = f x
         let elapsed = DateTime.UtcNow - dtStart
-        res, elapsed.TotalSeconds
+        result, elapsed.TotalSeconds
 
     let hello (name: string) =
+        // printfn "Hello %s from F#!" name
         Console.WriteLine("Hello {0} from F#!", name)
-        // printfn "Hello %s from F#!" name // this is still WIP (crashing)
 
     let sqr (x: double) = x * x
 

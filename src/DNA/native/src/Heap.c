@@ -99,6 +99,8 @@ static U32 trackHeapSize;
 static U32 heapSizeMax;
 // The number of allocated memory nodes
 static U32 numNodes = 0;
+// The number of pinned memory nodes
+static U32 numPinned = 0;
 // The number of collections done
 static U32 numCollections = 0;
 
@@ -107,8 +109,8 @@ static U32 numCollections = 0;
 U64 gcTotalTime = 0;
 #endif
 
-#define MIN_HEAP_SIZE 50000
-#define MAX_HEAP_EXCESS 200000
+#define MIN_HEAP_SIZE 1000000
+#define MAX_HEAP_EXCESS 4000000
 
 void Heap_Init() {
 	// Initialise vars
@@ -282,9 +284,6 @@ static void GC_Mark() {
 				continue;
 			}
 			// Find this piece of heap memory in the tracking tree.
-			// Note that the 2nd memory address comparison MUST be >, not >= as might be expected,
-			// to allow for a zero-sized memory to be detected (and not garbage collected) properly.
-			// E.g. The object class has zero memory.
 			tHeapEntry *pNode = TreeSearch(pHeapTreeRoot, pMemRef);
 			if (pNode != nil) {
 				// Found memory. See if it's already been marked.
@@ -334,6 +333,7 @@ static void GC_Sweep() {
 	// Traverse nodes
 	pUp[0] = pHeapTreeRoot;
 	I32 top = 1;
+	numPinned = 0;
 	while (top != 0) {
 		// Get this node
 		pNode = pUp[--top];
@@ -342,6 +342,9 @@ static void GC_Sweep() {
 			if (pNode->marked != 0xff) {
 				// Still in use (but not marked undeletable), so unmark
 				pNode->marked = 0;
+			}
+			else {
+				numPinned++;
 			}
 		}
 		else {
@@ -395,6 +398,7 @@ static void GC_Sweep() {
 static void GarbageCollect() {
 	U32 orgHeapSize = trackHeapSize;
 	U32 orgNumNodes = numNodes;
+	U32 orgPinned = numPinned;
 #ifdef DIAG_GC
 	U64 startTime;
 #endif
@@ -412,8 +416,8 @@ static void GarbageCollect() {
 	gcTotalTime += microTime() - startTime;
 #endif
 
-	log_f(1, "--- GARBAGE --- [Size: %d -> %d] [Nodes: %d -> %d]\n",
-		orgHeapSize, trackHeapSize, orgNumNodes, numNodes);
+	log_f(1, "--- GARBAGE --- [Size: %d -> %d] [Nodes: %d -> %d] [Pinned: %d -> %d]\n",
+		orgHeapSize, trackHeapSize, orgNumNodes, numNodes, orgPinned, numPinned);
 
 #ifdef DIAG_GC
 	log_f(1, "GC time = %d ms\n", gcTotalTime / 1000);

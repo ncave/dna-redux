@@ -38,8 +38,8 @@ void* mallocTrace(int s, char *pFile, int line);
 #define dprintf(format, ...) printf(format, __VA_ARGS__)
 #define dprintfn(format, ...) printf(format "\n", __VA_ARGS__)
 #else
-#define dprintf(format, ...) 0
-#define dprintfn(format, ...) 0
+#define dprintf(format, ...) ((void) 0)
+#define dprintfn(format, ...) ((void) 0)
 #endif
 
 #define FAKE_RETURN exit(101)
