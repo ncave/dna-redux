@@ -11,9 +11,8 @@ module Library =
         let elapsed = DateTime.UtcNow - dtStart
         result, elapsed.TotalSeconds
 
-    let hello (name: string) =
-        // printfn "Hello %s from F#!" name
-        Console.WriteLine("Hello {0} from F#!", name)
+    let hello name =
+        printfn "Hello %s from F#!" name
 
     let sqr (x: double) = x * x
 

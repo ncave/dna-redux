@@ -32,6 +32,10 @@ void Finalizer_Init() {
 	toFinalizeOfs = 0;
 }
 
+int Finalizer_Count() {
+	return toFinalizeOfs;
+}
+
 void AddFinalizer(HEAP_PTR ptr) {
 	if (toFinalizeOfs >= toFinalizeCapacity) {
 		toFinalizeCapacity <<= 1;

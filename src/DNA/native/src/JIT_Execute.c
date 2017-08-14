@@ -2633,7 +2633,7 @@ JIT_IS_INSTANCE_start:
 JIT_CAST_CLASS_start:
 	op = JIT_CAST_CLASS;
 jitCastClass:
-	OPCODE_USE(JIT_CAST_CLASS);
+	OPCODE_USE(op);
 	{
 		tMD_TypeDef *pToType, *pTestType;
 		HEAP_PTR heapPtr;

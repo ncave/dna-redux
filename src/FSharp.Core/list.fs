@@ -411,7 +411,7 @@ namespace Microsoft.FSharp.Collections
         let filter f x = Microsoft.FSharp.Primitives.Basics.List.filter f x
 
         [<CompiledName("Except")>]
-        let except (itemsToExclude: IEnumerable<'a>) list =
+        let except itemsToExclude list =
             match box itemsToExclude with
             | null -> nullArg "itemsToExclude"
             | _ -> ()

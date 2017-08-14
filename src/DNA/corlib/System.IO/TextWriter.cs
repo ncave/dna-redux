@@ -55,7 +55,6 @@ namespace System.IO {
             get {
                 return new string(CoreNewLine);
             }
-
             set {
                 if (value == null)
                     value = Environment.NewLine;
@@ -74,6 +73,7 @@ namespace System.IO {
                 GC.SuppressFinalize(this);
             }
         }
+
         public void Dispose() {
             Dispose(true);
 

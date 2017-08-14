@@ -353,7 +353,7 @@ static void GC_Sweep() {
 			if (pNode->needToFinalize) {
 				if (pNode->needToFinalize == 1) {
 					AddFinalizer((HEAP_PTR)pNode + sizeof(tHeapEntry));
-					// Mark it has having been placed in the finalization queue.
+					// Mark it as having been placed in the finalization queue.
 					// When it has been finalized, then this will be set to 0
 					pNode->needToFinalize = 2;
 					// If this object is being targetted by weak-ref(s), handle it
