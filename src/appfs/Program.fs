@@ -11,10 +11,11 @@ module Program =
             Console.Write(fmt, x, result)
             Console.WriteLine(", elapsed: {0:f3} sec", elapsed)
 
+        // printfn works now !!!
+        hello "World"
+
         GC.Collect()
         Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
-
-        hello "World" // using Console.Write
 
         let n = 30;
         let sum n = [1..n] |> List.fold (+) 0
@@ -30,8 +31,5 @@ module Program =
 
         GC.Collect()
         Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
-
-        // printfn works too !!!
-        printfn "Hello from %s %s %d" "Deep" "Space" 9
 
         0 // return an integer exit code
