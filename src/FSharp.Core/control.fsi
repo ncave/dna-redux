@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 #if FX_NO_CANCELLATIONTOKEN_CLASSES
+
+#if !AGGREGATE_EXCEPTION
 namespace System
     open Microsoft.FSharp.Core
     open Microsoft.FSharp.Collections
@@ -12,7 +14,8 @@ namespace System
         /// <summary>Gets a read-only collection of the <c>Exception</c> instances that caused
         /// the current exception.</summary>
         member InnerExceptions : System.Collections.ObjectModel.ReadOnlyCollection<exn>
-    
+#endif
+
 namespace System.Threading
     open System
     open Microsoft.FSharp.Core
@@ -665,6 +668,7 @@ namespace Microsoft.FSharp.Control
     module CommonExtensions =
         open System.IO
         
+#if !NO_ASYNC_READWRITE
         type System.IO.Stream with 
             
             /// <summary>Returns an asynchronous computation that will read from the stream into the given buffer.</summary>
@@ -695,6 +699,7 @@ namespace Microsoft.FSharp.Control
             [<CompiledName("AsyncWrite")>] // give the extension member a nice, unmangled compiled name, unique within this module
             member AsyncWrite : buffer:byte[] * ?offset:int * ?count:int -> Async<unit>
 
+#endif // !NO_ASYNC_READWRITE
 
         ///<summary>The family of first class event values for delegate types that satisfy the F# delegate constraint.</summary>
         type IObservable<'T> with

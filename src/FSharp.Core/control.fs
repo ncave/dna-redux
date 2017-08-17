@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 #if FX_NO_CANCELLATIONTOKEN_CLASSES
+
+#if !AGGREGATE_EXCEPTION
 namespace System
     open System
     open Microsoft.FSharp.Core
@@ -13,6 +15,7 @@ namespace System
         inherit Exception()
         let exnsList = new System.Collections.Generic.List<exn>(exns)        
         member this.InnerExceptions = new System.Collections.ObjectModel.ReadOnlyCollection<exn>(exnsList :> System.Collections.Generic.IList<exn>)
+#endif
 
 namespace System.Threading
     #nowarn "864"   // this is for typed Equals() in CancellationTokenRegistration and CancellationToken
@@ -310,6 +313,7 @@ namespace Microsoft.FSharp.Control
     type OperationCanceledException(s : System.String) =
         inherit System.Exception(s)
         new () = new OperationCanceledException("The operation has been canceled")
+        new (_token: CancellationToken) = OperationCanceledException()
 #endif
 
     
@@ -408,17 +412,17 @@ namespace Microsoft.FSharp.Control
         static val mutable private thisThreadHasTrampoline : bool
 #endif
 
+        let mutable cont = None
+        let mutable bindCount = 0
+        
+        static let unfake FakeUnit = ()
+
         static member ThisThreadHasTrampoline = 
 #if FX_NO_THREAD_STATIC
             true
 #else
             Trampoline.thisThreadHasTrampoline
 #endif
-        
-        let mutable cont = None
-        let mutable bindCount = 0
-        
-        static let unfake FakeUnit = ()
 
         // Install a trampolineStack if none exists
         member this.ExecuteAction (firstAction : unit -> FakeUnitValue) =
@@ -579,10 +583,11 @@ namespace Microsoft.FSharp.Control
         // To consider: augment with more exception traceability information
         // To consider: add the ability to suspend running ps in debug mode
         // To consider: add the ability to trace running ps in debug mode
-        open System
-        open System.Threading
-        open System.IO
-        open Microsoft.FSharp.Core
+
+        // open System
+        // open System.Threading
+        // open System.IO
+        // open Microsoft.FSharp.Core
 
         let fake () = FakeUnit
         let unfake FakeUnit = ()
@@ -1318,7 +1323,7 @@ namespace Microsoft.FSharp.Control
             //              (See (b) above)
             //      3) ensuring if reg is disposed, we do SetResult
             let barrier = VolatileBarrier()
-            let reg = token.Register(fun _ -> if barrier.Proceed then tcs.SetCanceled())
+            let reg = token.Register((fun _ -> if barrier.Proceed then tcs.SetCanceled()), null)
             let task = tcs.Task
             let disposeReg() =
                 barrier.Stop()
@@ -1609,7 +1614,11 @@ namespace Microsoft.FSharp.Control
 
                 let task = 
                     try 
+#if FX_NO_CANCELLATIONTOKEN_CLASSES
+                        Task.Delay(dueTime)
+#else
                         Task.Delay(dueTime, aux.token)
+#endif
                     with exn -> 
                         edi <- ExceptionDispatchInfo.RestoreOrCapture(exn)
                         null
@@ -1697,7 +1706,7 @@ namespace Microsoft.FSharp.Control
                             Async.Start (async { do (ccont e |> unfake) })
 
                     // register cancellation handler
-                    let registration = aux.token.Register(fun () -> cancel (OperationCanceledException(aux.token)))
+                    let registration = aux.token.Register((fun _ -> cancel (OperationCanceledException(aux.token))), null)
 
                     // run actual await routine
                     // callback will be executed on the thread pool so we need to use TrampolineHolder.Protect to install trampoline
@@ -2119,6 +2128,7 @@ namespace Microsoft.FSharp.Control
 
         open AsyncBuilderImpl
 
+#if !NO_ASYNC_READWRITE
         type System.IO.Stream with
 
             [<CompiledName("AsyncRead")>] // give the extension member a 'nice', unmangled compiled name, unique within this module
@@ -2157,7 +2167,8 @@ namespace Microsoft.FSharp.Control
 #else
                 Async.FromBeginEnd (buffer,offset,count,stream.BeginWrite,stream.EndWrite)
 #endif
-                
+#endif // !NO_ASYNC_READWRITE
+
         type System.Threading.WaitHandle with
             member waitHandle.AsyncWaitOne(?millisecondsTimeout:int) =  // only used internally, not a public API
                 Async.AwaitWaitHandle(waitHandle,?millisecondsTimeout=millisecondsTimeout) 

@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../JS.Interop/JS.Interop.csproj" />
     <ProjectReference Include="../FSharp.Core/FSharp.Core.fsproj" />
+    <ProjectReference Include="../JS.Interop/JS.Interop.csproj" />
   </ItemGroup>
 
   <Target Name="CopyToBuiltBin" AfterTargets="Build">

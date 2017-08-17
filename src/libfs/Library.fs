@@ -1,4 +1,4 @@
-// #nowarn "40"
+#nowarn "40"
 namespace LibFS
 open System
 open System.Collections.Generic
@@ -39,15 +39,15 @@ module Library =
     let memoizedFib =
         let dict = new Dictionary<int, int>()
         fun n ->
-          if dict.ContainsKey n then dict.[n]
-          else
-            let result = slowFib n
-            dict.Add(n, result)
-            result
+            if dict.ContainsKey n then dict.[n]
+            else
+                let result = slowFib n
+                dict.Add(n, result)
+                result
 
-    // let rec fibSequence = seq {
-    //   yield! [0; 1]
-    //   yield! fibSequence
-    //          |> Seq.pairwise
-    //          |> Seq.map (fun (prev, next) -> prev + next)
-    // }
+    let rec fibSequence = seq {
+        yield! [0; 1]
+        yield! fibSequence
+            |> Seq.pairwise
+            |> Seq.map (fun (prev, next) -> prev + next)
+        }

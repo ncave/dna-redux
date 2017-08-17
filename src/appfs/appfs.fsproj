@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--<ProjectReference Include="../FSharp.Core/FSharp.Core.fsproj" />-->
+    <ProjectReference Include="../FSharp.Core/FSharp.Core.fsproj" />
     <ProjectReference Include="../libfs/libfs.fsproj" />
   </ItemGroup>
 

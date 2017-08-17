@@ -1559,6 +1559,10 @@ cilLeave:
 					// Do nothing
 					break;
 
+				case CILX_VOLATILE:
+					// Do nothing
+					break;
+
 				case CILX_TAIL:
 					// Do nothing. TODO: implement
 					break;

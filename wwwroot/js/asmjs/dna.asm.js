@@ -10868,6 +10868,7 @@ function _JITit(i5, i27, i56, i31, i59, i57, i60) {
     i1 = i14 & 255;
     switch (i14 << 24 >> 24) {
     case 20:
+    case 19:
     case 30:
      {
       i1 = i15;
