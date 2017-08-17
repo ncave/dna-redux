@@ -10,7 +10,7 @@ Entirely based on the excellent works of:
 - and contributors
 
 Notes:
-- uses dotnet core 2.0 preview 2 (targeting netstandard1.3 and above).
+- uses .NET Core 2.0 (targeting netstandard1.3 and above).
 - uses build.cmd to build, VSCode to edit/run, Chrome debugger (optional).
 - runs in Node.js or browser (`npm start` starts a server for browser).
 - the BCL (corlib) implementation is somewhat minimal, so it may have to be extended to fully support FSharp.Core.

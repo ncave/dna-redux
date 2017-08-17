@@ -15,9 +15,9 @@
   "dependencies": {},
   "devDependencies": {
     "@types/emscripten": "^0.0.30",
-    "@types/node": "^8.0.20",
+    "@types/node": "^8.0.23",
     "http-server": "^0.10.0",
-    "rollup": "^0.47.4",
+    "rollup": "^0.47.6",
     "tslint": "^5.6.0",
     "typescript": "^2.4.2"
   }

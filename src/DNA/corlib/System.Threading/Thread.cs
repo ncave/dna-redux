@@ -97,6 +97,12 @@ namespace System.Threading {
 				this.currentCulture = value;
 			}
 		}
+
+		// [MethodImplAttribute(MethodImplOptions.InternalCall)]
+		// public static extern void MemoryBarrier();
+		public static void MemoryBarrier() {
+			// does nothing
+		}
 	}
 }
 

@@ -10,38 +10,62 @@
     <AllowCrossTargeting>true</AllowCrossTargeting>
     <FX_NO_LOADER>true</FX_NO_LOADER>
     <DefineConstants>$(DefineConstants);
+      <!-- new symbols -->
       INLINE_STRING_RESOURCES;
+      <!-- AGGREGATE_EXCEPTION; -->
       NO_ASYNC_BUILDER;
+      NO_ASYNC_READWRITE;
       NO_QUERY_BUILDER;
+
+      <!-- existing symbols -->
+      FSCORE_PORTABLE_NEW;
       FSHARP_CORE;
       FX_NO_ARRAY_LONG_LENGTH;
-      FX_NO_BEGINEND_READWRITE;
-      <!--FX_NO_BIGINT;-->
+      <!-- FX_NO_BIGINT; -->
       FX_NO_BINARY_SERIALIZATION;
+      FX_NO_CANCELLATIONTOKEN_CLASSES;
+      FX_NO_CHAR_PARSE;
       FX_NO_CONCURRENT_DICTIONARY;
+      FX_NO_CONDITIONAL_WEAK_TABLE;
       FX_NO_CONVERTER;
+      FX_NO_CREATE_DELEGATE;
       FX_NO_DEBUG_DISPLAYS;
       FX_NO_DEFAULT_DEPENDENCY_TYPE;
       FX_NO_DELEGATE_DYNAMIC_METHOD;
+      FX_NO_EVENTWAITHANDLE_IDISPOSABLE;
+      FX_NO_EXCEPTIONDISPATCHINFO;
       FX_NO_EXIT;
-      <!--FX_NO_LAZY;-->
+      FX_NO_EXIT_CONTEXT_FLAGS;
+      <!-- FX_NO_ICLONEABLE; -->
+      FX_NO_IOBSERVABLE;
+      <!-- FX_NO_LAZY; -->
       FX_NO_MONITOR_REPORTS_LOCKTAKEN;
+      FX_NO_OPERATION_CANCELLED;
+      FX_NO_PARAMETERIZED_THREAD_START;
       FX_NO_REFLECTION_EMIT;
       FX_NO_REFLECTION_METADATA_TOKENS;
       FX_NO_REFLECTION_ONLY;
+      FX_NO_REGISTERED_WAIT_HANDLES;
       FX_NO_SECURITY_PERMISSIONS;
+      FX_NO_SYNC_CONTEXT;
       FX_NO_SYSTEM_BINDINGFLAGS;
+      <!-- FX_NO_TASK; -->
       FX_NO_THREAD;
       FX_NO_THREAD_STATIC;
       FX_NO_THREADABORT;
       FX_NO_TPL_PARALLEL;
+      FX_NO_TRUNCATE;
       <!--FX_NO_TUPLE;-->
       FX_NO_TYPECODE;
+      FX_NO_WEB_CLIENT;
+      FX_NO_WEB_REQUESTS;
       FX_PORTABLE_OR_NETSTANDARD;
       FX_RESHAPED_REFLECTION;
+      <!-- NAN_INFINITY_MEASURES; -->
     </DefineConstants>
     <OtherFlags>$(OtherFlags) --warnon:1182 --compiling-fslib --compiling-fslib-40 --maxerrors:20 --extraoptimizationloops:1</OtherFlags>
      <!-- <OtherFlags>$(OtherFlags) - - nointerfacedata</OtherFlags>  -->
+    <!-- <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences> -->
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
@@ -196,12 +220,12 @@
     <Compile Include="nativeptr.fs">
       <Link>NativeInterop/nativeptr.fs</Link>
     </Compile>
-    <!--<Compile Include="control.fsi">
+    <!-- <Compile Include="control.fsi">
       <Link>Async/control.fsi</Link>
-    </Compile>-->
-    <!--<Compile Include="control.fs">
+    </Compile> -->
+    <!-- <Compile Include="control.fs">
       <Link>Async/control.fs</Link>
-    </Compile>-->
+    </Compile> -->
     <Compile Include="Linq.fsi">
       <Link>Queries/Linq.fsi</Link>
     </Compile>

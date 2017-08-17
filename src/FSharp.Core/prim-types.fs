@@ -784,10 +784,11 @@ namespace Microsoft.FSharp.Core
                 //assert not(TypeInfo<'T>.TypeInfo = TypeNullnessSemantics_NullTrueValue)
                 notnullPrim(isinstPrim<'T>(x)) 
 
-            let Dispose<'T when 'T :> System.IDisposable >(x:'T) = 
+            let Dispose<'T>(x:'T) = 
                 match box x with 
                 | null -> ()
-                | _ -> x.Dispose()
+                | :? System.IDisposable as y -> y.Dispose()
+                | _ -> ()
 
             let FailInit() : unit = raise (System.InvalidOperationException(SR.GetString(SR.checkInit)))
 
@@ -5269,9 +5270,10 @@ namespace Microsoft.FSharp.Core
                             state.Current
 
                     { new IEnumerator<'T> with
-                        member __.Dispose () = ()
-
                         member __.Current = current ()
+
+                      interface System.IDisposable with
+                        member __.Dispose () = ()
 
                       interface IEnumerator with 
                         member __.Current = box (current ())
@@ -5326,8 +5328,10 @@ namespace Microsoft.FSharp.Core
                                 derefValue
 
                         { new IEnumerator<'T> with
-                            member __.Dispose () = ()
                             member __.Current = current ()
+
+                          interface System.IDisposable with
+                            member __.Dispose () = ()
 
                           interface IEnumerator with
                             member __.Current = box (current ())
