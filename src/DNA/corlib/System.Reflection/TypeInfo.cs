@@ -6,27 +6,17 @@ namespace System.Reflection {
 
         private readonly Type _type;
 
-        internal TypeInfo(Type type)
-        {
+        internal TypeInfo(Type type) {
             _type = type;
         }
 
-        public bool IsValueType => _type.IsValueType;
+        public virtual Type BaseType => _type.BaseType;
+        public virtual bool IsValueType => _type.IsValueType;
+        public virtual bool IsGenericType => _type.IsGenericType;
+        public virtual bool IsGenericTypeDefinition => _type.IsGenericTypeDefinition;
 
-        public virtual Type[] GenericTypeParameters {
-            get { return _type.GetGenericArguments(); }
-        }
+        public virtual Type[] GenericTypeParameters => _type.GetGenericArguments();
+        public virtual IEnumerable<MethodInfo> DeclaredMethods => _type.GetMethods();
 
-        public virtual IEnumerable<MethodInfo> DeclaredMethods {
-            get { return _type.GetMethods(); }
-        }
-
-        public virtual bool IsGenericType {
-            get { return _type.IsGenericType; }
-        }
-
-        public virtual bool IsGenericTypeDefinition {
-            get { return _type.IsGenericTypeDefinition; }
-        }
     }
 }

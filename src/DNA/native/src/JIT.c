@@ -635,41 +635,39 @@ cilCallVirtConstrained:
 
 						pConstrainedType = MetaData_GetTypeDefFromDefRefOrSpec(pMetaData, u32Value2, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
 
-						//// commented as it doesn't seem to be needed according to ECMA-335
-						//if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
-						//	u32Value2 = 0xffffffff;
-						//	// Find the interface that we're dealing with
-						//	for (i=0; i<pConstrainedType->numInterfaces; i++) {
-						//		if (pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
-						//			u32Value2 = pConstrainedType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
-						//			break;
-						//		}
-						//	}
-						//	Assert(u32Value2 != 0xffffffff);
-						//	if (pConstrainedType->pVTable[u32Value2]->pParentType == pConstrainedType) {
-						//		// This method is implemented on this class, so make it a normal CALL op
-						//		op = CIL_CALL;
-						//		pCallMethod = pConstrainedType->pVTable[u32Value2];
-						//	}
-						//} else {
-							if (pConstrainedType->isValueType) {
-								tMD_MethodDef *pImplMethod;
-								// If pConstraintedType directly implements the call then don't do anything
-								// otherwise the 'this' pointer must be boxed (BoxedCall)
-								pImplMethod = pConstrainedType->pVTable[pCallMethod->vTableOfs];
-								if (pImplMethod->pParentType == pConstrainedType) {
-									op = CIL_CALL;
-									pCallMethod = pImplMethod;
-								} else {
-									pBoxCallType = pConstrainedType;
+						if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
+							// Find the interface that we're dealing with
+							for (i=0; i<pConstrainedType->numInterfaces; i++) {
+								if (pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
+									U32 vTableOfs = pConstrainedType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
+									// if method is implemented on this class, make it a normal CALL op
+									if (pConstrainedType->pVTable[vTableOfs]->pParentType == pConstrainedType) {
+										op = CIL_CALL;
+										pCallMethod = pConstrainedType->pVTable[vTableOfs];
+										//dprintfn("Calling interface method: %s", pCallMethod->name);
+										goto cilCallAll;
+									}
 								}
-							} else {
-								// Reference-type, so dereference the PTR to 'this' and use that for the 'this' for the call.
-								derefRefType = 1;
 							}
-						//}
-					}
+						}
 
+						if (pConstrainedType->isValueType) {
+							tMD_MethodDef *pImplMethod;
+							// If pConstraintedType directly implements the call then don't do anything
+							// otherwise the 'this' pointer must be boxed (BoxedCall)
+							pImplMethod = pConstrainedType->pVTable[pCallMethod->vTableOfs];
+							if (pImplMethod->pParentType == pConstrainedType) {
+								op = CIL_CALL;
+								pCallMethod = pImplMethod;
+							} else {
+								pBoxCallType = pConstrainedType;
+							}
+						} else {
+							// Reference-type, so dereference the PTR to 'this' and use that for the 'this' for the call.
+							derefRefType = 1;
+						}
+					}
+cilCallAll:
 					// Pop stack type for each argument. Don't actually care what these are,
 					// except the last one which will be the 'this' object type of a non-static method
 					//dprintfn("Call %s() - popping %d stack args", pCallMethod->name, pCallMethod->numberOfParameters);
@@ -1310,6 +1308,9 @@ conv2:
 					// Get the FieldRef or FieldDef of the field to load
 					u32Value = GetUnalignedU32(pCIL, &cilOfs);
 					pFieldDef = MetaData_GetFieldDefFromDefOrRef(pMethodDef->pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
+					if (pFieldDef->pType == NULL) {
+						MetaData_Fill_FieldDef(pMethodDef->pParentType, pFieldDef, 0, pMethodDef->pParentType->ppClassTypeArgs);
+					}
 					// Pop the object/valuetype on which to load the field.
 					pStackType = PopStackType();
 					if (pStackType->stackType == EVALSTACK_VALUETYPE) {

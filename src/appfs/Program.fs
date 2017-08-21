@@ -58,8 +58,10 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
-        // printfn works now!!! (%s, %d, %O works, but not %A yet)
         hello "World"
+
+        // printfn (almost) works now!!! (not working yet: more than one %A or %A with value type)
+        printfn "The %s is: %A" "answer" (box 42)
 
         testFunctions ()
         // testWorkflows ()

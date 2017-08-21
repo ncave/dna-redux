@@ -32,18 +32,18 @@
 #include "Type.h"
 #include "CLIFile.h"
 
-tAsyncCall* System_Type_GetTypeFromHandle(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tMD_TypeDef *pTypeDef = *(tMD_TypeDef**)pParams;
+tAsyncCall* System_Type_get_IsValueType(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tRuntimeType *pRuntimeType = (tRuntimeType*)pThis_;
 
-	*(HEAP_PTR*)pReturnValue = Type_GetTypeObject(pTypeDef);
+	*(U32*)pReturnValue = pRuntimeType->pTypeDef->isValueType;
 
 	return NULL;
 }
 
-tAsyncCall* System_Type_get_IsValueType(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tRuntimeType *pRuntimeType = (tRuntimeType*)pThis_;
-	
-	*(U32*)pReturnValue = pRuntimeType->pTypeDef->isValueType;
+tAsyncCall* System_Type_GetTypeFromHandle(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tMD_TypeDef *pTypeDef = *(tMD_TypeDef**)pParams;
+
+	*(HEAP_PTR*)pReturnValue = Type_GetTypeObject(pTypeDef);
 
 	return NULL;
 }
@@ -221,41 +221,5 @@ tAsyncCall* System_Type_GetMethod(PTR pThis_, PTR pParams, PTR pReturnValue)
 
 	// Not found
 	*(HEAP_PTR*)pReturnValue = NULL;
-	return NULL;
-}
-
-tAsyncCall* System_Reflection_MethodInfo_MakeGenericMethod(PTR pThis_, PTR pParams, PTR pReturnValue)
-{
-	// get type arguments
-	HEAP_PTR pTypeArgs = ((HEAP_PTR*)pParams)[0];
-	U32 argCount = SystemArray_GetLength(pTypeArgs);
-	HEAP_PTR* pArray = (HEAP_PTR*)SystemArray_GetElements(pTypeArgs);
-
-	// Get metadata for the 'this' type
-	tMethodInfo *pMethodInfoThis = (tMethodInfo*)pThis_;
-	tMD_MethodDef *pCoreMethod = pMethodInfoThis->methodBase.methodDef;
-
-	// get arg types
-	tMD_TypeDef **ppTypeArgs = malloc(argCount * sizeof(tMD_TypeDef*));
-	for (U32 i = 0; i < argCount; i++) {
-		ppTypeArgs[i] = Heap_GetType(pArray[i]);
-	}
-
-	// specialize generic method
-	tMD_MethodDef *pMethodDef = Generics_GetMethodDefFromCoreMethod(pCoreMethod, pCoreMethod->pParentType, argCount, ppTypeArgs);
-	free(ppTypeArgs);
-
-	// Instantiate a MethodInfo
-	tMethodInfo *pMethodInfo = (tMethodInfo*)Heap_AllocType(types[TYPE_SYSTEM_REFLECTION_METHODINFO]);
-
-	// Assign ownerType, name and flags
-	pMethodInfo->methodBase.ownerType = pThis_;
-	pMethodInfo->methodBase.name = SystemString_FromCharPtrASCII(pMethodDef->name);
-	pMethodInfo->methodBase.flags = pMethodDef->flags;
-
-	// Assign method def
-	pMethodInfo->methodBase.methodDef = pMethodDef;
-
-	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)pMethodInfo;
 	return NULL;
 }

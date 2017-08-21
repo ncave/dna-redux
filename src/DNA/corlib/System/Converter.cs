@@ -23,30 +23,24 @@
 namespace System {
 	public delegate TOutput Converter<TInput, TOutput>(TInput input);
 
-    public class Convert
-    {
-        public static int ToInt32(string str, int fromBase)
-        {
+    public class Convert {
+        public static int ToInt32(Single f) => (int)f;
+        public static int ToInt32(Double d) => (int)d;
+
+        public static int ToInt32(string str, int fromBase) {
             int res = 0;
-            if (fromBase == 2)
-            {
-                for(int i = 0; i < str.Length; ++i)
-                {
+            if (fromBase == 2) {
+                for(int i = 0; i < str.Length; ++i) {
                     var s = str[i];
-                    if ((char)s == '0')
-                    {
+                    if ((char)s == '0') {
                         res <<= 1;
-                    }
-                    else
-                    {
+                    } else {
                         res <<= 1;
                         res += 1;
                     }
                 }
-
                 return res;
             }
-
             return res;
         }
     }

@@ -35,25 +35,15 @@ namespace System {
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern public static Type GetTypeFromHandle(RuntimeTypeHandle handle);
 
-        public abstract Type BaseType {
-            get;
-        }
+        public abstract Type BaseType { get; }
 
-        public abstract bool IsEnum {
-            get;
-        }
+        public abstract bool IsEnum { get; }
 
-        public abstract string Namespace {
-            get;
-        }
+        public abstract string Namespace { get; }
 
-        public abstract string FullName {
-            get;
-        }
+        public abstract string FullName { get; }
 
-        public abstract bool IsGenericType {
-            get;
-        }
+        public abstract bool IsGenericType { get; }
 
         public abstract Type GetGenericTypeDefinition();
 
@@ -62,6 +52,10 @@ namespace System {
         public abstract Type GetElementType();
 
         public virtual bool IsArray => GetElementType() != null;
+
+        public virtual bool IsByRef => false;
+
+        public virtual bool IsPointer => false;
 
         extern public bool IsValueType {
             [MethodImpl(MethodImplOptions.InternalCall)]
@@ -146,13 +140,11 @@ namespace System {
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern private object GetMethodInternal(string name);
 
-        public static bool operator ==(Type t1, Type t2)
-        {
+        public static bool operator ==(Type t1, Type t2) {
             return t1?.FullName.Equals(t2?.FullName) == true;
         }
 
-        public static bool operator !=(Type t1, Type t2)
-        {
+        public static bool operator !=(Type t1, Type t2) {
             return t1?.FullName.Equals(t2?.FullName) == false;
         }
     }

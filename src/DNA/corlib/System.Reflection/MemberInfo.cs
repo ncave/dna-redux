@@ -26,6 +26,15 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace System.Reflection {
+
+    internal struct InternalCustomAttributeInfo {
+#pragma warning disable 0649
+        public Attribute UninitializedInstance;
+        public MethodBase ConstructorMethodBase;
+        public object[] ConstructorParams;
+#pragma warning restore 0649
+    }
+
 	public abstract class MemberInfo : ICustomAttributeProvider {
 
 #pragma warning disable 0169, 0649
@@ -42,8 +51,7 @@ namespace System.Reflection {
 
 		public abstract Object[] GetCustomAttributes(Type attributeType, bool inherit);
 
-        protected MemberInfo(Type ownerType, string name)
-        {
+        protected MemberInfo(Type ownerType, string name) {
             _ownerType = ownerType;
             _name = name;
         }

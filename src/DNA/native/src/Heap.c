@@ -473,8 +473,8 @@ HEAP_PTR Heap_Alloc(tMD_TypeDef *pTypeDef, U32 size) {
 		}
 	}
 
-	pHeapEntry = (tHeapEntry*)malloc(totalSize);
-	memset(pHeapEntry, 0, totalSize);
+	pHeapEntry = (tHeapEntry*)calloc(totalSize, 1);
+	//memset(pHeapEntry, 0, totalSize);
 	pHeapEntry->totalSize = totalSize;
 	pHeapEntry->pTypeDef = pTypeDef;
 	pHeapEntry->pSync = NULL;
