@@ -29,10 +29,13 @@
 U32 MetaData_CompareNameAndSig(STRING name, BLOB_ sigBlob, tMetaData *pSigMetaData, tMD_TypeDef **ppSigClassTypeArgs, tMD_TypeDef **ppSigMethodTypeArgs, tMD_MethodDef *pMethod, tMD_TypeDef **ppMethodClassTypeArgs, tMD_TypeDef **ppMethodMethodTypeArgs) {
 	if (strcmp(name, pMethod->name) == 0) {
 		SIG sig, thisSig;
-		U32 e, thisE, paramCount, i, isGeneric;
+		U32 e, thisE, paramCount, i, isGeneric, isSame;
 
 		sig = MetaData_GetBlob(sigBlob, NULL);
 		thisSig = MetaData_GetBlob(pMethod->signature, NULL);
+
+		// if signatures match
+		isSame = strcmp(sig, thisSig) == 0;
 
 		e = MetaData_DecodeSigEntry(&sig);
 		thisE = MetaData_DecodeSigEntry(&thisSig);
@@ -44,6 +47,9 @@ U32 MetaData_CompareNameAndSig(STRING name, BLOB_ sigBlob, tMetaData *pSigMetaDa
 		// If method has generic arguments, check the generic type argument count
 		isGeneric = e & SIG_CALLCONV_GENERIC;
 		if (isGeneric) {
+			if (isSame) {
+				return 1;
+			}
 			e = MetaData_DecodeSigEntry(&sig);
 			thisE = MetaData_DecodeSigEntry(&thisSig);
 			// Generic argument count
@@ -377,10 +383,11 @@ tMD_MethodDef* MetaData_GetMethodDefFromDefRefOrSpec(tMetaData *pMetaData, IDX_T
 
 tMD_FieldDef* MetaData_GetFieldDefFromDefOrRef(tMetaData *pMetaData, IDX_TABLE token, tMD_TypeDef **ppClassTypeArgs, tMD_TypeDef **ppMethodTypeArgs) {
 	void *pTableEntry;
-
 	pTableEntry = MetaData_GetTableRow(pMetaData, token);
-	if (((tMDC_ToFieldDef*)pTableEntry)->pFieldDef != NULL) {
-		return ((tMDC_ToFieldDef*)pTableEntry)->pFieldDef;
+
+	tMD_FieldDef *pFieldDef = ((tMDC_ToFieldDef*)pTableEntry)->pFieldDef;
+	if (pFieldDef != NULL) {
+		return pFieldDef;
 	}
 
 	switch (TABLE_ID(token)) {

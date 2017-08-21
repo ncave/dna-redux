@@ -177,12 +177,16 @@ namespace System {
 		}
 
 		public static string Concat(params string[] values) {
+			return Concat((IEnumerable<string>)values);
+		}
+		
+		public static string Concat(IEnumerable<string> values) {
 			if (values == null) {
 				throw new ArgumentNullException("args");
 			}
 			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < values.Length; i++) {
-				sb.Append(values[i]);
+			foreach (var s in values) {
+				sb.Append(s);
 			}
 			return sb.ToString();
 		}

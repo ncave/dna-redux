@@ -1251,16 +1251,19 @@ allCallStart:
 			*(HEAP_PTR*)pMem = heapPtr;
 		} else if (op == JIT_DEREF_CALLVIRT) {
 			pMem = pCurEvalStack - pCallMethod->parameterStackSize;
-			*(HEAP_PTR*)pMem = **(HEAP_PTR**)pMem;
+			heapPtr = **(HEAP_PTR**)pMem;
+			*(HEAP_PTR*)pMem = heapPtr;
+		}
+
+		// Get the actual object that is becoming 'this'
+		if (heapPtr == NULL) {
+			heapPtr = *(HEAP_PTR*)(pCurEvalStack - pCallMethod->parameterStackSize);
 		}
 
 		// If it's a virtual call then find the real correct method to call
 		if (op == JIT_CALLVIRT_O || op == JIT_BOX_CALLVIRT || op == JIT_DEREF_CALLVIRT) {
 			tMD_TypeDef *pThisType;
-			// Get the actual object that is becoming 'this'
-			if (heapPtr == NULL) {
-				heapPtr = *(HEAP_PTR*)(pCurEvalStack - pCallMethod->parameterStackSize);
-			}
+
 			if (heapPtr == NULL) {
 				//Crash("NULL 'this' in Virtual call: %s", Sys_GetMethodDesc(pCallMethod));
 				THROW(types[TYPE_SYSTEM_NULLREFERENCEEXCEPTION]);
@@ -1273,8 +1276,6 @@ allCallStart:
 		} else if (op == JIT_CALL_INTERFACE) {
 			tMD_TypeDef *pInterface, *pThisType;
 			pInterface = pCallMethod->pParentType;
-			// Get the actual object that is becoming 'this'
-			heapPtr = *(HEAP_PTR*)(pCurEvalStack - pCallMethod->parameterStackSize);
 			pThisType = Heap_GetType(heapPtr);
 
 			// Find the interface mapping on the 'this' type.

@@ -13,9 +13,9 @@ namespace AppCS {
 
         static void Main(string[] args) {
             hello("World");
+            TestGeneric();
             NBody.Run(args);
             TestSort(50000);
-            TestGeneric();
         }
 
         static void TestGeneric() {
