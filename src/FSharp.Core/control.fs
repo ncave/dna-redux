@@ -2,25 +2,26 @@
 
 #if FX_NO_CANCELLATIONTOKEN_CLASSES
 
-#if !AGGREGATE_EXCEPTION
-namespace System
-    open System
-    open Microsoft.FSharp.Core
-    open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
-    open Microsoft.FSharp.Core.Operators
-    open Microsoft.FSharp.Control
-    open Microsoft.FSharp.Collections
+namespace Microsoft.FSharp.Control
+#nowarn "864"   // this is for typed Equals() in CancellationTokenRegistration and CancellationToken
 
-    type [<Class>] AggregateException (exns : seq<exn>) =
+module System =
+  open System
+  open Microsoft.FSharp.Core
+  open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
+  open Microsoft.FSharp.Core.Operators
+  open Microsoft.FSharp.Control
+  open Microsoft.FSharp.Collections
+
+  type [<Class>] AggregateException (exns : seq<exn>) =
         inherit Exception()
         let exnsList = new System.Collections.Generic.List<exn>(exns)        
         member this.InnerExceptions = new System.Collections.ObjectModel.ReadOnlyCollection<exn>(exnsList :> System.Collections.Generic.IList<exn>)
-#endif
 
-namespace System.Threading
-    #nowarn "864"   // this is for typed Equals() in CancellationTokenRegistration and CancellationToken
+  module Threading =
 
     open System
+    open System.Threading
     open Microsoft.FSharp.Core
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Core.Operators
@@ -1277,7 +1278,11 @@ namespace Microsoft.FSharp.Control
             // Reuse the current ThreadPool thread if possible. Unfortunately
             // Thread.IsThreadPoolThread isn't available on all profiles so
             // we approximate it by testing synchronization context for null.
+#if FX_NO_SYNC_CONTEXT
+            match null, timeout with
+#else
             match SynchronizationContext.Current, timeout with
+#endif
             | null, None -> RunSynchronouslyInCurrentThread (token, computation)
             // When the timeout is given we need a dedicated thread
             // which cancels the computation.

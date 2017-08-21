@@ -12,7 +12,6 @@
     <DefineConstants>$(DefineConstants);
       <!-- new symbols -->
       INLINE_STRING_RESOURCES;
-      <!-- AGGREGATE_EXCEPTION; -->
       NO_ASYNC_BUILDER;
       NO_ASYNC_READWRITE;
       NO_QUERY_BUILDER;
@@ -37,7 +36,7 @@
       FX_NO_EXIT;
       FX_NO_EXIT_CONTEXT_FLAGS;
       <!-- FX_NO_ICLONEABLE; -->
-      FX_NO_IOBSERVABLE;
+      <!-- FX_NO_IOBSERVABLE; -->
       <!-- FX_NO_LAZY; -->
       FX_NO_MONITOR_REPORTS_LOCKTAKEN;
       FX_NO_OPERATION_CANCELLED;
