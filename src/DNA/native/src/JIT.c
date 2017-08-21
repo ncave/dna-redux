@@ -634,22 +634,24 @@ cilCallVirtConstrained:
 						tMD_TypeDef *pConstrainedType;
 
 						pConstrainedType = MetaData_GetTypeDefFromDefRefOrSpec(pMetaData, u32Value2, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
-						if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
-							u32Value2 = 0xffffffff;
-							// Find the interface that we're dealing with
-							for (i=0; i<pConstrainedType->numInterfaces; i++) {
-								if (pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
-									u32Value2 = pConstrainedType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
-									break;
-								}
-							}
-							Assert(u32Value2 != 0xffffffff);
-							if (pConstrainedType->pVTable[u32Value2]->pParentType == pConstrainedType) {
-								// This method is implemented on this class, so make it a normal CALL op
-								op = CIL_CALL;
-								pCallMethod = pConstrainedType->pVTable[u32Value2];
-							}
-						} else {
+
+						//// commented as it doesn't seem to be needed according to ECMA-335
+						//if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
+						//	u32Value2 = 0xffffffff;
+						//	// Find the interface that we're dealing with
+						//	for (i=0; i<pConstrainedType->numInterfaces; i++) {
+						//		if (pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
+						//			u32Value2 = pConstrainedType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
+						//			break;
+						//		}
+						//	}
+						//	Assert(u32Value2 != 0xffffffff);
+						//	if (pConstrainedType->pVTable[u32Value2]->pParentType == pConstrainedType) {
+						//		// This method is implemented on this class, so make it a normal CALL op
+						//		op = CIL_CALL;
+						//		pCallMethod = pConstrainedType->pVTable[u32Value2];
+						//	}
+						//} else {
 							if (pConstrainedType->isValueType) {
 								tMD_MethodDef *pImplMethod;
 								// If pConstraintedType directly implements the call then don't do anything
@@ -665,7 +667,7 @@ cilCallVirtConstrained:
 								// Reference-type, so dereference the PTR to 'this' and use that for the 'this' for the call.
 								derefRefType = 1;
 							}
-						}
+						//}
 					}
 
 					// Pop stack type for each argument. Don't actually care what these are,

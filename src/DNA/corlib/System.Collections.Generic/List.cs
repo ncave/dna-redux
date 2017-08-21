@@ -27,7 +27,7 @@ namespace System_.Collections.Generic {
 #else
 namespace System.Collections.Generic {
 #endif
-	public class List<T> : IList<T>, ICollection<T>, IEnumerable<T>, IList, ICollection, IEnumerable {
+	public class List<T> : IList<T>, ICollection<T>, IEnumerable<T>, IList, ICollection, IEnumerable, IReadOnlyCollection<T> {
 
 		public struct Enumerator : IEnumerator<T>, IDisposable {
 
@@ -126,6 +126,19 @@ namespace System.Collections.Generic {
 		public void Add(T item) {
 			this.EnsureSpace(1);
 			this.items[this.size++] = item;
+		}
+
+		public void AddRange(IEnumerable<T> collection) {
+			ICollection<T> iCol = collection as ICollection<T>;
+			if (iCol != null) {
+				this.EnsureSpace(iCol.Count);
+				iCol.CopyTo(this.items, this.size);
+				this.size += iCol.Count;
+			} else {
+				foreach (T t in collection) {
+					Add (t);
+				}
+			}
 		}
 
 		public int Count {

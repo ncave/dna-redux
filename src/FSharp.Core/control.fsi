@@ -2,21 +2,21 @@
 
 #if FX_NO_CANCELLATIONTOKEN_CLASSES
 
-#if !AGGREGATE_EXCEPTION
-namespace System
-    open Microsoft.FSharp.Core
-    open Microsoft.FSharp.Collections
-    
-    /// <summary>Represents one or more errors that occur during application execution.</summary>
-    [<Class>]
-    type AggregateException =
+namespace Microsoft.FSharp.Control
+module System =
+  open System
+  open Microsoft.FSharp.Core
+  open Microsoft.FSharp.Collections
+  
+  /// <summary>Represents one or more errors that occur during application execution.</summary>
+  [<Class>]
+  type AggregateException =
         inherit Exception
         /// <summary>Gets a read-only collection of the <c>Exception</c> instances that caused
         /// the current exception.</summary>
         member InnerExceptions : System.Collections.ObjectModel.ReadOnlyCollection<exn>
-#endif
 
-namespace System.Threading
+  module Threading =
     open System
     open Microsoft.FSharp.Core
     /// <summary>Represents a registration to a Cancellation token source.</summary>
