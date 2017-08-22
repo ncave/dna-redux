@@ -26,7 +26,7 @@ namespace System.Reflection
         public static IEnumerable<Attribute> GetCustomAttributes(this MemberInfo element, Type attributeType, bool inherit)
         {
             var attributes = GetCustomAttributes(element);
-            return attributes.Where(a => a.GetType() == attributeType);
+            return attributes.Where(attr => attributeType.IsAssignableFrom(attr.GetType()));
         }
 
     }

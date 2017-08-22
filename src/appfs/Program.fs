@@ -60,7 +60,7 @@ module Program =
     let main argv =
         hello "World"
 
-        // printfn (almost) works now!!! (not working yet: more than one %A or %A with value type)
+        // printfn (almost) works now!!! (not working yet: %f, %A with value type)
         printfn "The %s is: %A" "answer" (box 42)
 
         testFunctions ()
