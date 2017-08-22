@@ -173,11 +173,10 @@ tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_MethodDef 
 }
 
 static tMD_FieldDef* FindFieldInType(tMD_TypeDef *pTypeDef, STRING name) {
-	U32 i;
 
 	MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 
-	for (i=0; i<pTypeDef->numFields; i++) {
+	for (U32 i=0; i<pTypeDef->numFields; i++) {
 		if (strcmp(pTypeDef->ppFields[i]->name, name) == 0) {
 			return pTypeDef->ppFields[i];
 		}
@@ -212,9 +211,8 @@ tMetaData* MetaData_GetResolutionScopeMetaData(tMetaData *pMetaData, IDX_TABLE r
 }
 
 tMD_TypeDef* MetaData_GetTypeDefFromName(tMetaData *pMetaData, STRING nameSpace, STRING name, tMD_TypeDef *pInNestedClass, U8 assertExists) {
-	U32 i;
 
-	for (i=1; i<=pMetaData->tables.numRows[MD_TABLE_TYPEDEF]; i++) {
+	for (U32 i=1; i<=pMetaData->tables.numRows[MD_TABLE_TYPEDEF]; i++) {
 		tMD_TypeDef *pTypeDef;
 
 		pTypeDef = (tMD_TypeDef*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_TYPEDEF, i));
@@ -293,10 +291,9 @@ tMD_TypeDef* MetaData_GetTypeDefFromDefRefOrSpec(tMetaData *pMetaData, IDX_TABLE
 
 tMD_TypeDef* MetaData_GetTypeDefFromMethodDef(tMD_MethodDef *pMethodDef) {
 	tMetaData *pMetaData;
-	U32 i;
 
 	pMetaData = pMethodDef->pMetaData;
-	for (i=pMetaData->tables.numRows[MD_TABLE_TYPEDEF]; i>0; i--) {
+	for (U32 i=pMetaData->tables.numRows[MD_TABLE_TYPEDEF]; i>0; i--) {
 		tMD_TypeDef *pTypeDef;
 
 		pTypeDef = (tMD_TypeDef*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_TYPEDEF, i));
@@ -311,10 +308,9 @@ tMD_TypeDef* MetaData_GetTypeDefFromMethodDef(tMD_MethodDef *pMethodDef) {
 
 tMD_TypeDef* MetaData_GetTypeDefFromFieldDef(tMD_FieldDef *pFieldDef) {
 	tMetaData *pMetaData;
-	U32 i;
 
 	pMetaData = pFieldDef->pMetaData;
-	for (i=pMetaData->tables.numRows[MD_TABLE_TYPEDEF]; i>0; i--) {
+	for (U32 i=pMetaData->tables.numRows[MD_TABLE_TYPEDEF]; i>0; i--) {
 		tMD_TypeDef *pTypeDef;
 
 		pTypeDef = (tMD_TypeDef*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_TYPEDEF, i));
@@ -497,9 +493,8 @@ field:
 }
 
 tMD_ImplMap* MetaData_GetImplMap(tMetaData *pMetaData, IDX_TABLE memberForwardedToken) {
-	U32 i;
 
-	for (i=pMetaData->tables.numRows[MD_TABLE_IMPLMAP]; i >= 1; i--) {
+	for (U32 i=pMetaData->tables.numRows[MD_TABLE_IMPLMAP]; i >= 1; i--) {
 		tMD_ImplMap *pImplMap = (tMD_ImplMap*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_IMPLMAP, i));
 		if (pImplMap->memberForwarded == memberForwardedToken) {
 			return pImplMap;

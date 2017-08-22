@@ -634,6 +634,7 @@ cilCallVirtConstrained:
 						tMD_TypeDef *pConstrainedType;
 
 						pConstrainedType = MetaData_GetTypeDefFromDefRefOrSpec(pMetaData, u32Value2, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
+						MetaData_Fill_TypeDef(pConstrainedType, NULL, NULL);
 
 						if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
 							// Find the interface that we're dealing with
@@ -653,7 +654,7 @@ cilCallVirtConstrained:
 
 						if (pConstrainedType->isValueType) {
 							tMD_MethodDef *pImplMethod;
-							// If pConstraintedType directly implements the call then don't do anything
+							// If pConstrainedType directly implements the call then don't do anything
 							// otherwise the 'this' pointer must be boxed (BoxedCall)
 							pImplMethod = pConstrainedType->pVTable[pCallMethod->vTableOfs];
 							if (pImplMethod->pParentType == pConstrainedType) {
@@ -679,6 +680,7 @@ cilCallAll:
 						pStackType = types[TYPE_SYSTEM_OBJECT];
 					}
 					MetaData_Fill_TypeDef(pStackType, NULL, NULL);
+
 					if (TYPE_ISINTERFACE(pCallMethod->pParentType) && op == CIL_CALLVIRT) {
 						PushOp(JIT_CALL_INTERFACE);
 					} else if (pCallMethod->pParentType->pParent == types[TYPE_SYSTEM_MULTICASTDELEGATE]) {
@@ -1505,7 +1507,7 @@ cilLeave:
 
 				case CILX_LOADFUNCTION:
 				case CILX_LOADVIRTFN:
-				{
+					{
 						tMD_MethodDef *pFuncMethodDef;
 
 						u32Value = GetUnalignedU32(pCIL, &cilOfs);
@@ -1555,7 +1557,7 @@ cilLeave:
 
 				case CILX_CONSTRAINED:
 					u32Value2 = GetUnalignedU32(pCIL, &cilOfs);
-					cilOfs++;
+					op = pCIL[cilOfs++]; // always CIL_CALLVIRT
 					goto cilCallVirtConstrained;
 
 				case CILX_READONLY:
@@ -1571,7 +1573,7 @@ cilLeave:
 					break;
 
 				default:
-					Crash("JITit(): JITter cannot handle extended op-code:0x%02x", op);
+					Crash("JITit(): JITter cannot handle extended op-code: 0x%02x", op);
 
 				}
 				break;
