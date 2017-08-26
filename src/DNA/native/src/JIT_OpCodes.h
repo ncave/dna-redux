@@ -396,6 +396,7 @@
 #define JIT_LOAD_I4_2			0x13a
 
 #define JIT_LOADFIELD_4			0x13b
+#define JIT_LOADFIELD_8			0x13c
 
 #define JIT_CONV_OFFSET_I32 0
 #define JIT_CONV_OFFSET_U32 1

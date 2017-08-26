@@ -414,6 +414,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_CGT_UN_I32I32, 0);
 		GET_LABELS_DYNAMIC(JIT_CLT_I32I32, 0);
 		GET_LABELS_DYNAMIC(JIT_CLT_UN_I32I32, 0);
+
 		GET_LABELS_DYNAMIC(JIT_CEQ_I64I64, 0);
 		GET_LABELS_DYNAMIC(JIT_CGT_I64I64, 0);
 		GET_LABELS_DYNAMIC(JIT_CGT_UN_I64I64, 0);
@@ -589,10 +590,15 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 
 		GET_LABELS_DYNAMIC(JIT_CEQ_F32F32, 0);
 		GET_LABELS_DYNAMIC(JIT_CGT_F32F32, 0);
+		GET_LABELS_DYNAMIC(JIT_CGT_UN_F32F32, 0);
 		GET_LABELS_DYNAMIC(JIT_CLT_F32F32, 0);
+		GET_LABELS_DYNAMIC(JIT_CLT_UN_F32F32, 0);
+
 		GET_LABELS_DYNAMIC(JIT_CEQ_F64F64, 0);
 		GET_LABELS_DYNAMIC(JIT_CGT_F64F64, 0);
+		GET_LABELS_DYNAMIC(JIT_CGT_UN_F64F64, 0);
 		GET_LABELS_DYNAMIC(JIT_CLT_F64F64, 0);
+		GET_LABELS_DYNAMIC(JIT_CLT_UN_F64F64, 0);
 
 		GET_LABELS_DYNAMIC(JIT_ADD_F32F32, 0);
 		GET_LABELS_DYNAMIC(JIT_ADD_F64F64, 0);
@@ -609,6 +615,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_LOAD_I4_2, 0);
 
 		GET_LABELS_DYNAMIC(JIT_LOADFIELD_4, 4);
+		GET_LABELS_DYNAMIC(JIT_LOADFIELD_8, 8);
 
 		return 0;
 	}
@@ -1270,6 +1277,7 @@ allCallStart:
 			}
 			pThisType = Heap_GetType(heapPtr);
 			if (METHOD_ISVIRTUAL(pCallMethod)) {
+				// Assert(pCallMethod->parameterStackSize == pThisType->pVTable[pCallMethod->vTableOfs]->parameterStackSize);
 				pCallMethod = pThisType->pVTable[pCallMethod->vTableOfs];
 				//dprintfn("Calling virtual method: %s", pCallMethod->name);
 			}
@@ -1919,27 +1927,35 @@ JIT_CEQ_F64F64_end:
 	GO_NEXT();
 
 JIT_CGT_F32F32_start:
+JIT_CGT_UN_F32F32_start:
 	OPCODE_USE(JIT_CGT_F32F32);
 	BINARY_OP(U32, float, float, >);
 JIT_CGT_F32F32_end:
+JIT_CGT_UN_F32F32_end:
 	GO_NEXT();
 
 JIT_CGT_F64F64_start:
+JIT_CGT_UN_F64F64_start:
 	OPCODE_USE(JIT_CGT_F64F64);
 	BINARY_OP(U32, double, double, >);
 JIT_CGT_F64F64_end:
+JIT_CGT_UN_F64F64_end:
 	GO_NEXT();
 
 JIT_CLT_F32F32_start:
+JIT_CLT_UN_F32F32_start:
 	OPCODE_USE(JIT_CLT_F32F32);
 	BINARY_OP(U32, float, float, <);
 JIT_CLT_F32F32_end:
+JIT_CLT_UN_F32F32_end:
 	GO_NEXT();
 
 JIT_CLT_F64F64_start:
+JIT_CLT_UN_F64F64_start:
 	OPCODE_USE(JIT_CLT_F64F64);
 	BINARY_OP(U32, double, double, <);
 JIT_CLT_F64F64_end:
+JIT_CLT_UN_F64F64_end:
 	GO_NEXT();
 
 JIT_ADD_OVF_I32I32_start:
@@ -2910,10 +2926,20 @@ JIT_LOADFIELD_4_start:
 	OPCODE_USE(JIT_LOADFIELD_4);
 	{
 		U32 ofs = GET_OP();
-		PTR heapPtr = POP_O();
+		heapPtr = POP_O();
 		PUSH_U32(*(U32*)(heapPtr + ofs));
 	}
 JIT_LOADFIELD_4_end:
+	GO_NEXT();
+
+JIT_LOADFIELD_8_start:
+	OPCODE_USE(JIT_LOADFIELD_8);
+	{
+		U32 ofs = GET_OP();
+		heapPtr = POP_O();
+		PUSH_U64(*(U64*)(heapPtr + ofs));
+	}
+JIT_LOADFIELD_8_end:
 	GO_NEXT();
 
 JIT_LOADFIELD_VALUETYPE_start:

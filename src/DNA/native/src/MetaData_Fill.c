@@ -438,7 +438,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 
 		// If this is an enum type, then pretend its stack type is its underlying type
 		if (pTypeDef->pParent == types[TYPE_SYSTEM_ENUM]) {
-			pTypeDef->stackType = EVALSTACK_INT32;
+			pTypeDef->stackType = EVALSTACK_INT32; // TODO: other integral types?
 		}
 	}
 
