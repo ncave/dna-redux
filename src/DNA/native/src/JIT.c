@@ -341,10 +341,10 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
         U32 pcilOfs = cilOfs;
 
 		op = pCIL[cilOfs++];
-		//printf("Opcode: 0x%02x\n", op);
-		//U32 op2 = (op == CIL_EXTENDED) ? 0x100 + pCIL[cilOfs] : op;
-		//dprintfn("CIL op: 0x%03x (%s)", op2, Sys_CIL_OpCodeName(op2));
-        if (pDebugMetadataEntry != NULL && sequencePointIndex < pDebugMetadataEntry->sequencePointsCount) {
+		//U32 op2 = (op == CIL_EXTENDED) ? 0xFE00 + pCIL[cilOfs] : op;
+		//dprintfn("CIL op: 0x%02x (%s)", op2, Sys_CIL_OpCodeName(op2));
+
+		if (pDebugMetadataEntry != NULL && sequencePointIndex < pDebugMetadataEntry->sequencePointsCount) {
             U32 spOffset = pDebugMetadataEntry->sequencePoints[sequencePointIndex];
             if (spOffset == pcilOfs) {
                 nextOpSequencePoint = sequencePointIndex;
@@ -1306,27 +1306,45 @@ conv2:
 			case CIL_LDFLD:
 				{
 					tMD_FieldDef *pFieldDef;
+					tMD_TypeDef *pTypeDef;
 
 					// Get the FieldRef or FieldDef of the field to load
 					u32Value = GetUnalignedU32(pCIL, &cilOfs);
 					pFieldDef = MetaData_GetFieldDefFromDefOrRef(pMethodDef->pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
-					if (pFieldDef->pType == NULL) {
-						MetaData_Fill_FieldDef(pMethodDef->pParentType, pFieldDef, 0, pMethodDef->pParentType->ppClassTypeArgs);
-					}
+					// Sometimes, the type def will not have been filled, so ensure it's filled.
+					pTypeDef = MetaData_GetTypeDefFromFieldDef(pFieldDef);
+					MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
+
 					// Pop the object/valuetype on which to load the field.
 					pStackType = PopStackType();
-					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
-						PushOpParam(JIT_LOADFIELD_VALUETYPE, pStackType->stackSize);
-						PushPTR(pFieldDef);
-					} else {
+
+					switch (pStackType->stackType)
+					{
+					case EVALSTACK_INTNATIVE:
+					case EVALSTACK_INT32:
+					case EVALSTACK_F32:
+					case EVALSTACK_PTR:
+					case EVALSTACK_O:
 						if (pFieldDef->memSize <= 4) {
-							PushOp(JIT_LOADFIELD_4);
-							PushU32(pFieldDef->memOffset);
-						} else {
+							PushOpParam(JIT_LOADFIELD_4, pFieldDef->memOffset);
+						}
+						else {
 							PushOp(JIT_LOADFIELD);
 							PushPTR(pFieldDef);
 						}
+						break;
+					case EVALSTACK_INT64:
+					case EVALSTACK_F64:
+						PushOpParam(JIT_LOADFIELD_8, pFieldDef->memOffset);
+						break;
+					case EVALSTACK_VALUETYPE:
+						PushOpParam(JIT_LOADFIELD_VALUETYPE, pStackType->stackSize);
+						PushPTR(pFieldDef);
+						break;
+					default:
+						Crash("JITit(): Cannot load field on stack type: %d", pStackType->stackType);
 					}
+
 					// Push the stack type of the just-read field
 					PushStackType(pFieldDef->pType);
 				}

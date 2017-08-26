@@ -1,18 +1,12 @@
 using System;
 
 class NBody {
-    public static void Run(String[] args) {
-        int n = args.Length > 0 ? Int32.Parse(args[0]) : 50_000; //50_000_000;
-        Console.WriteLine("Calculating N-Body for {0} iterations", n);
+    public static void Run(int N) {
+        Console.WriteLine("Calculating N-Body for {0} iterations", N);
         NBodySystem bodies = new NBodySystem();
         Console.WriteLine("{0:f9}", bodies.Energy());
-
-        var dtStart = DateTime.UtcNow;
-        for (int i = 0; i < n; i++) { bodies.Advance(0.01); }
-        var elapsed = DateTime.UtcNow - dtStart;
-
+        for (int i = 0; i < N; i++) { bodies.Advance(0.01); }
         Console.WriteLine("{0:f9}", bodies.Energy());
-        Console.WriteLine("Elapsed {0:f3} sec", elapsed.TotalSeconds);
     }
 }
 

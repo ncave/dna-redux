@@ -48,7 +48,7 @@ U32 MetaData_CompareNameAndSig(STRING name, BLOB_ sigBlob, tMetaData *pSigMetaDa
 		isGeneric = e & SIG_CALLCONV_GENERIC;
 		if (isGeneric) {
 			if (isSame) {
-				return 1;
+				return 1; // just compare signatures (seems to help in some corner cases)
 			}
 			e = MetaData_DecodeSigEntry(&sig);
 			thisE = MetaData_DecodeSigEntry(&thisSig);
@@ -162,7 +162,8 @@ tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_MethodDef 
 		// Use normal inheritence rules
 		// It must be a virtual method that's being overridden.
 		for (U32 i = pTypeDef->numVirtualMethods - 1; i != 0xffffffff; i--) {
-			if (MetaData_CompareNameAndSig(pMethodDef->name, pMethodDef->signature, pMethodDef->pMetaData, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs, pTypeDef->pVTable[i], pTypeDef->ppClassTypeArgs, pTypeDef->pVTable[i]->ppMethodTypeArgs)) {
+			tMD_MethodDef *pVirtualMethodDef = pTypeDef->pVTable[i];
+			if (MetaData_CompareNameAndSig(pMethodDef->name, pMethodDef->signature, pMethodDef->pMetaData, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs, pVirtualMethodDef, pTypeDef->ppClassTypeArgs, pVirtualMethodDef->ppMethodTypeArgs)) {
 				return pTypeDef->pVTable[i];
 			}
 		}

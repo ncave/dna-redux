@@ -96,16 +96,10 @@ tAsyncCall* Reflection_MemberInfo_GetCustomAttributes(PTR pThis_, PTR pParams, P
 					// Skip the 'this' param
 					MetaData_DecodeSigEntry(&blob);
 				} else { 
-					if (param.pTypeDef == types[TYPE_SYSTEM_INT32]) {
-						unsigned int intValue = *((int*)blob);
-						blob += sizeof(int);
-						HEAP_PTR boxedInt = Heap_Box(types[TYPE_SYSTEM_INT32], (PTR)&intValue);
-						SystemArray_StoreElement(pConstructorArgsArray, argIndex - 1, (PTR)&boxedInt);
-					} else if (param.pTypeDef == types[TYPE_SYSTEM_BOOLEAN]) {
-						U32 boolVal = *((char*)blob);
-						blob += sizeof(char);
-						HEAP_PTR boxedBool = Heap_Box(types[TYPE_SYSTEM_BOOLEAN], (PTR)&boolVal);
-						SystemArray_StoreElement(pConstructorArgsArray, argIndex - 1, (PTR)&boxedBool);
+					if (param.pTypeDef->isValueType) {
+						HEAP_PTR boxed = Heap_Box(param.pTypeDef, blob);
+						blob += param.pTypeDef->instanceMemSize;
+						SystemArray_StoreElement(pConstructorArgsArray, argIndex - 1, (PTR)&boxed);
 					} else if (param.pTypeDef == types[TYPE_SYSTEM_STRING]) {
 						HEAP_PTR dotNetString;
 						unsigned int numUtf8Bytes = MetaData_DecodeSigEntryExt(&blob, 0);
@@ -125,7 +119,7 @@ tAsyncCall* Reflection_MemberInfo_GetCustomAttributes(PTR pThis_, PTR pParams, P
 						}
 						SystemArray_StoreElement(pConstructorArgsArray, argIndex - 1, (PTR)&dotNetString);
 					} else {
-						Crash("Unsupported: attribute parameter of type %s\n", param.pTypeDef->name);
+						Crash("GetCustomAttributes: Unsupported attribute parameter of type %s\n", param.pTypeDef->name);
 						return NULL;
 					}
 				}
@@ -133,7 +127,7 @@ tAsyncCall* Reflection_MemberInfo_GetCustomAttributes(PTR pThis_, PTR pParams, P
 
 			unsigned int numNamedParams = MetaData_DecodeSigEntry(&blob);
 			if (numNamedParams > 0) {
-				Crash("Unsupported: attributes with named params on attribute %s\n", pCtorTypeDef->name);
+				Crash("GetCustomAttributes: Unsupported attributes with named params on attribute %s\n", pCtorTypeDef->name);
 				return NULL;
 			}
 		}
