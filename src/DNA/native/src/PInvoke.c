@@ -95,7 +95,7 @@ fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap) {
 
 	libName = MetaData_GetModuleRefName(pMetaData, pImplMap->importScope);
 
-#ifndef NO_JS
+#ifndef NO_JS_INTEROP
 	return (fnPInvoke)invokeJsFunc;
 #else 
 	
@@ -107,7 +107,7 @@ fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap) {
 #endif
 #ifdef _WIN32
     return GetProcAddress(pLib->pLib, pImplMap->importName);
-#elif NO_JS
+#elif NO_JS_INTEROP
     return dlsym(pLib, pImplMap->importName);
 #endif
 }
