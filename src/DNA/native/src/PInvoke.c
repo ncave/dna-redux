@@ -95,7 +95,7 @@ fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap) {
 
 	libName = MetaData_GetModuleRefName(pMetaData, pImplMap->importScope);
 
-#ifndef _WIN32
+#ifndef NO_JS
 	return (fnPInvoke)invokeJsFunc;
 #else 
 	
@@ -104,11 +104,12 @@ fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap) {
 		// Library not found, so we can't find the function
 		return NULL;
 	}
-
-	pProc = GetProcAddress(pLib->pLib, pImplMap->importName);
 #endif
-	return pProc;
-
+#ifdef _WIN32
+    return GetProcAddress(pLib->pLib, pImplMap->importName);
+#elif NO_JS
+    return dlsym(pLib, pImplMap->importName);
+#endif
 }
 
 static void* ConvertStringToANSI(HEAP_PTR pHeapEntry) {
