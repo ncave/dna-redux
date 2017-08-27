@@ -61,7 +61,7 @@ static tLoadedLib* GetLib(STRING name) {
 	}
 	// Not loaded, so load it
 	sprintf(strchr(libName, 0), ".%s", LIB_SUFFIX);
-#if _WIN32
+#ifdef _WIN32
 	pNativeLib = LoadLibraryA(libName);
 #else
 	pNativeLib = dlopen(libName, RTLD_LAZY); //DL_LAZY);
@@ -80,7 +80,7 @@ static tLoadedLib* GetLib(STRING name) {
 #endif
 		return NULL;
 	}
-	pLib = TMALLOCFOREVER(tLoadedLib);
+	pLib = TMALLOCFOREVER(1, tLoadedLib);
 	pLib->pNext = pLoadedLibs;
 	pLoadedLibs = pLib;
 	pLib->name = name;

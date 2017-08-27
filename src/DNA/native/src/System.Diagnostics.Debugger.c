@@ -98,7 +98,7 @@ int Debugger_SetBreakPoint(char* pID, int sequencePoint)
 
     // Didn't find the node
     if (pNode == NULL) {
-        pNode = TMALLOC(tBreakPoint);
+        pNode = TMALLOC(1, tBreakPoint);
         pNode->pID = mallocForever((U32)strlen(pID) + 1);
         strcpy(pNode->pID, pID);
         pNode->offset = 0;

@@ -223,3 +223,19 @@ tAsyncCall* System_Type_GetMethod(PTR pThis_, PTR pParams, PTR pReturnValue)
 	*(HEAP_PTR*)pReturnValue = NULL;
 	return NULL;
 }
+
+tAsyncCall* System_Type_IsAssignableFrom(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
+	tMD_TypeDef *pFromType = RuntimeType_DeRef((PTR)((tMD_TypeDef**)pParams)[0]);
+	
+	*(U32*)pReturnValue = Type_IsAssignableFrom(pThisType, pFromType);
+	return NULL;
+}
+
+tAsyncCall* System_Type_IsSubclassOf(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tMD_TypeDef *pBaseType = RuntimeType_DeRef(pThis_);
+	tMD_TypeDef *pTestType = RuntimeType_DeRef((PTR)((tMD_TypeDef**)pParams)[0]);
+	
+	*(U32*)pReturnValue = Type_IsDerivedFromOrSame(pBaseType, pTestType);
+	return NULL;
+}

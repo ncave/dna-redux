@@ -46,7 +46,9 @@
 // Measure how long the entire .NET programme execution takes
 #define DIAG_TOTAL_TIME
 
-
+#ifdef _DEBUG
+//#define DIAG_MEMORY_LEAKS
+#endif
 
 // Non-diagnostic stuff
 

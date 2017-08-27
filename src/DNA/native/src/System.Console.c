@@ -97,7 +97,7 @@ static U32 Internal_ReadKey_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAs
 }
 
 tAsyncCall* System_Console_Internal_ReadKey(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tAsyncCall *pAsync = TMALLOC(tAsyncCall);
+	tAsyncCall *pAsync = TMALLOC(1, tAsyncCall);
 
 	pAsync->sleepTime = -1;
 	pAsync->checkFn = Internal_ReadKey_Check;

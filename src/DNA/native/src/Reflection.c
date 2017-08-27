@@ -148,7 +148,7 @@ tAsyncCall* Reflection_MethodInfo_MakeGenericMethod(PTR pThis_, PTR pParams, PTR
 	tMD_MethodDef *pCoreMethod = pMethodInfoThis->methodBase.methodDef;
 
 	// get arg types
-	tMD_TypeDef **ppTypeArgs = malloc(argCount * sizeof(tMD_TypeDef*));
+	tMD_TypeDef **ppTypeArgs = TMALLOC(argCount, tMD_TypeDef*);
 	for (U32 i = 0; i < argCount; i++) {
 		ppTypeArgs[i] = Heap_GetType(pArray[i]);
 	}

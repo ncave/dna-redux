@@ -62,8 +62,8 @@ IDX_TABLE MetaData_DecodeSigEntryToken(SIG *pSig) {
 }
 
 tMetaData* MetaData() {
-	tMetaData *pRet = TMALLOC(tMetaData);
-	memset(pRet, 0, sizeof(tMetaData));
+	tMetaData *pRet = TCALLOCFOREVER(1, tMetaData);
+	//memset(pRet, 0, sizeof(tMetaData));
 	return pRet;
 }
 
@@ -340,7 +340,7 @@ static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **p
 	}
 
 	// Allocate memory for destination table
-	pDest = pRet = malloc(numRows * rowLen);
+	pDest = pRet = mallocForever(numRows * rowLen);
 
 	// Load table
 	for (row=0; row<numRows; row++) {

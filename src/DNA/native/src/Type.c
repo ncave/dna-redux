@@ -123,7 +123,7 @@ static void CreateNewArrayType(tMD_TypeDef *pNewArrayType, tMD_TypeDef *pElement
 
 		orgNumInterfaces = pNewArrayType->numInterfaces;
 		pNewArrayType->numInterfaces += 3;
-		pAllIMs = (tInterfaceMap*)mallocForever(pNewArrayType->numInterfaces * sizeof(tInterfaceMap));
+		pAllIMs = TMALLOCFOREVER(pNewArrayType->numInterfaces, tInterfaceMap);
 		memcpy(pAllIMs, pNewArrayType->pInterfaceMaps, orgNumInterfaces * sizeof(tInterfaceMap));
 		pNewArrayType->pInterfaceMaps = pAllIMs;
 
@@ -132,7 +132,7 @@ static void CreateNewArrayType(tMD_TypeDef *pNewArrayType, tMD_TypeDef *pElement
 		pInterfaceT = Generics_GetGenericTypeFromCoreType(types[TYPE_SYSTEM_COLLECTIONS_GENERIC_IENUMERABLE_T], 1, &pElementType);
 		pInterfaceMap->pInterface = pInterfaceT;
 		pInterfaceMap->pVTableLookup = NULL;
-		pInterfaceMap->ppMethodVLookup = mallocForever(pInterfaceT->numVirtualMethods * sizeof(tMD_MethodDef*));
+		pInterfaceMap->ppMethodVLookup = TMALLOCFOREVER(pInterfaceT->numVirtualMethods, tMD_MethodDef*);
 		pMethod = Generics_GetMethodDefFromCoreMethod(ppGenericArrayMethods[GENERICARRAYMETHODS_Internal_GetGenericEnumerator], pNewArrayType, 1, &pElementType);
 		pInterfaceMap->ppMethodVLookup[0] = pMethod;
 
@@ -141,7 +141,7 @@ static void CreateNewArrayType(tMD_TypeDef *pNewArrayType, tMD_TypeDef *pElement
 		pInterfaceT = Generics_GetGenericTypeFromCoreType(types[TYPE_SYSTEM_COLLECTIONS_GENERIC_ICOLLECTION_T], 1, &pElementType);
 		pInterfaceMap->pInterface = pInterfaceT;
 		pInterfaceMap->pVTableLookup = NULL;
-		pInterfaceMap->ppMethodVLookup = mallocForever(pInterfaceT->numVirtualMethods * sizeof(tMD_MethodDef*));
+		pInterfaceMap->ppMethodVLookup = TMALLOCFOREVER(pInterfaceT->numVirtualMethods, tMD_MethodDef*);
 		pInterfaceMap->ppMethodVLookup[0] = ppGenericArrayMethods[GENERICARRAYMETHODS_get_Length];
 		pInterfaceMap->ppMethodVLookup[1] = ppGenericArrayMethods[GENERICARRAYMETHODS_get_IsReadOnly];
 		pInterfaceMap->ppMethodVLookup[2] = Generics_GetMethodDefFromCoreMethod(ppGenericArrayMethods[GENERICARRAYMETHODS_Internal_GenericAdd], pNewArrayType, 1, &pElementType);
@@ -155,7 +155,7 @@ static void CreateNewArrayType(tMD_TypeDef *pNewArrayType, tMD_TypeDef *pElement
 		pInterfaceT = Generics_GetGenericTypeFromCoreType(types[TYPE_SYSTEM_COLLECTIONS_GENERIC_ILIST_T], 1, &pElementType); //, ppClassTypeArgs, ppMethodTypeArgs);
 		pInterfaceMap->pInterface = pInterfaceT;
 		pInterfaceMap->pVTableLookup = NULL;
-		pInterfaceMap->ppMethodVLookup = mallocForever(pInterfaceT->numVirtualMethods * sizeof(tMD_MethodDef*));
+		pInterfaceMap->ppMethodVLookup = TMALLOCFOREVER(pInterfaceT->numVirtualMethods, tMD_MethodDef*);
 		pInterfaceMap->ppMethodVLookup[0] = Generics_GetMethodDefFromCoreMethod(ppGenericArrayMethods[GENERICARRAYMETHODS_Internal_GenericIndexOf], pNewArrayType, 1, &pElementType);
 		pInterfaceMap->ppMethodVLookup[1] = Generics_GetMethodDefFromCoreMethod(ppGenericArrayMethods[GENERICARRAYMETHODS_Internal_GenericInsert], pNewArrayType, 1, &pElementType);
 		pInterfaceMap->ppMethodVLookup[2] = ppGenericArrayMethods[GENERICARRAYMETHODS_Internal_GenericRemoveAt];
@@ -184,11 +184,11 @@ tMD_TypeDef* Type_GetArrayTypeDef(tMD_TypeDef *pElementType, tMD_TypeDef **ppCla
 
 	// Must have this new array type in the linked-list of array types before it is initialised
 	// (otherwise it can get stuck in an infinite loop)
-	pIterArrays = TMALLOCFOREVER(tArrayTypeDefs);
+	pIterArrays = TMALLOCFOREVER(1, tArrayTypeDefs);
 	pIterArrays->pElementType = pElementType;
 	pIterArrays->pNext = pArrays;
 	pArrays = pIterArrays;
-	pIterArrays->pArrayType = TMALLOC(tMD_TypeDef);
+	pIterArrays->pArrayType = TMALLOCFOREVER(1, tMD_TypeDef);
 
 	CreateNewArrayType(pIterArrays->pArrayType, pElementType, ppClassTypeArgs, ppMethodTypeArgs);
 	return pIterArrays->pArrayType;
@@ -424,7 +424,7 @@ int CorLibDone = 0;
 void Type_Init() {
 	// Build all the types needed by the interpreter.
 	numInitTypes = sizeof(typeInit) / sizeof(typeInit[0]);
-	types = (tMD_TypeDef**)mallocForever(numInitTypes * sizeof(tMD_TypeDef*));
+	types = TMALLOCFOREVER(numInitTypes, tMD_TypeDef*);
 	for (U32 i=0; i<numInitTypes; i++) {
 		if (i != typeInit[i].index) { Crash("invalid index"); }
 		if (typeInit[i].assemblyName != NULL) {
