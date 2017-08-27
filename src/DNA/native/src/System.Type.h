@@ -31,5 +31,7 @@ tAsyncCall* System_Type_EnsureAssemblyLoaded(PTR pThis_, PTR pParams, PTR pRetur
 tAsyncCall* System_Type_GetProperties(PTR pThis_, PTR pParams, PTR pReturnValue);
 tAsyncCall* System_Type_GetMethods(PTR pThis_, PTR pParams, PTR pReturnValue);
 tAsyncCall* System_Type_GetMethod(PTR pThis_, PTR pParams, PTR pReturnValue);
+tAsyncCall* System_Type_IsAssignableFrom(PTR pThis_, PTR pParams, PTR pReturnValue);
+tAsyncCall* System_Type_IsSubclassOf(PTR pThis_, PTR pParams, PTR pReturnValue);
 
 #endif

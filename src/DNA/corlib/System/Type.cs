@@ -84,52 +84,11 @@ namespace System {
             get { return false; }
         }
 
-        public virtual bool IsSubclassOf(Type c) {
-            Type p = this;
-            if (p == c)
-                return false;
-            while (p != null) {
-                if (p == c)
-                    return true;
-                p = p.BaseType;
-            }
-            return false;
-        }
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        extern public virtual bool IsSubclassOf(Type c);
 
-        public virtual bool IsAssignableFrom(Type c)
-        {
-            if (c == null)
-                return false;
-
-            if (this == c)
-                return true;
-
-            // TODO:
-            // // For backward-compatibility, we need to special case for the types
-            // // whose UnderlyingSystemType are RuntimeType objects. 
-            // RuntimeType toType = this.UnderlyingSystemType as RuntimeType;
-            // if (toType != null)
-            //     return toType.IsAssignableFrom(c);
-
-            // If c is a subclass of this class, then c can be cast to this type.
-            if (c.IsSubclassOf(this))
-                return true;
-
-            // TODO:
-            // if (this.IsInterface) {
-            //     return c.ImplementInterface(this);
-            // }
-            // else if (IsGenericParameter) {
-            //     Type[] constraints = GetGenericParameterConstraints();
-            //     for (int i = 0; i < constraints.Length; i++) {
-            //         if (!constraints[i].IsAssignableFrom(c))
-            //             return false;
-            //     }
-            //     return true;
-            // }
-
-            return false;
-        }
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        extern public virtual bool IsAssignableFrom(Type c);
 
         public static Type GetType(string typeName) {
             lock (typesByNameCache) {
