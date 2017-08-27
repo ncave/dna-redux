@@ -62,7 +62,7 @@ struct tTypeStack_ {
 	U32 maxBytes; // The max size of the stack in bytes
 };
 
-#define InitOps(ops_, initialCapacity) ops_.capacity = initialCapacity; ops_.ofs = 0; ops_.p = malloc((initialCapacity) * sizeof(U32)); ops_.pSequencePoints = malloc((initialCapacity) * sizeof(I32));
+#define InitOps(ops_, initialCapacity) ops_.capacity = initialCapacity; ops_.ofs = 0; ops_.p = TMALLOC(initialCapacity, U32); ops_.pSequencePoints = TMALLOC(initialCapacity, I32);
 #define DeleteOps(ops_) free(ops_.p); free(ops_.pSequencePoints)
 
 // Turn this into a MACRO at some point?
@@ -106,7 +106,7 @@ static U32 Translate(U32 op, U32 getDynamic) {
 #define PopStackTypeMulti(number) typeStack.ofs -= number
 #define PopStackTypeAll() typeStack.ofs = 0;
 
-#define MayCopyTypeStack() if (u32Value > cilOfs) ppTypeStacks[u32Value] = DeepCopyTypeStack(&typeStack)
+#define MayCopyTypeStack() if (u32Value > cilOfs) DeepCopyTypeStack(ppTypeStacks, u32Value, &typeStack)
 
 static void PushStackType_(tTypeStack *pTypeStack, tMD_TypeDef *pType) {
 	U32 i, size;
@@ -151,19 +151,29 @@ static U32 GetUnalignedU32(U8 *pCIL, U32 *pCILOfs) {
 	return a | (b << 8) | (c << 16) | (d << 24);
 }
 
-static tTypeStack* DeepCopyTypeStack(tTypeStack *pToCopy) {
+static void FreeTypeStack(tTypeStack *pStack) {
+	if (pStack != NULL) {
+		if (pStack->ppTypes != NULL) {
+			free(pStack->ppTypes);
+		}
+		free(pStack);
+	}
+}
+
+static void DeepCopyTypeStack(tTypeStack **ppTypeStacks, U32 index, tTypeStack *pCopyFrom) {
 	tTypeStack *pCopy;
 
-	pCopy = TMALLOC(tTypeStack);
-	pCopy->maxBytes = pToCopy->maxBytes;
-	pCopy->ofs = pToCopy->ofs;
-	if (pToCopy->ofs > 0) {
-		pCopy->ppTypes = malloc(pToCopy->ofs * sizeof(tMD_TypeDef*));
-		memcpy(pCopy->ppTypes, pToCopy->ppTypes, pToCopy->ofs * sizeof(tMD_TypeDef*));
+	pCopy = TMALLOC(1, tTypeStack);
+	pCopy->maxBytes = pCopyFrom->maxBytes;
+	pCopy->ofs = pCopyFrom->ofs;
+	if (pCopyFrom->ofs > 0) {
+		pCopy->ppTypes = TMALLOC(pCopyFrom->ofs, tMD_TypeDef*);
+		memcpy(pCopy->ppTypes, pCopyFrom->ppTypes, pCopyFrom->ofs * sizeof(tMD_TypeDef*));
 	} else {
 		pCopy->ppTypes = NULL;
 	}
-	return pCopy;
+	FreeTypeStack(ppTypeStacks[index]);
+	ppTypeStacks[index] = pCopy;
 }
 
 static void RestoreTypeStack(tTypeStack *pMainStack, tTypeStack *pCopyFrom) {
@@ -268,43 +278,43 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 	tMD_TypeDef *pTypeA, *pTypeB;
 	PTR pMem;
 	tMetaData *pMetaData;
-    tDebugMetaData* pDebugMetadata;
-    tDebugMetaDataEntry* pDebugMetadataEntry = NULL;
-    int sequencePointIndex;
+	tDebugMetaData* pDebugMetadata;
+	tDebugMetaDataEntry* pDebugMetadataEntry = NULL;
+	int sequencePointIndex;
 
 	pMetaData = pMethodDef->pMetaData;
-    pDebugMetadata = pMetaData->debugMetadata;
+	pDebugMetadata = pMetaData->debugMetadata;
 
-    // TODO: Use a hash table as this is super slow
-    if (pDebugMetadata != NULL) {
-        tDebugMetaDataEntry* pEntry = pDebugMetadata->entries;
+	// TODO: Use a hash table as this is super slow
+	if (pDebugMetadata != NULL) {
+		tDebugMetaDataEntry* pEntry = pDebugMetadata->entries;
 
-        while (pEntry != NULL) {
-            // TODO: Compare namespace, type and module name
-            if (strcmp(pEntry->pMethodName, pMethodDef->name) == 0) {
-                if (pMethodDef->pParentType != NULL) {
-                    if (strcmp(pEntry->pClassName, pMethodDef->pParentType->name) == 0 && strcmp(pEntry->pNamespaceName, pMethodDef->pParentType->nameSpace) == 0) {
-                        pDebugMetadataEntry = pEntry;
-                        break;
-                    }
-                }
-                else {
-                    pDebugMetadataEntry = pEntry;
-                    break;
-                }
-            }
-            pEntry = pEntry->next;
-        }
-    }
-    
-	pJITOffsets = malloc(codeSize * sizeof(U32));
+		while (pEntry != NULL) {
+			// TODO: Compare namespace, type and module name
+			if (strcmp(pEntry->pMethodName, pMethodDef->name) == 0) {
+				if (pMethodDef->pParentType != NULL) {
+					if (strcmp(pEntry->pClassName, pMethodDef->pParentType->name) == 0 && strcmp(pEntry->pNamespaceName, pMethodDef->pParentType->nameSpace) == 0) {
+						pDebugMetadataEntry = pEntry;
+						break;
+					}
+				}
+				else {
+					pDebugMetadataEntry = pEntry;
+					break;
+				}
+			}
+			pEntry = pEntry->next;
+		}
+	}
+
+	pJITOffsets = TMALLOC(codeSize, U32);
 	// + 1 to handle cases where the stack is being restored at the last instruction in a method
-	ppTypeStacks = malloc((codeSize + 1) * sizeof(tTypeStack*));
-	memset(ppTypeStacks, 0, (codeSize + 1) * sizeof(tTypeStack*));
+	ppTypeStacks = TCALLOC(codeSize + 1, tTypeStack*);
+	//memset(ppTypeStacks, 0, (codeSize + 1) * sizeof(tTypeStack*));
 	typeStack.maxBytes = 0;
 	typeStack.ofs = 0;
-	typeStack.ppTypes = malloc(maxStack * sizeof(tMD_TypeDef*));
-    sequencePointIndex = 0;
+	typeStack.ppTypes = TMALLOC(maxStack, tMD_TypeDef*);
+	sequencePointIndex = 0;
 
 	// Set up all exception 'catch' blocks with the correct stack information,
 	// So they'll have just the exception type on the stack when entered
@@ -315,10 +325,10 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 		if (pEx->flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION) {
 			tTypeStack *pTypeStack;
 
-			ppTypeStacks[pEx->handlerStart] = pTypeStack = TMALLOC(tTypeStack);
+			ppTypeStacks[pEx->handlerStart] = pTypeStack = TMALLOC(1, tTypeStack);
 			pTypeStack->maxBytes = 4;
 			pTypeStack->ofs = 1;
-			pTypeStack->ppTypes = TMALLOC(tMD_TypeDef*);
+			pTypeStack->ppTypes = TMALLOC(1, tMD_TypeDef*);
 			pTypeStack->ppTypes[0] = pEx->u.pCatchTypeDef;
 		}
 	}
@@ -338,27 +348,27 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 		// Set the JIT offset for this CIL opcode
 		pJITOffsets[cilOfs] = ops.ofs;
 
-        U32 pcilOfs = cilOfs;
+		U32 pcilOfs = cilOfs;
 
 		op = pCIL[cilOfs++];
 		//U32 op2 = (op == CIL_EXTENDED) ? 0xFE00 + pCIL[cilOfs] : op;
 		//dprintfn("CIL op: 0x%02x (%s)", op2, Sys_CIL_OpCodeName(op2));
 
 		if (pDebugMetadataEntry != NULL && sequencePointIndex < pDebugMetadataEntry->sequencePointsCount) {
-            U32 spOffset = pDebugMetadataEntry->sequencePoints[sequencePointIndex];
-            if (spOffset == pcilOfs) {
-                nextOpSequencePoint = sequencePointIndex;
-                sequencePointIndex++;
-            } else {
-                nextOpSequencePoint = -1;
-            }
-        }
-        
+			U32 spOffset = pDebugMetadataEntry->sequencePoints[sequencePointIndex];
+			if (spOffset == pcilOfs) {
+				nextOpSequencePoint = sequencePointIndex;
+				sequencePointIndex++;
+			} else {
+				nextOpSequencePoint = -1;
+			}
+		}
+
 		switch (op) {
 			case CIL_NOP:
-                {
-                    PushOp(JIT_NOP);
-                }
+				{
+					PushOp(JIT_NOP);
+				}
 				break;
 			case CIL_BREAK:
 				Crash("Break-point requested.");
@@ -1666,7 +1676,7 @@ cilLeave:
 			shrinkOpsBy = 0;
 			if (opCodeCount > 1) {
 				U32 combinedSize;
-				tCombinedOpcodesMem *pCOMem = TMALLOC(tCombinedOpcodesMem);
+				tCombinedOpcodesMem *pCOMem = TMALLOC(1, tCombinedOpcodesMem);
 				shrinkOpsBy = GenCombined(&ops, &isDynamic, inst0, instCount, &combinedSize, &pCOMem->pMem);
 				pCOMem->pNext = pJITted->pCombinedOpcodesMem;
 				pJITted->pCombinedOpcodesMem = pCOMem;
@@ -1715,10 +1725,8 @@ combineDone:
 
 	free(typeStack.ppTypes);
 
-	for (i=0; i<codeSize; i++) {
-		if (ppTypeStacks[i] != NULL) {
-			free(ppTypeStacks[i]->ppTypes);
-		}
+	for (i=0; i <= codeSize; i++) {
+		FreeTypeStack(ppTypeStacks[i]);
 	}
 	free(ppTypeStacks);
 
@@ -1727,7 +1735,7 @@ combineDone:
 
 	// Copy ops to some memory of exactly the correct size. To not waste memory.
 	u32Value = ops.ofs * sizeof(U32);
-	pFinalOps = genCombinedOpcodes?malloc(u32Value):mallocForever(u32Value);
+	pFinalOps = genCombinedOpcodes ? malloc(u32Value) : mallocForever(u32Value);
 	memcpy(pFinalOps, ops.p, u32Value);
 	
 	pJITted->pDebugMetadataEntry = pDebugMetadataEntry;
@@ -1765,7 +1773,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 	log_f(2, "JIT:   %s\n", Sys_GetMethodDesc(pMethodDef));
 
 	pMetaData = pMethodDef->pMetaData;
-	pJITted = (genCombinedOpcodes)?TMALLOC(tJITted):TMALLOCFOREVER(tJITted);
+	pJITted = (genCombinedOpcodes) ? TMALLOC(1, tJITted) : TMALLOCFOREVER(1, tJITted);
 #ifdef GEN_COMBINED_OPCODES
 	pJITted->pCombinedOpcodesMem = NULL;
 	pJITted->opsMemSize = 0;
@@ -1789,7 +1797,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		} else {
 			pJITted->maxStack = (pMethodDef->pReturnType == NULL)?0:pMethodDef->pReturnType->stackSize; // For return value
 		}
-		pCallNative = TMALLOCFOREVER(tJITCallNative);
+		pCallNative = TMALLOCFOREVER(1, tJITCallNative);
 		pCallNative->opCode = Translate(JIT_CALL_NATIVE, 0);
 		pCallNative->pMethodDef = pMethodDef;
 		pCallNative->fn = InternalCall_Map(pMethodDef);
@@ -1811,7 +1819,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 			Crash("PInvoke library or function not found: %s()", pImplMap->importName);
 		}
 
-		pCallPInvoke = TMALLOCFOREVER(tJITCallPInvoke);
+		pCallPInvoke = TMALLOCFOREVER(1, tJITCallPInvoke);
 		pCallPInvoke->opCode = Translate(JIT_CALL_PINVOKE, 0);
 		pCallPInvoke->fn = fn;
 		pCallPInvoke->pMethod = pMethodDef;
@@ -1852,7 +1860,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 			//pJITted->pExceptionHeaders = (tExceptionHeader*)(pMethodHeader + 4);
 			exSize = numClauses * sizeof(tExceptionHeader);
 			pJITted->pExceptionHeaders =
-				(tExceptionHeader*)(genCombinedOpcodes?malloc(exSize):mallocForever(exSize));
+				(tExceptionHeader*)(genCombinedOpcodes ? malloc(exSize) : mallocForever(exSize));
 			memcpy(pJITted->pExceptionHeaders, pMethodHeader + 4, exSize);
 		} else {
 			// Thin header
@@ -1862,9 +1870,9 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 			numClauses = (((U8*)pMethodHeader)[1] - 4) / 12;
 			exSize = numClauses * sizeof(tExceptionHeader);
 			pMethodHeader += 4;
-			//pExHeaders = pJITted->pExceptionHeaders = (tExceptionHeader*)mallocForever(numClauses * sizeof(tExceptionHeader));
+			//pExHeaders = pJITted->pExceptionHeaders = TMALLOCFOREVER(numClauses, tExceptionHeader);
 			pExHeaders = pJITted->pExceptionHeaders =
-				(tExceptionHeader*)(genCombinedOpcodes?malloc(exSize):mallocForever(exSize));
+				(tExceptionHeader*)(genCombinedOpcodes ? malloc(exSize) : mallocForever(exSize));
 			for (i=0; i<numClauses; i++) {
 				pExHeaders[i].flags = ((U16*)pMethodHeader)[0];
 				pExHeaders[i].tryStart = ((U16*)pMethodHeader)[1];
@@ -1902,7 +1910,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		sig = MetaData_GetBlob(pStandAloneSig->signature, &sigLength);
 		MetaData_DecodeSigEntry(&sig); // Always 0x07
 		numLocals = MetaData_DecodeSigEntry(&sig);
-		pLocals = (tParameter*)malloc(numLocals * sizeof(tParameter));
+		pLocals = TMALLOC(numLocals, tParameter);
 		totalSize = 0;
 		for (i=0; i<numLocals; i++) {
 			tMD_TypeDef *pTypeDef;

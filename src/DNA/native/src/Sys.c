@@ -80,12 +80,37 @@ char* Sys_GetMethodDesc(tMD_MethodDef *pMethod) {
 	return methodName;
 }
 
-static U32 mallocForeverSize = 0;
+static U32 allocForeverTotal = 0;
+#ifdef DIAG_MEMORY_LEAKS
+static U32 allocForeverIndex = 0;
+#define allocForeverMax 50000
+static void* allocForeverPointers[allocForeverMax];
+#endif
+
 // malloc() some memory that will never need to be resized or freed.
+static void* allocForever(void* ptr, U32 size) {
+	allocForeverTotal += size;
+	log_f(3, "--- allocForever: Total Size %d\n", allocForeverTotal);
+#ifdef DIAG_MEMORY_LEAKS
+	if (allocForeverIndex >= allocForeverMax) Crash("Too many allocForever()");
+	allocForeverPointers[allocForeverIndex++] = ptr;
+#endif
+	return ptr;
+}
+
 void* mallocForever(U32 size) {
-	mallocForeverSize += size;
-log_f(3, "--- mallocForever: TotalSize %d\n", mallocForeverSize);
-	return malloc(size);
+	return allocForever(malloc(size), size);
+}
+void* callocForever(U32 count, U32 size) {
+	return allocForever(calloc(count, size), count * size);
+}
+
+void freeForever() {
+#ifdef DIAG_MEMORY_LEAKS
+	for (U32 i=0; i < allocForeverIndex; i++) {
+		free(allocForeverPointers[i]);
+	}
+#endif
 }
 
 /*

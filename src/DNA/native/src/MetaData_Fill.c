@@ -104,7 +104,7 @@ void MetaData_Fill_MethodDef(tMD_TypeDef *pParentType, tMD_MethodDef *pMethodDef
 	if (pMethodDef->pReturnType != NULL) {
 		MetaData_Fill_TypeDef(pMethodDef->pReturnType, NULL, NULL);
 	}
-	pMethodDef->pParams = (tParameter*)malloc(pMethodDef->numberOfParameters * sizeof(tParameter));
+	pMethodDef->pParams = TMALLOCFOREVER(pMethodDef->numberOfParameters, tParameter);
 	totalSize = 0;
 	if (!METHOD_ISSTATIC(pMethodDef)) {
 		// Fill in parameter info for the 'this' pointer
@@ -233,7 +233,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 		lastIdx = firstIdx + pTypeDef->numFields - 1;
 		staticMemSize = 0;
 		if (pTypeDef->numFields > 0) {
-			pTypeDef->ppFields = mallocForever(pTypeDef->numFields * sizeof(tMD_FieldDef*));
+			pTypeDef->ppFields = TMALLOCFOREVER(pTypeDef->numFields, tMD_FieldDef*);
 		}
 		instanceMemSize = (pTypeDef->pParent == NULL)?0:pTypeDef->pParent->instanceMemSize;
 		for (token = firstIdx, i=0; token <= lastIdx; token++, i++) {
@@ -245,7 +245,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 				if (pTypeDef->pGenericDefinition != NULL) {
 					// If this is a generic instantiation type, then all field defs need to be copied,
 					// as there will be lots of different instantiations.
-					tMD_FieldDef *pFieldCopy = TMALLOCFOREVER(tMD_FieldDef);
+					tMD_FieldDef *pFieldCopy = TMALLOCFOREVER(1, tMD_FieldDef);
 					memcpy(pFieldCopy, pFieldDef, sizeof(tMD_FieldDef));
 					pFieldDef = pFieldCopy;
 				}
@@ -287,7 +287,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 				if (pTypeDef->pGenericDefinition != NULL) {
 					// If this is a generic instantiation type, then all field defs need to be copied,
 					// as there will be lots of different instantiations.
-					tMD_FieldDef *pFieldCopy = TMALLOCFOREVER(tMD_FieldDef);
+					tMD_FieldDef *pFieldCopy = TMALLOCFOREVER(1, tMD_FieldDef);
 					memcpy(pFieldCopy, pFieldDef, sizeof(tMD_FieldDef));
 					pFieldDef = pFieldCopy;
 				}
@@ -303,8 +303,8 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 			}
 		}
 		if (staticMemSize > 0) {
-			pTypeDef->pStaticFields = mallocForever(staticMemSize);
-			memset(pTypeDef->pStaticFields, 0, staticMemSize);
+			pTypeDef->pStaticFields = callocForever(1, staticMemSize);
+			//memset(pTypeDef->pStaticFields, 0, staticMemSize);
 			// Set the field addresses (->pMemory) of all static fields
 			for (i = 0; i<pTypeDef->numFields; i++) {
 				tMD_FieldDef *pFieldDef;
@@ -321,8 +321,8 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 		// Resolve all members
 		firstIdx = pTypeDef->methodList;
 		lastIdx = firstIdx + pTypeDef->numMethods - 1;
-		pTypeDef->ppMethods = mallocForever(pTypeDef->numMethods * sizeof(tMD_MethodDef*));
-		pTypeDef->pVTable = mallocForever(pTypeDef->numVirtualMethods * sizeof(tMD_MethodDef*));
+		pTypeDef->ppMethods = TMALLOCFOREVER(pTypeDef->numMethods, tMD_MethodDef*);
+		pTypeDef->pVTable = TMALLOCFOREVER(pTypeDef->numVirtualMethods, tMD_MethodDef*);
 		// Copy initial vTable from parent
 		if (pTypeDef->pParent != NULL) {
 			memcpy(pTypeDef->pVTable, pTypeDef->pParent->pVTable, pTypeDef->pParent->numVirtualMethods * sizeof(tMD_MethodDef*));
@@ -334,7 +334,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 			if (pTypeDef->pGenericDefinition != NULL) {
 				// If this is a generic instantiation type, then all method defs need to be copied,
 				// as there will be lots of different instantiations.
-				tMD_MethodDef *pMethodCopy = TMALLOCFOREVER(tMD_MethodDef);
+				tMD_MethodDef *pMethodCopy = TMALLOCFOREVER(1, tMD_MethodDef);
 				memcpy(pMethodCopy, pMethodDef, sizeof(tMD_MethodDef));
 				pMethodDef = pMethodCopy;
 			}
@@ -397,7 +397,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 			if (pTypeDef->numInterfaces > 0 && !pTypeDef->isGenericDefinition) {
 				U32 mapNum;
 
-				pTypeDef->pInterfaceMaps = (tInterfaceMap*)mallocForever(pTypeDef->numInterfaces * sizeof(tInterfaceMap));
+				pTypeDef->pInterfaceMaps = TMALLOCFOREVER(pTypeDef->numInterfaces, tInterfaceMap);
 				// Copy interface maps from parent type
 				if (j > 0) {
 					memcpy(pTypeDef->pInterfaceMaps, pTypeDef->pParent->pInterfaceMaps, j * sizeof(tInterfaceMap));
@@ -417,7 +417,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 							MetaData_Fill_TypeDef(pInterface, NULL, NULL);
 							pMap = &pTypeDef->pInterfaceMaps[mapNum];
 							pMap->pInterface = pInterface;
-							pMap->pVTableLookup = (U32*)mallocForever(pInterface->numVirtualMethods * sizeof(U32));
+							pMap->pVTableLookup = TMALLOCFOREVER(pInterface->numVirtualMethods, U32);
 							pMap->ppMethodVLookup = NULL;
 							// Discover interface mapping for each interface method
 							for (i=0; i<pInterface->numVirtualMethods; i++) {

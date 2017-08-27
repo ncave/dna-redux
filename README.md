@@ -2,7 +2,7 @@
 
 Playground for running C#/F# code in Node.js or Browser.
 
-The CIL is running on a portable .NET runtime called DotNetAnywhere (DNA) compiled to WebAssembly with emscripten.
+The CIL is running on a portable .NET runtime called DotNetAnywhere (DNA) compiled to WebAssembly with Emscripten.
 
 Entirely based on the excellent works of:
 - @chrisdunelm https://github.com/chrisdunelm/DotNetAnywhere

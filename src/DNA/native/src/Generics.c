@@ -46,7 +46,7 @@ tMD_TypeDef* Generics_GetGenericTypeFromSig
 	MetaData_Fill_TypeDef(pCoreType, NULL, NULL);
 
 	U32 numTypeArgs = MetaData_DecodeSigEntry(pSig);
-	tMD_TypeDef **ppTypeArgs = (tMD_TypeDef**)malloc(numTypeArgs * sizeof(tMD_TypeDef*));
+	tMD_TypeDef **ppTypeArgs = TMALLOC(numTypeArgs, tMD_TypeDef*);
 	for (U32 i=0; i < numTypeArgs; i++) {
 		ppTypeArgs[i] = Type_GetTypeFromSig(pMetaData, pSig, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
 		if (ppTypeArgs[i] != NULL) {
@@ -116,8 +116,8 @@ tMD_TypeDef* Generics_GetGenericTypeFromCoreType(tMD_TypeDef *pCoreType, U32 num
 	memcpy(pInst->pTypeArgs, ppTypeArgs, numTypeArgs * sizeof(tMD_TypeDef*));
 
 	// Create the new instantiated type
-	pInst->pInstanceTypeDef = pTypeDef = TMALLOCFOREVER(tMD_TypeDef);
-	memset(pTypeDef, 0, sizeof(tMD_TypeDef));
+	pInst->pInstanceTypeDef = pTypeDef = TCALLOCFOREVER(1, tMD_TypeDef);
+	//memset(pTypeDef, 0, sizeof(tMD_TypeDef));
 	// Make the name of the instantiation.
 	strcpy(name, pCoreType->name);
 	strcat(name, "<");
@@ -181,7 +181,7 @@ tMD_MethodDef* Generics_GetMethodDefFromSpec
 	SIG sig = MetaData_GetBlob(pMethodSpec->instantiation, NULL);
 	MetaData_DecodeSigEntry(&sig); // always 0x0a
 	U32 argCount = MetaData_DecodeSigEntry(&sig);
-	tMD_TypeDef **ppTypeArgs = malloc(argCount * sizeof(tMD_TypeDef*));
+	tMD_TypeDef **ppTypeArgs = TMALLOC(argCount, tMD_TypeDef*);
 	for (U32 i = 0; i<argCount; i++) {
 		tMD_TypeDef *pArgType = Type_GetTypeFromSig(pMethodSpec->pMetaData, &sig, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
 		ppTypeArgs[i] = pArgType;
@@ -217,8 +217,8 @@ tMD_MethodDef* Generics_GetMethodDefFromCoreMethod
 	pInst->numTypeArgs = numTypeArgs;
 	memcpy(pInst->pTypeArgs, ppTypeArgs, numTypeArgs * sizeof(tMD_TypeDef*));
 
-	pInst->pInstanceMethodDef = pMethod = TMALLOCFOREVER(tMD_MethodDef);
-	memset(pMethod, 0, sizeof(tMD_MethodDef));
+	pInst->pInstanceMethodDef = pMethod = TCALLOCFOREVER(1, tMD_MethodDef);
+	//memset(pMethod, 0, sizeof(tMD_MethodDef));
 	pMethod->pMethodDef = pMethod;
 	pMethod->pMetaData = pCoreMethod->pMetaData;
 	pMethod->pCIL = pCoreMethod->pCIL;

@@ -117,8 +117,8 @@ void Heap_Init() {
 	trackHeapSize = 0;
 	heapSizeMax = MIN_HEAP_SIZE;
 	// Create nil node - for leaf termination
-	nil = TMALLOCFOREVER(tHeapEntry);
-	memset(nil, 0, sizeof(tHeapEntry));
+	nil = TCALLOCFOREVER(1, tHeapEntry);
+	//memset(nil, 0, sizeof(tHeapEntry));
 	nil->pLink[0] = nil->pLink[1] = nil;
 	// Set the heap tree as empty
 	pHeapTreeRoot = nil;
@@ -257,7 +257,7 @@ static void GC_Mark() {
 	tHeapRoots heapRoots;
 	heapRoots.capacity = 64;
 	heapRoots.num = 0;
-	heapRoots.pHeapEntries = malloc(heapRoots.capacity * sizeof(tHeapRootEntry));
+	heapRoots.pHeapEntries = TMALLOC(heapRoots.capacity, tHeapRootEntry);
 
 	Thread_GetHeapRoots(&heapRoots);
 	CLIFile_GetHeapRoots(&heapRoots);
@@ -473,7 +473,7 @@ HEAP_PTR Heap_Alloc(tMD_TypeDef *pTypeDef, U32 size) {
 		}
 	}
 
-	pHeapEntry = (tHeapEntry*)calloc(totalSize, 1);
+	pHeapEntry = (tHeapEntry*)calloc(1, totalSize);
 	//memset(pHeapEntry, 0, totalSize);
 	pHeapEntry->totalSize = totalSize;
 	pHeapEntry->pTypeDef = pTypeDef;
@@ -529,8 +529,8 @@ HEAP_PTR Heap_Clone(HEAP_PTR obj) {
 
 static tSync* EnsureSync(tHeapEntry *pHeapEntry) {
 	if (pHeapEntry->pSync == NULL) {
-		tSync *pSync = TMALLOC(tSync);
-		memset(pSync, 0, sizeof(tSync));
+		tSync *pSync = TCALLOC(1, tSync);
+		//memset(pSync, 0, sizeof(tSync));
 		pHeapEntry->pSync = pSync;
 	}
 	return pHeapEntry->pSync;
