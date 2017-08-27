@@ -89,26 +89,26 @@ static tLoadedLib* GetLib(STRING name) {
 }
 
 fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap) {
+#ifdef JS_INTEROP
+	return (fnPInvoke)invokeJsFunc;
+#else
 	tLoadedLib *pLib;
 	STRING libName;
 	void *pProc;
 
 	libName = MetaData_GetModuleRefName(pMetaData, pImplMap->importScope);
 
-#ifndef NO_JS_INTEROP
-	return (fnPInvoke)invokeJsFunc;
-#else 
-	
 	pLib = GetLib(libName);
 	if (pLib == NULL) {
 		// Library not found, so we can't find the function
 		return NULL;
 	}
-#endif
 #ifdef _WIN32
-    return GetProcAddress(pLib->pLib, pImplMap->importName);
-#elif NO_JS_INTEROP
-    return dlsym(pLib, pImplMap->importName);
+	pProc = GetProcAddress(pLib->pLib, pImplMap->importName);
+#else
+	pProc = dlsym(pLib, pImplMap->importName);
+#endif
+	return pProc;
 #endif
 }
 
