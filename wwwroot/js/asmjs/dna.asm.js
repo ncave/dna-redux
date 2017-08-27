@@ -27474,13 +27474,6 @@ function _casefold(i2) {
  return i1 | 0;
 }
 
-function _PInvoke_GetFunction(i1, i2) {
- i1 = i1 | 0;
- i2 = i2 | 0;
- _MetaData_GetModuleRefName(i1, HEAP32[i2 + 12 >> 2] | 0) | 0;
- return 149;
-}
-
 function _System_Enum_Internal_GetValue(i1, i2, i3) {
  i1 = i1 | 0;
  i2 = i2 | 0;
@@ -28171,6 +28164,12 @@ function ___bswap_16_494(i1) {
 function _Delegate_GetMethod(i1) {
  i1 = i1 | 0;
  return HEAP32[i1 + 4 >> 2] | 0;
+}
+
+function _PInvoke_GetFunction(i1, i2) {
+ i1 = i1 | 0;
+ i2 = i2 | 0;
+ return 149;
 }
 
 function _putchar(i1) {
