@@ -38,10 +38,13 @@
 #include "System.Reflection.MethodBase.h"
 #include "System.Diagnostics.Debugger.h"
 
+#ifdef SWITCH_ON_JIT_OP
+#else
 // Global array which stores the absolute addresses of the start and end of all JIT code
 // fragment machine code.
 tJITCodeInfo jitCodeInfo[JIT_OPCODE_MAXNUM];
 tJITCodeInfo jitCodeGoNext;
+#endif
 
 // Get the next op-code
 #define GET_OP() (*(pCurOp++))
@@ -200,6 +203,15 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 #define CHECK_FOR_BREAKPOINT() \
 	CheckIfCurrentInstructionHasBreakpoint(pCurrentMethodState, pCurOp - pOps, pOpSequencePoints);
 
+#ifdef SWITCH_ON_JIT_OP
+
+//#define GET_LABEL(var, label) \
+
+#define GO_NEXT() \
+	CHECK_FOR_BREAKPOINT(); \
+	goto goNext;
+
+#else
 #ifdef __GNUC__
 
 #define GET_LABEL(var, label) var = &&label
@@ -224,10 +236,21 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #endif
 #endif
+#endif
 
 #define GO_NEXT_CHECK() \
 	if (--numInst == 0) goto done; \
 	GO_NEXT()
+
+#ifdef SWITCH_ON_JIT_OP
+
+#define GET_LABELS(op) \
+	case op: goto op##_start;
+
+#define GET_LABELS_DYNAMIC(op, extraBytes) \
+	case op: goto op##_start;
+
+#else
 
 #define GET_LABELS(op) \
 	GET_LABEL(pAddr, op##_start); \
@@ -242,6 +265,8 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 	GET_LABEL(pAddr, op##_end); \
 	jitCodeInfo[op].pEnd = pAddr; \
 	jitCodeInfo[op].isDynamic = 0x100 | (extraBytes & 0xff)
+
+#endif
 
 #define RUN_FINALIZER() {tMethodState *pMS = RunFinalizer(pThread);if(pMS) {CHANGE_METHOD_STATE(pMS);}}
 
@@ -272,7 +297,19 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 	PTR pMem;
 
 	if (pThread == NULL) {
+
+#ifdef SWITCH_ON_JIT_OP
+		return 0;
+	}
+
+	LOAD_METHOD_STATE();
+	GO_NEXT();
+
+goNext:
+	switch (GET_OP()) {
+#else
 		void *pAddr;
+
 		// Special case to get all the label addresses
 		// Default all op-codes to noCode.
 		GET_LABEL(pAddr, noCode);
@@ -286,6 +323,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABEL(jitCodeGoNext.pStart, JIT_GoNext_start);
 		GET_LABEL(jitCodeGoNext.pEnd, JIT_GoNext_end);
 		jitCodeGoNext.isDynamic = 0;
+#endif
 
 		// Get all defined opcodes
 		GET_LABELS_DYNAMIC(JIT_NOP, 0);
@@ -617,17 +655,25 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_LOADFIELD_4, 4);
 		GET_LABELS_DYNAMIC(JIT_LOADFIELD_8, 8);
 
+#ifdef SWITCH_ON_JIT_OP
+	default: goto noCode;
+	}
+#else
 		return 0;
 	}
+#endif
 
 #ifdef DIAG_OPCODE_TIMES
 	U64 opcodeStartTime = rdtsc();
 	U32 realOp;
 #endif
 
+#ifdef SWITCH_ON_JIT_OP
+#else
 	LOAD_METHOD_STATE();
 
 	GO_NEXT();
+#endif
 
 noCode:
 	Crash("No code for op-code");

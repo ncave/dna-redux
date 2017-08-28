@@ -66,6 +66,9 @@ struct tTypeStack_ {
 #define DeleteOps(ops_) free(ops_.p); free(ops_.pSequencePoints)
 
 // Turn this into a MACRO at some point?
+#ifdef SWITCH_ON_JIT_OP
+#define Translate(op, getDynamic) op
+#else
 static U32 Translate(U32 op, U32 getDynamic) {
 	if (op >= JIT_OPCODE_MAXNUM) {
 		Crash("Illegal opcode: %d", op);
@@ -79,6 +82,7 @@ static U32 Translate(U32 op, U32 getDynamic) {
 		return (U32)jitCodeInfo[op].pStart;
 	}
 }
+#endif
 
 #ifdef GEN_COMBINED_OPCODES
 #define PushU32(v) PushU32_(&ops, (U32)(v)); PushU32_(&isDynamic, 0)
@@ -86,7 +90,7 @@ static U32 Translate(U32 op, U32 getDynamic) {
 #define PushFloat(v) convFloat.f=(float)(v); PushU32_(&ops, convFloat.u32); PushU32_(&isDynamic, 0)
 #define PushDouble(v) convDouble.d=(double)(v); PushU32_(&ops, convDouble.u32.a); PushU32_(&ops, convDouble.u32.b); PushU32_(&isDynamic, 0); PushU32_(&isDynamic, 0)
 #define PushPTR(ptr) PushU32_(&ops, (U32)(ptr)); PushU32_(&isDynamic, 0)
-#define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0)); PushU32_(&isDynamic,	 Translate((U32)(op), 1))
+#define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0)); PushU32_(&isDynamic, Translate((U32)(op), 1))
 #define PushOpParam(op, param) PushOp(op); PushU32_(&ops, (U32)(param)); PushU32_(&isDynamic, 0)
 #else
 #define PushU32(v) PushU32_(&ops, (U32)(v), -1)

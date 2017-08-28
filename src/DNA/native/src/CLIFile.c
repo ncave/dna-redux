@@ -157,7 +157,7 @@ static void* LoadFileFromDisk(char *pFileName) {
 
 char* GetNullTerminatedString(PTR pData, int* length)
 {
-    *length = strlen(pData) + 1;
+    *length = (int)strlen(pData) + 1;
     return pData;
 }
 
@@ -386,7 +386,7 @@ tCLIFile* CLIFile_Load(char *pFileName) {
 
     // Assume it ends in .dll
     char* pDebugFileName = (char*)mallocForever((U32)strlen(pFileName) + 1);
-    U32 fileLengthWithoutExt = strlen(pFileName) - 3;
+    U32 fileLengthWithoutExt = (int)strlen(pFileName) - 3;
     strncpy(pDebugFileName, pFileName, fileLengthWithoutExt);
     strncpy(pDebugFileName + fileLengthWithoutExt, "wdb", 3);
     *(pDebugFileName + fileLengthWithoutExt + 3) = '\0';
