@@ -39,6 +39,8 @@
 #include "System.Diagnostics.Debugger.h"
 
 #ifdef SWITCH_ON_JIT_OP
+// Disable warning about unreferenced label
+#pragma warning(disable:4102)
 #else
 // Global array which stores the absolute addresses of the start and end of all JIT code
 // fragment machine code.
@@ -672,7 +674,6 @@ goNext:
 
 #ifdef DIAG_OPCODE_TIMES
 	U64 opcodeStartTime = rdtsc();
-	U32 realOp;
 #endif
 
 #ifdef SWITCH_ON_JIT_OP

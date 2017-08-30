@@ -43,7 +43,8 @@ struct tFilesLoaded_ {
 // In .NET Core, the core libraries are split over numerous assemblies. For simplicity,
 // the DNA corlib just puts them in one assembly
 static STRING assembliesMappedToDnaCorlib[] = {
-	"mscorlib"
+	"mscorlib",
+	"netstandard"
 	// Also, "System.*" is implemented below
 };
 static int numAssembliesMappedToDnaCorlib = sizeof(assembliesMappedToDnaCorlib)/sizeof(STRING);

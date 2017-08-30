@@ -6,6 +6,7 @@
   "author": "",
   "license": "MIT",
   "scripts": {
+    "clean": "git clean -fdX",
     "prebuild": "tslint -p wwwroot/ts",
     "build": "tsc -p wwwroot/ts",
     "postbuild": "rollup -c",
