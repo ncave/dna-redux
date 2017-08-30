@@ -60,10 +60,8 @@ module Program =
     let main argv =
         hello "World"
 
-        // printfn (almost) works now!!!
-        // not working yet: %d, %f with value types larger than 4 bytes (int64, double)
-        // not working yet: %A with unboxed value types
-        printfn "The %s is: %A" "answer" (box 42)
+        // printfn works now!!!
+        printfn "The %s is: %d" "answer" 42
 
         testFunctions ()
         // testWorkflows ()

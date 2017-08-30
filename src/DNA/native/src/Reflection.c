@@ -150,7 +150,7 @@ tAsyncCall* Reflection_MethodInfo_MakeGenericMethod(PTR pThis_, PTR pParams, PTR
 	// get arg types
 	tMD_TypeDef **ppTypeArgs = TMALLOC(argCount, tMD_TypeDef*);
 	for (U32 i = 0; i < argCount; i++) {
-		ppTypeArgs[i] = Heap_GetType(pArray[i]);
+		ppTypeArgs[i] = RuntimeType_DeRef(pArray[i]);
 	}
 
 	// specialize generic method
