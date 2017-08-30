@@ -200,15 +200,24 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #endif
 
-#define CHECK_FOR_BREAKPOINT() \
-	CheckIfCurrentInstructionHasBreakpoint(pCurrentMethodState, pCurOp - pOps, pOpSequencePoints);
-
 #ifdef SWITCH_ON_JIT_OP
+
+#define CHECK_FOR_BREAKPOINT() \
+	if (pOpSequencePoints != NULL) { \
+		I32 currentOpSequencePoint = pOpSequencePoints[pCurOp - pOps]; \
+		if (currentOpSequencePoint >= 0) { \
+			CheckIfSequencePointIsBreakpoint(pCurrentMethodState, currentOpSequencePoint); \
+		} \
+	}
 
 #define GO_NEXT() \
 	goto goNext;
 
 #else
+
+#define CHECK_FOR_BREAKPOINT() \
+	CheckIfCurrentInstructionHasBreakpoint(pCurrentMethodState, pCurOp - pOps, pOpSequencePoints);
+
 #ifdef __GNUC__
 
 #define GET_LABEL(var, label) var = &&label

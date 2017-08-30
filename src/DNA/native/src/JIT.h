@@ -21,9 +21,9 @@
 #if !defined (__JIT_H)
 #define __JIT_H
 
-#ifdef _WIN64
+//#ifdef _WIN64
 #define SWITCH_ON_JIT_OP
-#endif
+//#endif
 
 typedef struct tJITted_ tJITted;
 typedef struct tExceptionHeader_ tExceptionHeader;
