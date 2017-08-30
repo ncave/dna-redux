@@ -667,16 +667,17 @@ cilCallVirtConstrained:
 						}
 
 						if (pConstrainedType->isValueType) {
-							tMD_MethodDef *pImplMethod;
 							// If pConstrainedType directly implements the call then don't do anything
 							// otherwise the 'this' pointer must be boxed (BoxedCall)
-							pImplMethod = pConstrainedType->pVTable[pCallMethod->vTableOfs];
-							if (pImplMethod->pParentType == pConstrainedType) {
-								op = CIL_CALL;
-								pCallMethod = pImplMethod;
-							} else {
-								pBoxCallType = pConstrainedType;
+							if (pCallMethod->vTableOfs != 0xffffffff) {
+								tMD_MethodDef *pImplMethod = pConstrainedType->pVTable[pCallMethod->vTableOfs];
+								if (pImplMethod->pParentType == pConstrainedType) {
+									op = CIL_CALL;
+									pCallMethod = pImplMethod;
+									goto cilCallAll;
+								}
 							}
+							pBoxCallType = pConstrainedType;
 						} else {
 							// Reference-type, so dereference the PTR to 'this' and use that for the 'this' for the call.
 							derefRefType = 1;

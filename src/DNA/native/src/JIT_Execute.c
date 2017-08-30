@@ -205,10 +205,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #ifdef SWITCH_ON_JIT_OP
 
-//#define GET_LABEL(var, label) \
-
 #define GO_NEXT() \
-	CHECK_FOR_BREAKPOINT(); \
 	goto goNext;
 
 #else
@@ -306,6 +303,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 	GO_NEXT();
 
 goNext:
+	CHECK_FOR_BREAKPOINT();
 	switch (GET_OP()) {
 #else
 		void *pAddr;
@@ -1231,7 +1229,12 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 			HEAP_PTR* invocationParamsArrayElements = (HEAP_PTR*)SystemArray_GetElements(invocationParamsArray);
 			for (U32 paramIndex = 0; paramIndex < invocationParamsArrayLength; paramIndex++) {
 				HEAP_PTR currentParam = invocationParamsArrayElements[paramIndex];
-				PUSH_O(currentParam);
+				tMD_TypeDef *pParamType = Heap_GetType(currentParam);
+				if (pParamType->isValueType) {
+					PUSH_VALUETYPE(currentParam, pParamType->stackSize, pParamType->stackSize);
+				} else {
+					PUSH_O(currentParam);
+				}
 			}
 		}
 		pCurEvalStack = pPrevEvalStack;

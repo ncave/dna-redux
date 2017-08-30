@@ -279,7 +279,7 @@ tMD_TypeDef* MetaData_GetTypeDefFromDefRefOrSpec(tMetaData *pMetaData, IDX_TABLE
 				sig = MetaData_GetBlob(pTypeSpec->signature, NULL);
 				pTypeDef = Type_GetTypeFromSig(pTypeSpec->pMetaData, &sig, ppClassTypeArgs, ppMethodTypeArgs);
 				// Note: Cannot cache the TypeDef for this TypeSpec because it
-				// can change depending on class arguemnts given.
+				// can change depending on class arguments given.
 
 				return pTypeDef;
 			}

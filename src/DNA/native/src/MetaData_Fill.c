@@ -268,6 +268,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 		// Note that this may already be set, as some basic types have this preset;
 		// or if it's not a value-type it'll already be set
 		if (pTypeDef->stackSize == 0) {
+			Assert(pTypeDef->isValueType);
 			// if it gets here then it must be a value type
 			pTypeDef->stackType = EVALSTACK_VALUETYPE;
 			pTypeDef->stackSize = pTypeDef->instanceMemSize;

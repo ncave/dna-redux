@@ -154,8 +154,6 @@ static tInternalCall internalCalls[] = {
 	{NULL, NULL, "Floor", System_Math_Floor, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
 	{NULL, NULL, "Round", System_Math_Round, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_DOUBLE}},
 
-	{"System.Reflection", "MemberInfo", "GetCustomAttributes", Reflection_MemberInfo_GetCustomAttributes, TYPE_SYSTEM_ARRAY_NO_TYPE, 0},
-
 	{"System.Threading", "Thread", ".ctor", System_Threading_Thread_ctor, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_THREADSTART}},
 	{NULL,               NULL,     ".ctor", System_Threading_Thread_ctorParam, TYPE_SYSTEM_VOID, 1, {TYPE_SYSTEM_THREADING_PARAMETERIZEDTHREADSTART}},
 	{NULL,               NULL,     "Start", System_Threading_Thread_Start, TYPE_SYSTEM_VOID, 0},
@@ -178,6 +176,8 @@ static tInternalCall internalCalls[] = {
 	{NULL,        NULL,           "GetFileAttributes", System_IO_FileInternal_GetFileAttributes, TYPE_SYSTEM_IO_FILESYSTEMATTRIBUTES, 2, {TYPE_SYSTEM_STRING, TYPE_SYSTEM_INTPTR}},
 	{NULL,        NULL,           "GetFileSystemEntries", System_IO_FileInternal_GetFileSystemEntries, TYPE_SYSTEM_ARRAY_STRING, 5, {TYPE_SYSTEM_STRING, TYPE_SYSTEM_STRING, TYPE_SYSTEM_IO_FILESYSTEMATTRIBUTES, TYPE_SYSTEM_IO_FILESYSTEMATTRIBUTES, TYPE_SYSTEM_INTPTR}},
 
+	{"System.Reflection", "MemberInfo", "GetCustomAttributes", Reflection_MemberInfo_GetCustomAttributes, TYPE_SYSTEM_ARRAY_NO_TYPE, 0},
+
 	{"System.Reflection", "MethodInfo", "MakeGenericMethod", Reflection_MethodInfo_MakeGenericMethod, TYPE_SYSTEM_REFLECTION_METHODINFO, 1, {TYPE_SYSTEM_ARRAY_TYPE}},
 
 	{"System.Runtime.CompilerServices", "RuntimeHelpers", "InitializeArray", System_Runtime_CompilerServices_InitializeArray, TYPE_SYSTEM_VOID, 2, {TYPE_SYSTEM_ARRAY_NO_TYPE, TYPE_SYSTEM_RUNTIMEFIELDHANDLE}},
@@ -195,8 +195,9 @@ static tInternalCall internalCalls[] = {
 	{NULL,                 NULL,     "Internal_Receive", System_Net_Sockets_Internal_Receive, TYPE_SYSTEM_INT32, 6, {TYPE_SYSTEM_INTPTR, TYPE_SYSTEM_ARRAY_BYTE, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INTPTR}},
 	{NULL,                 NULL,     "Internal_Send", System_Net_Sockets_Internal_Send, TYPE_SYSTEM_INT32, 6, {TYPE_SYSTEM_INTPTR, TYPE_SYSTEM_ARRAY_BYTE, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INTPTR}},
 
-	{"System.Runtime.InteropServices", 	"GCHandle", 	"ToHeapRef", Framework_JSInterop_ToHeapRef, TYPE_SYSTEM_INT32, 1, {TYPE_SYSTEM_OBJECT}}, 
-	{NULL, 								NULL, 			"FromHeapRef", Framework_JSInterop_FromHeapRefImpl, TYPE_SYSTEM_OBJECT, 1, {TYPE_SYSTEM_INT32}}, 
+	{"System.Runtime.InteropServices", "GCHandle", "ToHeapRef", Framework_JSInterop_ToHeapRef, TYPE_SYSTEM_INT32, 1, {TYPE_SYSTEM_OBJECT}}, 
+	{NULL,                             NULL,       "FromHeapRef", Framework_JSInterop_FromHeapRefImpl, TYPE_SYSTEM_OBJECT, 1, {TYPE_SYSTEM_INT32}}, 
+
 	{NULL, NULL, NULL, NULL}
 };
 

@@ -4,7 +4,7 @@ namespace AppCS {
     using static LibCS.Library;
 
     public class GenericMethodClassExample {
-        public void GenericInstanceMethod<T1, T2>(T1 t1, T2 t2) {
+        public static void GenericMethod<T1, T2>(T1 t1, T2 t2) {
             Console.WriteLine("The answer is: {0}{1}", t1, t2);
         }
     }
@@ -19,11 +19,10 @@ namespace AppCS {
         }
 
         static void TestGeneric() {
-            var example = new GenericMethodClassExample();
-            MethodInfo mi = example.GetType().GetMethod("GenericInstanceMethod");
-            MethodInfo miSpecialized = mi.MakeGenericMethod(typeof(int), typeof(string));
-            object[] args = { 4, "2" };
-            miSpecialized.Invoke(example, args);
+            MethodInfo mi = typeof(GenericMethodClassExample).GetMethod("GenericMethod");
+            MethodInfo miConstructed = mi.MakeGenericMethod(typeof(long), typeof(string));
+            object[] args = { 4L, "2" };
+            miConstructed.Invoke(null, args);
         }
 
         static void TestNBody(int N) {
