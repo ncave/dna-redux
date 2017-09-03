@@ -93,11 +93,11 @@ namespace System {
 			return tmp;
 		}
 
-		public static string Join<T>(string separator, T[] values) {
+		public static string Join(string separator, string[] values) {
 			return Join(separator, values, 0, values.Length);
 		}
 
-		public static string Join<T>(string separator, T[] values, int startIndex, int count) {
+		public static string Join(string separator, string[] values, int startIndex, int count) {
 			StringBuilder sb = new StringBuilder();
 			for (int i = startIndex; i < count; i++) {
 				sb.Append(values[i]);
@@ -628,10 +628,10 @@ namespace System {
 
 		#endregion
 
-		#region IEquatable<string> Members
+		#region IConvertible Members
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public double ToDouble();
+		extern public double ToDouble(IFormatProvider provider);
 
 		#endregion
 	}

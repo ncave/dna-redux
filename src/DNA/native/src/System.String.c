@@ -419,6 +419,7 @@ U32 SystemString_GetNumBytes(HEAP_PTR pThis_) {
 
 tAsyncCall* System_String_ToDouble(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
+	// TODO: use the NumberFormatInfo in pParams
 	*(double*)pReturnValue = wcstod((const wchar_t *)pThis->chars, NULL);
 	return NULL;
 }

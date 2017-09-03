@@ -114,7 +114,7 @@ tJITCodeInfo jitCodeGoNext;
 // Set the new method state (for use when the method state changes - in calls mainly)
 #define SAVE_METHOD_STATE() \
 	pCurrentMethodState->stackOfs = (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack); \
-	pCurrentMethodState->ipOffset = (U32)(pCurOp - pOps); \
+	pCurrentMethodState->ipOffset = (U32)(pCurOp - pOps) \
 
 #define LOAD_METHOD_STATE() \
 	pCurrentMethodState = pThread->pCurrentMethodState; \
@@ -123,7 +123,7 @@ tJITCodeInfo jitCodeGoNext;
 	pJIT = pCurrentMethodState->pJIT; \
 	pOps = pJIT->pOps; \
 	pOpSequencePoints = pJIT->pOpSequencePoints; \
-	pCurOp = pOps + pCurrentMethodState->ipOffset;
+	pCurOp = pOps + pCurrentMethodState->ipOffset
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \
 	SAVE_METHOD_STATE(); \

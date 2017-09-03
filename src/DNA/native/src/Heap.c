@@ -72,7 +72,9 @@ struct tHeapEntry_ {
 	// unused
 	U8 padding;
 
+#ifdef STORE_HEAPENTRY_SIZE
 	U32 totalSize;
+#endif
 
 	// The type in this heap entry
 	tMD_TypeDef *pTypeDef;
@@ -124,6 +126,11 @@ void Heap_Init() {
 	pHeapTreeRoot = nil;
 }
 
+#ifdef STORE_HEAPENTRY_SIZE
+#define HEAPENTRY_TOTALSIZE(pNode) pNode->totalSize
+#else
+#define HEAPENTRY_TOTALSIZE(pNode) GetSize(pNode) + sizeof(tHeapEntry)
+
 // Get the size of a heap entry, NOT including the header
 // This works by returning the size of the type, unless the type is an array or a string,
 // which are the only two types that can have variable sizes
@@ -140,6 +147,7 @@ static U32 GetSize(tHeapEntry *pHeapEntry) {
 	// If it's not string or array, just return the instance memory size
 	return pType->instanceMemSize;
 }
+#endif
 
 static tHeapEntry* TreeSkew(tHeapEntry *pRoot) {
 	if (pRoot->pLink[0]->level == pRoot->level && pRoot->level != 0) {
@@ -185,8 +193,7 @@ static tHeapEntry* TreeSearch(tHeapEntry *pNode, char *pMemRef) {
 		if (pMemRef < (char*)pNode) {
 			pNode = pNode->pLink[0];
 		}
-		//else if (pMemRef > (char*)pNode + GetSize(pNode) + sizeof(tHeapEntry)) {
-		else if (pMemRef > (char*)pNode + pNode->totalSize) {
+		else if (pMemRef > (char*)pNode + HEAPENTRY_TOTALSIZE(pNode)) {
 			pNode = pNode->pLink[1];
 		}
 		else {
@@ -307,7 +314,7 @@ static void GC_Mark() {
 								pType->pArrayElementType->stackType == EVALSTACK_PTR)) {
 
 							if (pType != types[TYPE_SYSTEM_WEAKREFERENCE]) {
-								Heap_SetRoots(&heapRoots, pNode->memory, GetSize(pNode));
+								Heap_SetRoots(&heapRoots, pNode->memory, HEAPENTRY_TOTALSIZE(pNode) - sizeof(tHeapEntry));
 								moreRootsAdded = 1;
 							}
 						}
@@ -390,7 +397,7 @@ static void GC_Sweep() {
 		pToDelete = (tHeapEntry*)(pToDelete->pSync);
 		pHeapTreeRoot = TreeRemove(pHeapTreeRoot, pThis);
 		numNodes--;
-		trackHeapSize -= GetSize(pThis) + sizeof(tHeapEntry);
+		trackHeapSize -= HEAPENTRY_TOTALSIZE(pThis);
 		free(pThis);
 	}
 }
@@ -475,7 +482,9 @@ HEAP_PTR Heap_Alloc(tMD_TypeDef *pTypeDef, U32 size) {
 
 	pHeapEntry = (tHeapEntry*)calloc(1, totalSize);
 	//memset(pHeapEntry, 0, totalSize);
+#ifdef STORE_HEAPENTRY_SIZE
 	pHeapEntry->totalSize = totalSize;
+#endif
 	pHeapEntry->pTypeDef = pTypeDef;
 	pHeapEntry->pSync = NULL;
 	pHeapEntry->needToFinalize = (pTypeDef->pFinalizer != NULL);
@@ -519,7 +528,7 @@ HEAP_PTR Heap_Box(tMD_TypeDef *pType, PTR pMem) {
 HEAP_PTR Heap_Clone(HEAP_PTR obj) {
 	tHeapEntry *pObj = GET_HEAPENTRY(obj);
 	HEAP_PTR clone;
-	U32 size = GetSize(pObj);
+	U32 size = HEAPENTRY_TOTALSIZE(pObj) - sizeof(tHeapEntry);
 
 	clone = Heap_Alloc(pObj->pTypeDef, size);
 	memcpy(clone, pObj->memory, size);
