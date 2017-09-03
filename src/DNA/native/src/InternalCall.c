@@ -84,7 +84,7 @@ static tInternalCall internalCalls[] = {
 	{NULL, NULL,     "InternalReplace", System_String_InternalReplace, TYPE_SYSTEM_STRING, 2, {TYPE_SYSTEM_STRING, TYPE_SYSTEM_STRING}},
 	{NULL, NULL,     "InternalIndexOf", System_String_InternalIndexOf, TYPE_SYSTEM_INT32, 4, {TYPE_SYSTEM_CHAR, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INT32, TYPE_SYSTEM_BOOLEAN}},
 	{NULL, NULL,     "InternalIndexOfAny", System_String_InternalIndexOfAny, TYPE_SYSTEM_INT32, 4, {TYPE_SYSTEM_ARRAY_CHAR, TYPE_SYSTEM_INT32, TYPE_SYSTEM_INT32, TYPE_SYSTEM_BOOLEAN}},
-	{NULL, NULL,     "ToDouble", System_String_ToDouble, TYPE_SYSTEM_DOUBLE, 0},
+	{NULL, NULL,     "ToDouble", System_String_ToDouble, TYPE_SYSTEM_DOUBLE, 1, {TYPE_SYSTEM_OBJECT}},
 
 	{NULL, "Activator", "CreateInstance", Framework_JSInterop_Activator_CreateInstance, TYPE_SYSTEM_OBJECT, 1, {TYPE_SYSTEM_TYPE}},
 

@@ -145,7 +145,7 @@ namespace System {
 				return false;
 			}
 			
-			result = s.ToDouble(); // returns zero on parsing error
+			result = s.ToDouble(info); // returns zero on parsing error
 
 			String sTrim = s.Trim();
 			bool isZero = true;

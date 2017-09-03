@@ -22,13 +22,13 @@ type Step<'a> =
     | Await of ICriticalNotifyCompletion * (unit -> Step<'a>)
     | Return of 'a
     // We model tail calls explicitly, but still can't run them without O(n) memory usage.
-    | ReturnFrom of 'a Task
+    | ReturnFrom of Task<'a>
 
 module private TaskBuilderImpl =
 
     // Implements the machinery of running a `Step<'m, 'm>` as a task returning a continuation task.
     type StepStateMachine<'a>(firstStep) as this =
-        let methodBuilder = AsyncTaskMethodBuilder<'a Task>()
+        let methodBuilder = AsyncTaskMethodBuilder<Task<'a>>()
         // The continuation we left off awaiting on our last MoveNext().
         let mutable continuation = fun () -> firstStep
         // Returns next pending awaitable or null if exiting (including tail call).
@@ -77,38 +77,50 @@ module private TaskBuilderImpl =
     // Used to return a value.
     let inline ret (x : 'a) = Return x
 
-    type Binder<'out> =
-        // We put the output generic parameter up here at the class level, so it doesn't get subject to
-        // inline rules. If we put it all in the inline function, then the compiler gets confused at the
-        // below and demands that the whole function either is limited to working with (x : obj), or must
-        // be inline itself.
-        //
-        // let yieldThenReturn (x : 'a) =
-        //     task {
-        //         do! Task.Yield()
-        //         return x
-        //     }
+    // type Binder<'out> =
+    //     // We put the output generic parameter up here at the class level, so it doesn't get subject to
+    //     // inline rules. If we put it all in the inline function, then the compiler gets confused at the
+    //     // below and demands that the whole function either is limited to working with (x : obj), or must
+    //     // be inline itself.
+    //     //
+    //     // let yieldThenReturn (x : 'a) =
+    //     //     task {
+    //     //         do! Task.Yield()
+    //     //         return x
+    //     //     }
 
-        static member inline GenericAwait< ^abl, ^awt, ^inp
-                                            when ^abl : (member GetAwaiter : unit -> ^awt)
-                                            and ^awt :> ICriticalNotifyCompletion 
-                                            and ^awt : (member get_IsCompleted : unit -> bool)
-                                            and ^awt : (member GetResult : unit -> ^inp) >
-            (abl : ^abl, continuation : ^inp -> 'out Step) : 'out Step =
-                let awt = (^abl : (member GetAwaiter : unit -> ^awt)(abl)) // get an awaiter from the awaitable
-                if (^awt : (member get_IsCompleted : unit -> bool)(awt)) then // shortcut to continue immediately
-                    continuation (^awt : (member GetResult : unit -> ^inp)(awt))
-                else
-                    Await (awt, fun () -> continuation (^awt : (member GetResult : unit -> ^inp)(awt)))
+    //     static member inline GenericAwait< ^abl, ^awt, ^inp
+    //                                         when ^abl : (member GetAwaiter : unit -> ^awt)
+    //                                         and ^awt :> ICriticalNotifyCompletion 
+    //                                         and ^awt : (member get_IsCompleted : unit -> bool)
+    //                                         and ^awt : (member GetResult : unit -> ^inp) >
+    //         (abl : ^abl, continuation : ^inp -> 'out Step) : 'out Step =
+    //             let awt = (^abl : (member GetAwaiter : unit -> ^awt)(abl)) // get an awaiter from the awaitable
+    //             if (^awt : (member get_IsCompleted : unit -> bool)(awt)) then // shortcut to continue immediately
+    //                 continuation (^awt : (member GetResult : unit -> ^inp)(awt))
+    //             else
+    //                 Await (awt, fun () -> continuation (^awt : (member GetResult : unit -> ^inp)(awt)))
 
-    // Special case of the above for `Task<'a>`. Have to write this out by hand to avoid confusing the compiler
-    // trying to decide between satisfying the constraints with `Task` or `Task<'a>`.
-    let inline bindTask (task : 'a Task) (continuation : 'a -> Step<'b>) =
-        let awt = task.GetAwaiter()
-        if awt.IsCompleted then // Proceed to the next step based on the result we already have.
-            continuation(awt.GetResult())
-        else // Await and continue later when a result is available.
-            Await (awt, (fun () -> continuation(awt.GetResult())))
+    // // Special case of the above for `Task<'a>`. Have to write this out by hand to avoid confusing the compiler
+    // // trying to decide between satisfying the constraints with `Task` or `Task<'a>`.
+    // let inline bindTask (task : Task<'a>) (continuation : 'a -> Step<'b>) =
+    //     let awt = task.GetAwaiter()
+    //     if awt.IsCompleted then // Proceed to the next step based on the result we already have.
+    //         continuation(awt.GetResult())
+    //     else // Await and continue later when a result is available.
+    //         Await (awt, (fun () -> continuation(awt.GetResult())))
+
+    let rec bindStep (step: Step<'a>) (continuation: 'a -> Step<'b>) =
+        match step with
+        | Return x -> continuation(x)
+        | ReturnFrom t ->
+            let awt = t.GetAwaiter()
+            if awt.IsCompleted then // Proceed to the next step based on the result we already have.
+                continuation(awt.GetResult())
+            else // Await and continue later when a result is available.
+                Await (awt, (fun () -> continuation(awt.GetResult())))
+        | Await (awt, next) ->
+            Await (awt, (fun () -> bindStep (next()) continuation))
 
     // Chains together a step with its following step.
     // Note that this requires that the first step has no result.
@@ -198,7 +210,7 @@ module private TaskBuilderImpl =
             (fun e -> whileLoop e.MoveNext (fun () -> body e.Current))
 
     // Runs a step as a task -- with a short-circuit for immediately completed steps.
-    let run (firstStep : unit -> Step<'a>) =
+    let runAsTask (firstStep : unit -> Step<'a>) =
         try
             match firstStep() with
             | Return x -> Task.FromResult(x)
@@ -216,32 +228,47 @@ module private TaskBuilderImpl =
 open TaskBuilderImpl
 
 type TaskBuilder() =
-    member __.Delay(f : unit -> Step<_>) = f
-    member __.Run(f : unit -> Step<'m>) = run f
+    member __.Delay(f : unit -> Step<_>) = f //fun () -> f ()
+    member __.Run(f : unit -> Step<'m>) = f () //runAsTask f
     member __.Zero() = zero
     member __.Return(x) = ret x
-    member __.ReturnFrom(task : _ Task) = ReturnFrom task
-    member __.Combine(step : unit Step, continuation) = combine step continuation
-    member __.While(condition : unit -> bool, body : unit -> unit Step) = whileLoop condition body
-    member __.For(sequence : _ seq, body : _ -> unit Step) = forLoop sequence body
-    member __.TryWith(body : unit -> _ Step, catch : exn -> _ Step) = tryWith body catch
-    member __.TryFinally(body : unit -> _ Step, fin : unit -> unit) = tryFinally body fin
-    member __.Using(disp : #IDisposable, body : #IDisposable -> _ Step) = using disp body
+    // member __.ReturnFrom(task: Task<_>) = ReturnFrom task
+    member __.ReturnFrom(x: Step<_>) = x
+    member __.Combine(step: Step<unit>, continuation) = combine step continuation
+    member __.While(condition: unit -> bool, body: unit -> Step<unit>) = whileLoop condition body
+    member __.For(sequence: seq<_>, body: _ -> Step<unit>) = forLoop sequence body
+    member __.TryWith(body: unit -> Step<_>, catch: exn -> Step<_>) = tryWith body catch
+    member __.TryFinally(body: unit -> Step<_>, fin: unit -> unit) = tryFinally body fin
+    member __.Using(disp: #IDisposable, body: #IDisposable -> Step<_>) = using disp body
 
-    // We have to have a dedicated overload for Task<'a> so the compiler doesn't get confused.
-    // Everything else can use bindGenericAwaitable via an extension member (defined later).
-    member inline __.Bind(task : 'a Task, continuation : 'a -> 'b Step) : 'b Step =
-        bindTask task continuation
+    member __.Bind(step : Step<'a>, continuation : 'a -> Step<'b>) : Step<'b> = bindStep step continuation
 
-    // These are fallbacks when the Bind and ReturnFrom on the builder object itself don't apply.
-    // This is how we support binding arbitrary task-like types.
-    member inline __.ReturnFrom(taskLike) =
-        Binder<_>.GenericAwait(taskLike, ret)
-    member inline __.Bind(taskLike, continuation : _ -> 'a Step) : 'a Step =
-        Binder<'a>.GenericAwait(taskLike, continuation)
+    // // // We have to have a dedicated overload for Task<'a> so the compiler doesn't get confused.
+    // // // Everything else can use bindGenericAwaitable via an extension member (defined later).
+    // member inline __.Bind(task : Task<'a>, continuation : 'a -> Step<'b>) : Step<'b> =
+    //     bindTask task continuation
+
+    // // These are fallbacks when the Bind and ReturnFrom on the builder object itself don't apply.
+    // // This is how we support binding arbitrary task-like types.
+    // member inline __.ReturnFrom(taskLike) =
+    //     Binder<_>.GenericAwait(taskLike, ret)
+    // member inline __.Bind(taskLike, continuation : _ -> Step<'a>) : Step<'a> =
+    //     Binder<'a>.GenericAwait(taskLike, continuation)
 
 // Builds a `System.Threading.Tasks.Task<'a>` similarly to a C# async/await method.
 // Use this like `task { let! taskResult = someTask(); return taskResult.ToString(); }`.
 [<AutoOpen>]
 module ContextSensitive =
-    let task = TaskBuilder()
+    // let task = TaskBuilder()
+
+    type Async<'T> = Step<'T>
+    let async = TaskBuilder()
+
+module Async =
+    // let Start (t: Async<unit>): unit =
+    // let StartChild (t: Async<'T>): Async<Async<'T>> = async { return t }
+    // let StartImmediate (t: Async<unit>): unit =
+    let StartAsTask (t: Async<'T>): Task<'T> = runAsTask (fun () -> t)
+    // let StartChildAsTask (t: Async<'T>): Async<Task<'T>> = async { return StartAsTask t }
+    let RunSynchronously (t: Async<'T>): 'T = StartAsTask(t).Result
+    // let Sleep (dueTime: int): Async<unit> = Task.Delay(dueTime).ContinueWith(ignore) |> ReturnFrom

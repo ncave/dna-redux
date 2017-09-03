@@ -1,6 +1,6 @@
 namespace AppFS
 open System
-open System.Threading.Tasks
+// open FSharp.Control.Tasks
 open LibFS.Library
 
 module Program =
@@ -31,30 +31,23 @@ module Program =
         Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
 
 
-    module Async =
-        let RunSynchronously (t: Task<_>) = t.Wait() // not actually waiting yet
-        let Sleep (dueTime: int) = Task.Delay(dueTime)
+    // let testWorkflows () =
 
-    let async = FSharp.Control.Tasks.TaskBuilder()
-
-    let testWorkflows () =
-
-        let getChildWorkflow () = async {
-            printfn "Starting child workflow"
-            do! Async.Sleep 500
-            printfn "Finished child workflow"
-        }
-        let getParentWorkflow () = async {
-            printfn "Starting parent workflow"
-            let childWorkflow = getChildWorkflow ()
-            do! Async.Sleep 200
-            printfn "Did something useful while waiting"
-            let! result = childWorkflow
-            printfn "Finished parent workflow"
-        }
-        // run the parent workflow
-        Async.RunSynchronously (getParentWorkflow ())
-
+    //     let childWorkflow = async {
+    //         printfn "Starting child workflow"
+    //         // do! Async.Sleep 500
+    //         printfn "Finished child workflow"
+    //     }
+    //     let parentWorkflow = async {
+    //         printfn "Starting parent workflow"
+    //         let childTask = childWorkflow
+    //         // do! Async.Sleep 200
+    //         printfn "Did something useful while waiting"
+    //         let! result = childTask
+    //         printfn "Finished parent workflow"
+    //     }
+    //     // run the parent workflow
+    //     Async.RunSynchronously parentWorkflow // not actually waiting in DNA (no Task.Wait() yet)
 
     [<EntryPoint>]
     let main argv =
