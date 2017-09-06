@@ -119,7 +119,7 @@ void MetaData_Fill_MethodDef(tMD_TypeDef *pParentType, tMD_MethodDef *pMethodDef
 		}
 		totalSize = 4;
 	}
-	for (i=totalSize>>2; i<pMethodDef->numberOfParameters; i++) {
+	for (i=METHOD_ISSTATIC(pMethodDef)?0:1; i<pMethodDef->numberOfParameters; i++) {
 		tMD_TypeDef *pTypeDef;
 		U32 size;
 

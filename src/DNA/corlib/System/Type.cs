@@ -127,6 +127,9 @@ namespace System {
         }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
+        extern public Type[] GetInterfaces();
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
         extern public PropertyInfo[] GetProperties();
 
         [MethodImpl(MethodImplOptions.InternalCall)]

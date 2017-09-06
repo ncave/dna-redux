@@ -1,7 +1,7 @@
 namespace AppFS
 open System
-// open FSharp.Control.Tasks
 open LibFS.Library
+// open FSharp.Control.Tasks
 
 module Program =
 
@@ -32,7 +32,6 @@ module Program =
 
 
     // let testWorkflows () =
-
     //     let childWorkflow = async {
     //         printfn "Starting child workflow"
     //         // do! Async.Sleep 500
@@ -51,6 +50,12 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
+
+        // // not working yet: Seq.groupBy
+        // let ofList (xs: (string * 'T) list) = xs |> Seq.groupBy fst //|> Seq.map (fun (k,v) -> (k,List.ofSeq (Seq.map snd v))) |> Map.ofSeq 
+        // let res = ["a","1"; "b","2"] |> ofList
+        // printfn "%A" res
+
         hello "World"
 
         // printfn works now!!!

@@ -324,12 +324,8 @@ tMD_TypeDef* Type_GetTypeFromSig(tMetaData *pMetaData, SIG *pSig, tMD_TypeDef **
 			if (ppMethodTypeArgs != NULL) {
 				return ppMethodTypeArgs[entry];
 			} else {
-				if (ppClassTypeArgs != NULL) {
-					return ppClassTypeArgs[entry];
-				} else {
-					// Can't do anything sensible, as we don't have any type args
-					return NULL;
-				}
+				// Can't do anything sensible, as we don't have any type args
+				return NULL;
 			}
 
 		default:

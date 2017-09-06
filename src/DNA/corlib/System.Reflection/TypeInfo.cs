@@ -16,7 +16,9 @@ namespace System.Reflection {
         public virtual bool IsGenericTypeDefinition => _type.IsGenericTypeDefinition;
 
         public virtual Type[] GenericTypeParameters => _type.GetGenericArguments();
+        public virtual IEnumerable<Type> ImplementedInterfaces => _type.GetInterfaces();
         public virtual IEnumerable<MethodInfo> DeclaredMethods => _type.GetMethods();
+        public virtual IEnumerable<PropertyInfo> DeclaredProperties => _type.GetProperties();
 
     }
 }
