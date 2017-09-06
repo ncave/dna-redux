@@ -33,9 +33,9 @@
 #include "CLIFile.h"
 
 tAsyncCall* System_Type_get_IsValueType(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tRuntimeType *pRuntimeType = (tRuntimeType*)pThis_;
+	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
 
-	*(U32*)pReturnValue = pRuntimeType->pTypeDef->isValueType;
+	*(U32*)pReturnValue = pThisType->isValueType;
 
 	return NULL;
 }
@@ -95,10 +95,29 @@ tAsyncCall* System_Type_GetTypeFromName(PTR pThis_, PTR pParams, PTR pReturnValu
 	return NULL;
 }
 
+tAsyncCall* System_Type_GetInterfaces(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	// Get metadata for the 'this' type
+	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
+
+	// Instantiate a Type array
+	tMD_TypeDef *pArrayType = Type_GetArrayTypeDef(types[TYPE_SYSTEM_TYPE], NULL, NULL);
+	HEAP_PTR ret = SystemArray_NewVector(pArrayType, pThisType->numInterfaces);
+	// Allocate to return value straight away, so it cannot be GCed
+	*(HEAP_PTR*)pReturnValue = ret;
+
+	// Fill the Type array
+	for (U32 i = 0; i<pThisType->numInterfaces; i++) {
+		HEAP_PTR typeObject = Type_GetTypeObject(pThisType->pInterfaceMaps[i].pInterface);
+		SystemArray_StoreElement(ret, i, (PTR)&typeObject);
+	}
+
+	return NULL;
+}
+
 tAsyncCall* System_Type_GetProperties(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tRuntimeType *pRuntimeType = (tRuntimeType*)pThis_;
-	tMD_TypeDef *pTypeDef = pRuntimeType->pTypeDef;
-	tMetaData *pMetaData = pTypeDef->pMetaData;
+	// Get metadata for the 'this' type
+	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
+	tMetaData *pMetaData = pThisType->pMetaData;
 
 	// First we search through the table of propertymaps to find the propertymap for the requested type
 	U32 i;
@@ -107,7 +126,7 @@ tAsyncCall* System_Type_GetProperties(PTR pThis_, PTR pParams, PTR pReturnValue)
 	U32 numPropertymapRows = pMetaData->tables.numRows[MD_TABLE_PROPERTYMAP];
 	for (i=1; i <= numPropertymapRows; i++) {
 		tMD_PropertyMap *pPropertyMap = (tMD_PropertyMap*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_PROPERTYMAP, i));
-		if (pPropertyMap->parent == pTypeDef->tableIndex) {
+		if (pPropertyMap->parent == pThisType->tableIndex) {
 			firstIdx = TABLE_OFS(pPropertyMap->propertyList);
 			if (i < numPropertymapRows) {
 				tMD_PropertyMap *pNextPropertyMap = (tMD_PropertyMap*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_PROPERTYMAP, i + 1));
@@ -119,14 +138,14 @@ tAsyncCall* System_Type_GetProperties(PTR pThis_, PTR pParams, PTR pReturnValue)
 		}
 	}
 
-	// Instantiate a PropertyInfo[]
+	// Instantiate a PropertyInfo array
 	U32 numProperties = lastIdxExc - firstIdx;
 	tMD_TypeDef *pArrayType = Type_GetArrayTypeDef(types[TYPE_SYSTEM_REFLECTION_PROPERTYINFO], NULL, NULL);
 	HEAP_PTR ret = SystemArray_NewVector(pArrayType, numProperties);
 	// Allocate to return value straight away, so it cannot be GCed
 	*(HEAP_PTR*)pReturnValue = ret;
 
-	// Now fill the PropertyInfo[]
+	// Fill the PropertyInfo array
 	for (i=0; i<numProperties; i++) {
 		IDX_TABLE index = MAKE_TABLE_INDEX(MD_TABLE_PROPERTY, firstIdx + i);
 		tMD_Property *pPropertyMetadata = (tMD_Property*)MetaData_GetTableRow(pMetaData, index);
@@ -144,7 +163,7 @@ tAsyncCall* System_Type_GetProperties(PTR pThis_, PTR pParams, PTR pReturnValue)
 		PTR typeSig = MetaData_GetBlob(pPropertyMetadata->typeSig, &sigLength);
 		MetaData_DecodeSigEntry(&typeSig); // Ignored: prolog
 		MetaData_DecodeSigEntry(&typeSig); // Ignored: number of 'getter' parameters		
-		tMD_TypeDef *propertyTypeDef = Type_GetTypeFromSig(pMetaData, &typeSig, NULL, NULL);
+		tMD_TypeDef *propertyTypeDef = Type_GetTypeFromSig(pMetaData, &typeSig, pThisType->ppClassTypeArgs, NULL);
 		MetaData_Fill_TypeDef(propertyTypeDef, NULL, NULL);
 		pPropertyInfo->propertyType = Type_GetTypeObject(propertyTypeDef);
 
@@ -156,21 +175,19 @@ tAsyncCall* System_Type_GetProperties(PTR pThis_, PTR pParams, PTR pReturnValue)
 	return NULL;
 }
 
-tAsyncCall* System_Type_GetMethods(PTR pThis_, PTR pParams, PTR pReturnValue)
-{
+tAsyncCall* System_Type_GetMethods(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	// Get metadata for the 'this' type
-	tRuntimeType *pRuntimeType = (tRuntimeType*)pThis_;
-	tMD_TypeDef *pTypeDef = pRuntimeType->pTypeDef;
+	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
 
-	// Instantiate a MethodInfo[]
+	// Instantiate a MethodInfo array
 	tMD_TypeDef *pArrayType = Type_GetArrayTypeDef(types[TYPE_SYSTEM_REFLECTION_METHODINFO], NULL, NULL);
-	HEAP_PTR ret = SystemArray_NewVector(pArrayType, pTypeDef->numMethods);
+	HEAP_PTR ret = SystemArray_NewVector(pArrayType, pThisType->numMethods);
 	// Allocate to return value straight away, so it cannot be GCed
 	*(HEAP_PTR*)pReturnValue = ret;
 
-	// Search for the method by name
-	for (U32 i = 0; i<pTypeDef->numMethods; i++) {
-		tMD_MethodDef *pMethodDef = pTypeDef->ppMethods[i];
+	// Fill the MethodInfo array
+	for (U32 i = 0; i<pThisType->numMethods; i++) {
+		tMD_MethodDef *pMethodDef = pThisType->ppMethods[i];
 
 		// Instantiate a MethodInfo and put it in the array
 		tMethodInfo *pMethodInfo = (tMethodInfo*)Heap_AllocType(types[TYPE_SYSTEM_REFLECTION_METHODINFO]);
@@ -188,20 +205,18 @@ tAsyncCall* System_Type_GetMethods(PTR pThis_, PTR pParams, PTR pReturnValue)
 	return NULL;
 }
 
-tAsyncCall* System_Type_GetMethod(PTR pThis_, PTR pParams, PTR pReturnValue)
-{
+tAsyncCall* System_Type_GetMethod(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	// Read param
 	unsigned char methodName[256];
 	DotNetStringToCString(methodName, 256, ((HEAP_PTR*)pParams)[0]);
 
 	// Get metadata for the 'this' type
-	tRuntimeType *pRuntimeType = (tRuntimeType*)pThis_;
-	tMD_TypeDef *pTypeDef = pRuntimeType->pTypeDef;
+	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
 
 	// Search for the method by name
-	for (U32 i=0; i<pTypeDef->numMethods; i++) {
-		if (strcmp(pTypeDef->ppMethods[i]->name, methodName) == 0) {
-			tMD_MethodDef *pMethodDef = pTypeDef->ppMethods[i];
+	for (U32 i=0; i<pThisType->numMethods; i++) {
+		if (strcmp(pThisType->ppMethods[i]->name, methodName) == 0) {
+			tMD_MethodDef *pMethodDef = pThisType->ppMethods[i];
 
 			// Instantiate a MethodInfo
 			tMethodInfo *pMethodInfo = (tMethodInfo*)Heap_AllocType(types[TYPE_SYSTEM_REFLECTION_METHODINFO]);

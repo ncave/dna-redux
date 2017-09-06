@@ -1336,8 +1336,14 @@ allCallStart:
 			}
 			pThisType = Heap_GetType(heapPtr);
 			if (METHOD_ISVIRTUAL(pCallMethod)) {
-				// Assert(pCallMethod->parameterStackSize == pThisType->pVTable[pCallMethod->vTableOfs]->parameterStackSize);
-				pCallMethod = pThisType->pVTable[pCallMethod->vTableOfs];
+				tMD_MethodDef* pVirtualMethod = pThisType->pVTable[pCallMethod->vTableOfs];
+				if (pVirtualMethod->isGenericDefinition) {
+					tMD_MethodDef* pInstMethod = Generics_GetMethodDefFromCoreMethod(pVirtualMethod, pVirtualMethod->pParentType, pCallMethod->numMethodTypeArgs, pCallMethod->ppMethodTypeArgs);
+					pCallMethod = pInstMethod;
+				} else {
+					//Assert(pCallMethod->parameterStackSize == pVirtualMethod->parameterStackSize);
+					pCallMethod = pVirtualMethod;
+				}
 				//dprintfn("Calling virtual method: %s", pCallMethod->name);
 			}
 		} else if (op == JIT_CALL_INTERFACE) {

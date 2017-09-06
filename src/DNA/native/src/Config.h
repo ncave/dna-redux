@@ -70,8 +70,8 @@
 
 // perf improvement: switch on JIT ops instead of labels
 // (enabled in WIN64 by default, but works well in 32-bit too)
-#ifdef _WIN64
+//#ifdef _WIN64
 #define SWITCH_ON_JIT_OP
-#endif
+//#endif
 
 #endif

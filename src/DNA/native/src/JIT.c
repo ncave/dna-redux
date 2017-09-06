@@ -955,6 +955,7 @@ cilBinaryArithOp:
 			case CIL_CONV_OVF_I4: // Fix this later - will never overflow
 			case CIL_CONV_OVF_I4_UN: // Fix this later - will never overflow
 			case CIL_CONV_I: // Only on 32-bit
+			case CIL_CONV_OVF_I: // Only on 32-bit
 			case CIL_CONV_OVF_I_UN: // Only on 32-bit; Fix this later - will never overflow
 				toBitCount = 32;
 				toType = TYPE_SYSTEM_INT32;
@@ -977,6 +978,7 @@ cilConvInt32:
 			case CIL_CONV_OVF_U4: // Fix this later - will never overflow
 			case CIL_CONV_OVF_U4_UN: // Fix this later - will never overflow
 			case CIL_CONV_U: // Only on 32-bit
+			case CIL_CONV_OVF_U: // Only on 32-bit
 			case CIL_CONV_OVF_U_UN: // Only on 32-bit; Fix this later - will never overflow
 				toBitCount = 32;
 				toType = TYPE_SYSTEM_UINT32;
