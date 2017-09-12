@@ -127,6 +127,7 @@ void MetaData_Fill_MethodDef(tMD_TypeDef *pParentType, tMD_MethodDef *pMethodDef
 		//if (pTypeDef != NULL) {
 			MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 			size = pTypeDef->stackSize;
+			Assert(pTypeDef->isGenericDefinition || size != 0); // if this fails, there is a circular dependency on pTypeDef, so add it to Type.c
 		//} else {
 		//	// If this method has generic-type-argument arguments, then we can't do anything very sensible yet
 		//	size = 0;

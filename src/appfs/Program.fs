@@ -48,13 +48,9 @@ module Program =
     //     // run the parent workflow
     //     Async.RunSynchronously parentWorkflow // not actually waiting in DNA (no Task.Wait() yet)
 
+
     [<EntryPoint>]
     let main argv =
-
-        // // not working yet: Seq.groupBy
-        // let ofList (xs: (string * 'T) list) = xs |> Seq.groupBy fst //|> Seq.map (fun (k,v) -> (k,List.ofSeq (Seq.map snd v))) |> Map.ofSeq 
-        // let res = ["a","1"; "b","2"] |> ofList
-        // printfn "%A" res
 
         hello "World"
 

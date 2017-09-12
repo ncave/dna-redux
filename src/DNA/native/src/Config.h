@@ -37,7 +37,7 @@
 
 // Count how many times each .NET opcode is used
 #ifdef _DEBUG
-#undef DIAG_OPCODE_USE
+#undef DIAG_OPCODE_USES
 #endif
 
 // Measure how much time is spent in the garbage collector

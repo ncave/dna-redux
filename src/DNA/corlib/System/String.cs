@@ -36,6 +36,10 @@ namespace System {
 			return (value == null) || (value.Length == 0);
 		}
 
+		public static bool IsNullOrWhiteSpace(string value) {
+			return (value == null) || IsNullOrEmpty(value.Trim());
+		}
+
 		// This field must be the only field, to tie up with C code
 		private int length;
 
@@ -95,6 +99,10 @@ namespace System {
 
 		public static string Join(string separator, string[] values) {
 			return Join(separator, values, 0, values.Length);
+		}
+
+		public static string Join(string separator, IEnumerable<string> values) {
+			return Join<string>(separator, values);
 		}
 
 		public static string Join(string separator, string[] values, int startIndex, int count) {
@@ -776,10 +784,25 @@ namespace System {
 
 		#endregion
 
-		#region IConvertible Members
+		#region Parsing
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public double ToDouble(IFormatProvider provider);
+		extern internal int InternalToInt32(out int error);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal long InternalToInt64(out int error);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal uint InternalToUInt32(out int error);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal ulong InternalToUInt64(out int error);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal float InternalToSingle(out int error);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal double InternalToDouble(out int error);
+
+		internal static Exception GetFormatException(int error) {
+			//TODO: exception based on error
+			return new FormatException("Input string was not in the correct format");
+		}
 
 		#endregion
 	}
