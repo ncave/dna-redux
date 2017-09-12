@@ -849,6 +849,8 @@ cilBrCond:
 					//pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_INT32 ||
 					//pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_O) {
 					PushOp(JIT_BEQ_I32I32 + (op - u32Value2));
+				} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_PTR) {
+					PushOp((sizeof(void*) == 4 ? JIT_BEQ_I32I32 : JIT_BEQ_I64I64) + (op - u32Value2));
 				} else {
 					Crash("JITit(): Cannot perform conditional branch on stack types: %d and %d", pTypeA->stackType, pTypeB->stackType);
 				}

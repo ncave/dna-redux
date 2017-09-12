@@ -24,18 +24,22 @@ int JSInterop_CallDotNet(char* assemblyName, char* namespace, char* className, c
 	// Specifying it exactly (type generic args, method generic args, arguments themselves, picking the
 	// inherited methods if needed), is complex and not required at the moment.
 	tMD_TypeDef *pTypeDef = MetaData_GetTypeDefFromName(pAssemblyMetadata, namespace, className, NULL, /* assertExists */ 1);
-	MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
-	for (U32 i=0; i<pTypeDef->numMethods; i++) {
-		if (strcmp(pTypeDef->ppMethods[i]->name, methodName) == 0) {
-			tMD_MethodDef *pMethodDef = pTypeDef->ppMethods[i];
-			
-			// We found the method - now call it
-			Thread_SetEntryPoint(pThread, pAssemblyMetadata, pMethodDef->tableIndex, (PTR)&arg, sizeof(void*));
-			int result = Thread_Execute();
+	if (pTypeDef != NULL) {
+		MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
+		for (U32 i=0; i<pTypeDef->numMethods; i++) {
+			if (strcmp(pTypeDef->ppMethods[i]->name, methodName) == 0) {
+				tMD_MethodDef *pMethodDef = pTypeDef->ppMethods[i];
 
-			Heap_MakeDeletable(arg);
-			return result;
+				// We found the method - now call it
+				Thread_SetEntryPoint(pThread, pAssemblyMetadata, pMethodDef->tableIndex, (PTR)&arg, sizeof(void*));
+				int result = Thread_Execute();
+
+				Heap_MakeDeletable(arg);
+				return result;
+			}
 		}
+	} else {
+		Crash("Cannot find type %s.%s\n", namespace, className);
 	}
 
 	Crash("Found type %s, but no such method %s\n", className, methodName);

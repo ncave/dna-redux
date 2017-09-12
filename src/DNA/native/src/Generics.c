@@ -105,7 +105,7 @@ tMD_TypeDef* Generics_GetGenericTypeFromCoreType(tMD_TypeDef *pCoreType, U32 num
 	tGenericInstance *pInst;
 	tMD_TypeDef *pTypeDef;
 	U32 i;
-	unsigned char name[2048]; // must be big enough to handle the biggest types
+	unsigned char name[8192]; // must be big enough to handle the biggest types
 	tMetaData *pMetaData;
 
 	pMetaData = pCoreType->pMetaData;
