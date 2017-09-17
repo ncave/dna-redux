@@ -1,3 +1,4 @@
+namespace AppCS {
 using System;
 
 class NBody {
@@ -106,4 +107,5 @@ class NBodySystem {
         }
         return e;
     }
+}
 }
