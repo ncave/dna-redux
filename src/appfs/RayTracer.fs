@@ -5,6 +5,7 @@ open System.Text
 // Ray tracer based on samples from the .NET parallel extensions
 // http://code.msdn.microsoft.com/windowsdesktop/Samples-for-Parallel-b4b76364
 
+[<Struct>]
 type Vector(x:float, y:float, z:float) =
     member this.X = x
     member this.Y = y
@@ -23,6 +24,7 @@ type Vector(x:float, y:float, z:float) =
                v1.Z * v2.X - v1.X * v2.Z,
                v1.X * v2.Y - v1.Y * v2.X)
 
+[<Struct>]
 type Color(r:float, g:float, b:float) =
     static let clamp v = Math.Floor(255.0 * Math.Min(v, 1.0))
     member this.R = r
@@ -48,6 +50,7 @@ type Camera(pos : Vector, lookAt : Vector) =
     member c.Up      = up
     member c.Right   = right
 
+[<Struct>]
 type Ray =
     { Start: Vector;
       Dir: Vector }
