@@ -1312,7 +1312,7 @@ allCallStart:
 		}
 
 		pCallMethod = (tMD_MethodDef*)GET_OP();
-		//for (I32 i = padding++; i > 0; i--) { printf("|"); }
+		//for (I32 i = padding++; i >= 0; i--) { printf("|"); }
 		//printf(" %s.%s\n", pCallMethod->pParentType->name, pCallMethod->name);
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 		heapPtr = NULL;

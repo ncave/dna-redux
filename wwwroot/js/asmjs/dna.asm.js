@@ -21882,6 +21882,26 @@ function _select(i1, i2, i3, i4, i5) {
  return i5 | 0;
 }
 
+function _Thread_StackAlloc(i1, i2) {
+ i1 = i1 | 0;
+ i2 = i2 | 0;
+ var i3 = 0, i4 = 0, i5 = 0, i6 = 0;
+ i6 = STACKTOP;
+ STACKTOP = STACKTOP + 16 | 0;
+ if ((STACKTOP | 0) >= (STACK_MAX | 0)) abortStackOverflow(16);
+ i3 = HEAP32[i1 + 52 >> 2] | 0;
+ i4 = i3 + 5e4 | 0;
+ i5 = HEAP32[i4 >> 2] | 0;
+ i1 = i2 + 4 + i5 | 0;
+ HEAP32[i4 >> 2] = i1;
+ if (i1 >>> 0 > 5e4) _Crash(20394, i6); else {
+  HEAP32[i4 >> 2] = i1 + 4;
+  STACKTOP = i6;
+  return i3 + i5 | 0;
+ }
+ return 0;
+}
+
 function ___towrite(i1) {
  i1 = i1 | 0;
  var i2 = 0, i3 = 0;
@@ -22217,25 +22237,6 @@ function _MetaData_GetUserString(i1, i2, i3) {
  if (i3 | 0) HEAP32[i3 >> 2] = i1 + -1;
  STACKTOP = i5;
  return HEAP32[i4 >> 2] | 0;
-}
-
-function _Thread_StackAlloc(i1, i3) {
- i1 = i1 | 0;
- i3 = i3 | 0;
- var i2 = 0, i4 = 0, i5 = 0;
- i4 = STACKTOP;
- STACKTOP = STACKTOP + 16 | 0;
- if ((STACKTOP | 0) >= (STACK_MAX | 0)) abortStackOverflow(16);
- i1 = HEAP32[i1 + 52 >> 2] | 0;
- i5 = i1 + 5e4 | 0;
- i2 = HEAP32[i5 >> 2] | 0;
- i3 = i2 + i3 | 0;
- HEAP32[i5 >> 2] = i3;
- if (i3 >>> 0 > 5e4) _Crash(20394, i4); else {
-  STACKTOP = i4;
-  return i1 + i2 | 0;
- }
- return 0;
 }
 
 function _RVA_FindData(i1, i3) {
