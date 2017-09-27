@@ -155,11 +155,11 @@ namespace System {
 		}
 
 		public bool StartsWith(string str) {
-			return this.Substring(0, str.Length) == str;
+			return this.Length < str.Length ? false : this.Substring(0, str.Length) == str;
 		}
 
 		public bool EndsWith(string str) {
-			return this.Substring(this.Length - str.Length, str.Length) == str;
+			return this.Length < str.Length ? false : this.Substring(this.Length - str.Length, str.Length) == str;
 		}
 
 		public bool StartsWith(string str, StringComparison comparisonType) {

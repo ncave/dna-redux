@@ -1355,7 +1355,7 @@ allCallStart:
 				}
 				//dprintfn("Calling virtual method: %s", pCallMethod->name);
 			}
-		} else if (op == JIT_CALL_INTERFACE && heapPtr != NULL) {
+		} else if (op == JIT_CALL_INTERFACE) {
 			tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
 			tMD_TypeDef *pInterface = pCallMethod->pParentType;
 

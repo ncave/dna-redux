@@ -189,7 +189,7 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 #ifdef DIAG_METHOD_CALLS
 	// Keep track of the number of times this method is called
 	pMethod->callCount++;
-	pMethod->startTime = pThis->startTime = microTime();
+	pMethod->startTime = microTime();
 #endif
 
 	return pThis;
@@ -220,7 +220,7 @@ void MethodState_Delete(tThread *pThread, tMethodState **ppMethodState) {
 #endif
 
 #ifdef DIAG_METHOD_CALLS
-	U64 elapsed = microTime() - pThis->startTime;
+	U64 elapsed = microTime() - pThis->pMethod->startTime;
 	pThis->pMethod->totalTime += elapsed;
 	if (pThis->pMethod->maxTime < elapsed) { pThis->pMethod->maxTime = elapsed; }
 #endif

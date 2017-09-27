@@ -90,6 +90,8 @@ void Diag_Print() {
 					if (topMethods[t]->callCount < pMethod->callCount) {
 #elif defined(DIAG_METHOD_CALLS_SORT_BY_START)
 					if (topMethods[t]->startTime < pMethod->startTime) {
+#elif defined(DIAG_METHOD_CALLS_SORT_BY_STACK)
+					if (pMethod->pJITted != NULL && (topMethods[t]->pJITted == NULL || topMethods[t]->pJITted->maxStack < pMethod->pJITted->maxStack)) {
 #else
 					if (topMethods[t]->totalTime < pMethod->totalTime) {
 #endif
@@ -109,7 +111,9 @@ void Diag_Print() {
 			printf("%02d: %s\n    calls: %llu", t+1, methodName, pMethod->callCount);
 			printf(", total: %.3f sec", pMethod->totalTime / 1000000.0);
 			printf(", max: %f sec", pMethod->maxTime / 1000000.0);
-			printf(", avg: %f sec\n", pMethod->totalTime / max(pMethod->callCount, 1) / 1000000.0);
+			printf(", avg: %f sec", pMethod->totalTime / max(pMethod->callCount, 1) / 1000000.0);
+			printf(", stack: %lu bytes", pMethod->pJITted == NULL ? 0 : pMethod->pJITted->maxStack);
+			printf("\n");
 		}
 
 		printf("\n");

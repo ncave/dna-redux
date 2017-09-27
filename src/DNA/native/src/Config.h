@@ -29,9 +29,10 @@
 
 // Count how many times each .NET method is called
 #undef DIAG_METHOD_CALLS
-// default method sort is by total time (inclusive), unless changed below:
+// The default method sort is by total time (inclusive), unless changed below:
 //#define DIAG_METHOD_CALLS_SORT_BY_COUNT // sort by method count
-//#define DIAG_METHOD_CALLS_SORT_BY_START // sort by last start time (i.e. like a call stack)
+//#define DIAG_METHOD_CALLS_SORT_BY_START // sort by method start time (i.e. like a call stack)
+//#define DIAG_METHOD_CALLS_SORT_BY_STACK // sort by method stack size
 
 // Measure how much time is spent in each .NET opcode
 // This only works on Windows
