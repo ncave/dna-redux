@@ -138,13 +138,13 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	}
 	pThis->pJIT = pMethod->pJITted;
 	pThis->ipOffset = 0;
-	pThis->pEvalStack = (PTR)Thread_StackAlloc(pThread, pThis->pMethod->pJITted->maxStack);
+	pThis->pEvalStack = Thread_StackAlloc(pThread, pThis->pMethod->pJITted->maxStack);
 	pThis->stackOfs = 0;
 	pThis->isInternalNewObjCall = isInternalNewObjCall;
 	pThis->pNextDelegate = NULL;
 	pThis->pDelegateParams = NULL;
 
-	pThis->pParamsLocals = (PTR)Thread_StackAlloc(pThread, pMethod->parameterStackSize + pMethod->pJITted->localsStackSize);
+	pThis->pParamsLocals = Thread_StackAlloc(pThread, pMethod->parameterStackSize + pMethod->pJITted->localsStackSize);
 	memset(pThis->pParamsLocals, 0, pMethod->parameterStackSize + pMethod->pJITted->localsStackSize);
 
 #ifdef GEN_COMBINED_OPCODES
@@ -236,7 +236,7 @@ void MethodState_Delete(tThread *pThread, tMethodState **ppMethodState) {
 
 	// Note that the way the stack free function works means that only the first allocated chunk
 	// needs to be free'd, as this function just sets the current allocation offset to the address given.
-	Thread_StackFree(pThread, pThis);
+	Thread_StackFree(pThread, (PTR)pThis);
 
 	*ppMethodState = NULL;
 }

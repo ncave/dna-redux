@@ -265,9 +265,9 @@ module ContextSensitive =
     let async = TaskBuilder()
 
 module Async =
-    // let Start (t: Async<unit>): unit =
+    let Start (t: Async<unit>): unit = runAsTask (fun () -> t) |> ignore
     // let StartChild (t: Async<'T>): Async<Async<'T>> = async { return t }
-    // let StartImmediate (t: Async<unit>): unit =
+    let StartImmediate (t: Async<unit>): unit = runAsTask (fun () -> t) |> ignore
     let StartAsTask (t: Async<'T>): Task<'T> = runAsTask (fun () -> t)
     // let StartChildAsTask (t: Async<'T>): Async<Task<'T>> = async { return StartAsTask t }
     let RunSynchronously (t: Async<'T>): 'T = StartAsTask(t).Result

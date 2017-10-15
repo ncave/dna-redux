@@ -24,6 +24,7 @@
 #include "Compat.h"
 #include "Sys.h"
 
+#include "System.Char.h"
 #include "System.String.h"
 
 #include "MetaData.h"
@@ -40,7 +41,7 @@ struct tSystemString_ {
 	// Length in characters (not bytes)
 	U32 length;
 	// The characters
-	U16 chars[0];
+	CHAR2 chars[0];
 };
 
 // length in characters, not bytes
@@ -105,16 +106,16 @@ tAsyncCall* System_String_ctor_CharAIntInt(PTR pThis_, PTR pParams, PTR pReturnV
 }
 
 tAsyncCall* System_String_ctor_StringIntInt(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tSystemString *pThis, *pStr;
+	tSystemString *pSystemString, *pStr;
 	U32 startIndex, length;
 
 	pStr = ((tSystemString**)pParams)[0];
 	startIndex = ((U32*)pParams)[1];
 	length = ((U32*)pParams)[2];
 
-	pThis = CreateStringHeapObj(length);
-	memcpy(pThis->chars, &pStr->chars[startIndex], length << 1);
-	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)pThis;
+	pSystemString = CreateStringHeapObj(length);
+	memcpy(pSystemString->chars, &pStr->chars[startIndex], length << 1);
+	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)pSystemString;
 
 	return NULL;
 }
@@ -147,14 +148,14 @@ tAsyncCall* System_String_InternalTrim(PTR pThis_, PTR pParams, PTR pReturnValue
 	HEAP_PTR pWhiteChars;
 	U32 trimType, i, j, checkCharsLen;
 	U32 ofsStart, ofsEnd;
-	U16 *pCheckChars;
+	CHAR2 *pCheckChars;
 	U32 isWhiteSpace;
 	tSystemString *pRet;
-	U16 c;
+	CHAR2 c;
 
 	pWhiteChars = ((HEAP_PTR*)pParams)[0];
 	trimType = ((U32*)pParams)[1];
-	pCheckChars = (U16*)SystemArray_GetElements(pWhiteChars);
+	pCheckChars = (CHAR2*)SystemArray_GetElements(pWhiteChars);
 	checkCharsLen = SystemArray_GetLength(pWhiteChars);
 
 	ofsStart = 0;
@@ -203,6 +204,22 @@ tAsyncCall* System_String_InternalTrim(PTR pThis_, PTR pParams, PTR pReturnValue
 	return NULL;
 }
 
+tAsyncCall* System_String_CompareOrdinal(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tSystemString *a, *b;
+	I32 ret;
+
+	a = ((tSystemString**)pParams)[0];
+	b = ((tSystemString**)pParams)[1];
+
+	if (a == NULL && b == NULL) { ret = 0; }
+	else if (a == NULL) { ret = -1; }
+	else if (b == NULL) { ret = 1; }
+	else { ret = wcscmp((wchar_t *)a->chars, (wchar_t *)b->chars); }
+	*(I32*)pReturnValue = ret;
+
+	return NULL;
+}
+
 tAsyncCall* System_String_Equals(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *a, *b;
 	U32 ret;
@@ -224,7 +241,7 @@ tAsyncCall* System_String_Equals(PTR pThis_, PTR pParams, PTR pReturnValue) {
 
 tAsyncCall* System_String_GetHashCode(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U16 *pChar, *pEnd;
+	CHAR2 *pChar, *pEnd;
 	I32 hash;
 	
 	hash = 0;
@@ -248,7 +265,7 @@ tAsyncCall* System_String_InternalReplace(PTR pThis_, PTR pParams, PTR pReturnVa
 	tSystemString *pNew = ((tSystemString**)pParams)[1];
 	tSystemString *pResult;
 	U32 thisLen, oldLen, newLen;
-	U16 *pThisChar0, *pOldChar0, *pNewChar0, *pResultChar0;
+	CHAR2 *pThisChar0, *pOldChar0, *pNewChar0, *pResultChar0;
 	U32 i, j, replacements, dstIndex;
 	U32 resultLen;
 
@@ -306,25 +323,15 @@ tAsyncCall* System_String_InternalReplace(PTR pThis_, PTR pParams, PTR pReturnVa
 
 tAsyncCall* System_String_InternalIndexOf(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U16 value = ((U16*)pParams)[0];
+	CHAR2 value = ((CHAR2*)pParams)[0];
 	I32 startIndex = ((I32*)pParams)[1];
 	I32 count = ((I32*)pParams)[2];
-	U32 forwards = ((U32*)pParams)[3];
+	U32 forward = ((U32*)pParams)[3];
 
-	I32 lastIndex;
-	I32 inc;
-	I32 i;
+	I32 inc = forward ? 1 : -1;
+	I32 lastIndex = forward ? startIndex + count : startIndex - count;
 
-	if (forwards) {
-		lastIndex = startIndex + count;
-		inc = 1;
-		i = startIndex;
-	} else {
-		lastIndex = startIndex - 1;
-		inc = -1;
-		i = startIndex + count - 1;
-	}
-	for (; i != lastIndex; i += inc) {
+	for (I32 i = startIndex; i != lastIndex; i += inc) {
 		if (pThis->chars[i] == value) {
 			*(I32*)pReturnValue = i;
 			return NULL;
@@ -339,33 +346,61 @@ tAsyncCall* System_String_InternalIndexOfAny(PTR pThis_, PTR pParams, PTR pRetur
 	HEAP_PTR valueArray = ((HEAP_PTR*)pParams)[0];
 	I32 startIndex = ((I32*)pParams)[1];
 	I32 count = ((I32*)pParams)[2];
-	U32 forwards = ((U32*)pParams)[3];
+	U32 forward = ((U32*)pParams)[3];
 
 	PTR valueChars = SystemArray_GetElements(valueArray);
 	U32 numValueChars = SystemArray_GetLength(valueArray);
 
-	I32 lastIndex;
-	I32 inc;
-	I32 i, j;
+	I32 inc = forward ? 1 : -1;
+	I32 lastIndex = forward ? startIndex + count : startIndex - count;
 
-	if (forwards) {
-		lastIndex = startIndex + count;
-		inc = 1;
-		i = startIndex;
-	} else {
-		lastIndex = startIndex - 1;
-		inc = -1;
-		i = startIndex + count - 1;
-	}
-	for (; i != lastIndex; i += inc) {
-		U16 thisChar = pThis->chars[i];
-		for (j=numValueChars - 1; j>=0; j--) {
-			if (thisChar == ((U16*)valueChars)[j]) {
+	for (I32 i = startIndex; i != lastIndex; i += inc) {
+		CHAR2 thisChar = pThis->chars[i];
+		for (I32 j=numValueChars - 1; j >= 0; j--) {
+			if (thisChar == ((CHAR2*)valueChars)[j]) {
 				*(I32*)pReturnValue = i;
 				return NULL;
 			}
 		}
 	}
+
+	*(I32*)pReturnValue = -1;
+	return NULL;
+}
+
+tAsyncCall* System_String_InternalIndexOfStr(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tSystemString *pThis = (tSystemString*)pThis_;
+	tSystemString *pValue = ((tSystemString**)pParams)[0];
+	I32 startIndex = ((I32*)pParams)[1];
+	I32 count = ((I32*)pParams)[2];
+	U32 forward = ((U32*)pParams)[3];
+
+	if (pThis->length == 0) {
+		*(I32*)pReturnValue = (pValue->length == 0 ? 0 : -1);
+		return NULL;
+	}
+	if (pValue->length == 0) {
+		*(I32*)pReturnValue = (forward ? startIndex : min((I32)pThis->length - 1, startIndex));
+		return NULL;
+	}
+
+	if (!forward && startIndex == pThis->length) {
+		startIndex--;
+		if (count > 0) { count--; }
+	}
+
+	I32 inc = forward ? 1 : -1;
+	I32 fromIndex = forward ? startIndex : startIndex - pValue->length + 1;
+	I32 lastIndex = forward ? startIndex + count - pValue->length + 1 : startIndex - count;
+	U32 byteLen = pValue->length << 1;
+
+	for (I32 i = fromIndex; i != lastIndex; i += inc) {
+		if (memcmp(pThis->chars + i, pValue->chars, byteLen) == 0) {
+			*(I32*)pReturnValue = i;
+			return NULL;
+		}
+	}
+
 	*(I32*)pReturnValue = -1;
 	return NULL;
 }
@@ -394,7 +429,7 @@ HEAP_PTR SystemString_FromCharPtrASCII(U8 *pStr) {
 	return (HEAP_PTR)pSystemString;
 }
 
-HEAP_PTR SystemString_FromCharPtrUTF16(U16 *pStr) {
+HEAP_PTR SystemString_FromCharPtrUTF16(CHAR2 *pStr) {
 	tSystemString *pSystemString;
 	int strLen = 0;
 
@@ -423,8 +458,7 @@ U32 SystemString_GetNumBytes(HEAP_PTR pThis_) {
 tAsyncCall* System_String_InternalToInt32(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 	U32 *pError = ((U32**)pParams)[0];
-	const wchar_t *str = (const wchar_t *)pThis->chars;
-	wchar_t *end;
+	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	I32 ret = wcstol(str, &end, 0);
 	*pError = end != (str + pThis->length) || (ret == 0 && errno != 0);
@@ -435,8 +469,7 @@ tAsyncCall* System_String_InternalToInt32(PTR pThis_, PTR pParams, PTR pReturnVa
 tAsyncCall* System_String_InternalToInt64(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 	U32 *pError = ((U32**)pParams)[0];
-	const wchar_t *str = (const wchar_t *)pThis->chars;
-	wchar_t *end;
+	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	I64 ret = wcstoll(str, &end, 0);
 	*pError = end != (str + pThis->length) || (ret == 0 && errno != 0);
@@ -447,8 +480,7 @@ tAsyncCall* System_String_InternalToInt64(PTR pThis_, PTR pParams, PTR pReturnVa
 tAsyncCall* System_String_InternalToUInt32(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 	U32 *pError = ((U32**)pParams)[0];
-	const wchar_t *str = (const wchar_t *)pThis->chars;
-	wchar_t *end;
+	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	U32 ret = wcstoul(str, &end, 0);
 	*pError = end != (str + pThis->length) || (ret == 0 && errno != 0);
@@ -459,8 +491,7 @@ tAsyncCall* System_String_InternalToUInt32(PTR pThis_, PTR pParams, PTR pReturnV
 tAsyncCall* System_String_InternalToUInt64(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 	U32 *pError = ((U32**)pParams)[0];
-	const wchar_t *str = (const wchar_t *)pThis->chars;
-	wchar_t *end;
+	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	U64 ret = wcstoull(str, &end, 0);
 	*pError = end != (str + pThis->length) || (ret == 0 && errno != 0);
@@ -471,8 +502,7 @@ tAsyncCall* System_String_InternalToUInt64(PTR pThis_, PTR pParams, PTR pReturnV
 tAsyncCall* System_String_InternalToSingle(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 	U32 *pError = ((U32**)pParams)[0];
-	const wchar_t *str = (const wchar_t *)pThis->chars;
-	wchar_t *end;
+	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	float ret = wcstof(str, &end);
 	*pError = end != (str + pThis->length) || (ret == 0 && errno != 0);
@@ -483,11 +513,30 @@ tAsyncCall* System_String_InternalToSingle(PTR pThis_, PTR pParams, PTR pReturnV
 tAsyncCall* System_String_InternalToDouble(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 	U32 *pError = ((U32**)pParams)[0];
-	const wchar_t *str = (const wchar_t *)pThis->chars;
-	wchar_t *end;
+	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	double ret = wcstod(str, &end);
 	*pError = end != (str + pThis->length) || (ret == 0 && errno != 0);
 	*(double*)pReturnValue = ret;
+	return NULL;
+}
+
+tAsyncCall* System_String_ToLowerInvariant(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tSystemString *pThis = (tSystemString*)pThis_;
+	tSystemString *pSystemString = CreateStringHeapObj(pThis->length);
+	for (U32 i = 0; i < pThis->length; i++) {
+		pSystemString->chars[i] = Char_ToLowerInvariant(pThis->chars[i]);
+	}
+	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)pSystemString;
+	return NULL;
+}
+
+tAsyncCall* System_String_ToUpperInvariant(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	tSystemString *pThis = (tSystemString*)pThis_;
+	tSystemString *pSystemString = CreateStringHeapObj(pThis->length);
+	for (U32 i = 0; i < pThis->length; i++) {
+		pSystemString->chars[i] = Char_ToUpperInvariant(pThis->chars[i]);
+	}
+	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)pSystemString;
 	return NULL;
 }
