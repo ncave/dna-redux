@@ -234,6 +234,7 @@ tMD_TypeDef* MetaData_GetTypeDefFromFullName(STRING assemblyName, STRING nameSpa
 	pTypeMetaData = CLIFile_GetMetaDataForAssembly(assemblyName);
 
 	// Note that this cannot get a nested class, as this final parameter is always NULL
+    log_f(0, "MetaData_GetTypeDefFromFullName: %s:%s.%s\n", assemblyName, nameSpace, name);
 	return MetaData_GetTypeDefFromName(pTypeMetaData, nameSpace, name, NULL, /* assertExists */ 1);
 }
 

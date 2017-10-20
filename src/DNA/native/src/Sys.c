@@ -103,7 +103,7 @@ static void* allocForever(void* ptr, U32 size) {
 }
 
 void* mallocForever(U32 size) {
-	return allocForever(malloc(size), size);
+    return allocForever(calloc(size, 1), size);
 }
 void* callocForever(U32 count, U32 size) {
 	return allocForever(calloc(count, size), count * size);
