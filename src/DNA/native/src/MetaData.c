@@ -242,7 +242,7 @@ static char* tableDefs[] = {
 // Coded indexes use this lookup table.
 // Note that the extra 'z' characters are important!
 // (Because of how the lookup works each string must be a power of 2 in length)
-static unsigned char* codedTags[] = {
+static const char* codedTags[] = {
 	// TypeDefOrRef
 	"\x02\x01\x1Bz",
 	// HasConstant
