@@ -510,7 +510,6 @@ static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **p
 							pSource += 2;
 						}
                         v = (size_t)(pThis->strings.pStart + v);
-                        log_f(0, "LoadSingleTable(S): %s\n", (char*)v);
 						break;
 					case 'G': // index into GUID heap
 						if (pThis->index32BitGUID) {
