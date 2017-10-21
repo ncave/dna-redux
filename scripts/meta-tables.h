@@ -1,64 +1,3 @@
-// Copyright (c) 2012 DotNetAnywhere
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-#if !defined(__METADATATABLES_H)
-#define __METADATATABLES_H
-
-// Forward typedef's (anything used in MetaData.h must be here)
-typedef struct tMD_MethodDef_ tMD_MethodDef;
-typedef struct tMD_FieldDef_ tMD_FieldDef;
-typedef struct tMD_TypeDef_ tMD_TypeDef;
-typedef struct tMD_MethodSpec_ tMD_MethodSpec;
-typedef struct tMD_ImplMap_ tMD_ImplMap;
-
-#include "Types.h"
-#include "JIT.h"
-#include "MetaData.h"
-#include "Generics.h"
-
-// First, the combined tables
-
-typedef struct tMDC_ToFieldDef_ tMDC_ToFieldDef;
-struct tMDC_ToFieldDef_ {
-	tMD_FieldDef *pFieldDef;
-};
-
-typedef struct tMDC_ToMethodDef_ tMDC_ToMethodDef;
-struct tMDC_ToMethodDef_ {
-	tMD_MethodDef *pMethodDef;
-};
-
-typedef struct tMDC_ToTypeDef_ tMDC_ToTypeDef;
-struct tMDC_ToTypeDef_ {
-	tMD_TypeDef *pTypeDef;
-};
-
-#ifndef _MSC_VER
-#   define PACKED __attribute__((packed))
-#else
-#   define PACKED
-#   pragma pack(push,1)
-#endif
-
-// Second, the raw metadata tables
-
 // Table 0x00 - Module
 struct PACKED tMD_Module_ {
 	// Module name - index into string heap
@@ -131,7 +70,7 @@ struct PACKED tMD_TypeDef_ {
 	// have been pre-set.
 	U8 isPrimed;
 	// padding
-	U8 padding0[1];
+	U8 padding0;
 	// If this type has a static constructor, then store it here. NULL if no static constructor
 	tMD_MethodDef *pStaticConstructor;
 	// The size of this type when in an array
@@ -251,30 +190,6 @@ struct PACKED tMD_MethodDef_ {
 	tMD_TypeDef **ppMethodTypeArgs;
 	// If this is a generic core method, then store type instances here.
 	tGenericMethodInstance *pGenericMethodInstances;
-
-#ifdef GEN_COMBINED_OPCODES
-	// The number of times this method is on the call stack of all threads
-	U32 callStackCount;
-	// The number of times this method has been called
-	U64 genCallCount;
-	// Pointer to the method that has the next highest number of calls
-	tMD_MethodDef *pNextHighestCalls;
-	// Pointer to the method that has the prev highest number of calls
-	tMD_MethodDef *pPrevHighestCalls;
-	// If this method currently has a combined opcode JIT version, then point to it here.
-	tJITted *pJITtedCombined;
-#endif
-
-#ifdef DIAG_METHOD_CALLS
-	// Number of times this method has been called
-	U64 callCount;
-	// Total time (inclusive of children) in this function
-	U64 totalTime;
-	// Max time (inclusive of children)
-	U64 maxTime;
-	// Last start time
-	U64 startTime;
-#endif
 };
 #define MD_TABLE_METHODDEF 0x06
 
@@ -303,10 +218,10 @@ struct PACKED tMD_InterfaceImpl_ {
 // Table 0x0A - MemberRef
 struct PACKED tMD_MemberRef_ {
 	// Combined
-	union {
+	//union {
 		tMD_MethodDef *pMethodDef;
-		tMD_FieldDef *pFieldDef;
-	} u;
+	//	tMD_FieldDef *pFieldDef;
+	//} u;
 
 	// Type of member, coded index: MemberRefParent
 	IDX_TABLE class_;
@@ -323,7 +238,8 @@ struct PACKED tMD_Constant_ {
 	// The ELEMENT_TYPE of the constant - 'void' is ELEMENT_TYPE_CLASS with a 0 blob index
 	U8 type;
 	// Padding
-	U8 padding0[3];
+	U8 padding0;
+	U16 padding1;
 	// The parent of this constant - HasConstant encoded table index
 	IDX_TABLE parent;
 	// The value of the constant, index in the BLOB heap
@@ -501,7 +417,10 @@ struct PACKED tMD_Assembly_ {
 	// Hash algorithm ID of type AssemblyHashAlgorithm
 	U32 hashAlgID;
 	// Version info
-	U16 majorVersion, minorVersion, buildNumber, revisionNumber;
+    U16 majorVersion;
+    U16 minorVersion;
+    U16 buildNumber;
+    U16 revisionNumber;
 	// Flags - AssemblyFlags
 	FLAGS32 flags;
 	// Public key
@@ -516,7 +435,10 @@ typedef struct tMD_Assembly_ tMD_Assembly;
 
 struct PACKED tMD_AssemblyRef_ {
 	// Version info
-	U16 majorVersion, minorVersion, buildNumber, revisionNumber;
+    U16 majorVersion;
+    U16 minorVersion;
+    U16 buildNumber;
+    U16 revisionNumber;
 	// Flags - AssemblyFlags
 	FLAGS32 flags;
 	// Public key or token
@@ -577,8 +499,3 @@ struct PACKED tMD_GenericParamConstraint_ {
 	// The type of the constraint (coded index TypeDefOrRef)
 	IDX_TABLE constraint;
 };
-
-#ifdef _MSC_VER
-#   pragma pack(pop)
-#endif
-#endif
