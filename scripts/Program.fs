@@ -1,5 +1,6 @@
 ﻿open System
 open System.IO
+open System.Security.Cryptography.X509Certificates
 
 let (|>!) a f = f a; a
 
@@ -84,7 +85,7 @@ let rec nextToken (state: Token list) (stream: char list) : Token list =
         | h :: t when h = ';'           -> Token.SC,    t
         | _ -> failwith "unhandled token"
     match stream with
-    | [] -> (tok :: state) |> List.rev |>! printfn "%A"
+    | [] -> (tok :: state) |> List.rev //|>! printfn "%A"
     | _  -> nextToken (tok :: state) stream
 
 let tokenizeFieldLine (l: string) =
@@ -115,8 +116,8 @@ let convertHex (s: string) =
         let A = 'A' |> int64;
         match c with
         | c when c >= '0' && c <= '9' -> state * 16L + (c |> int64) - z
-        | c when c >= 'a' && c <= 'f' -> state * 16L + (c |> int64) - a
-        | c when c >= 'A' && c <= 'F' -> state * 16L + (c |> int64) - A
+        | c when c >= 'a' && c <= 'f' -> state * 16L + (10L + (c |> int64) - a)
+        | c when c >= 'A' && c <= 'F' -> state * 16L + (10L + (c |> int64) - A)
         | _ -> failwith "invalid hex char") 0L
 
 let readTableFile fileName =
@@ -137,7 +138,7 @@ let readTableFile fileName =
             then failwith "invalid define"
             (s.[9..], i))
         |> Map.ofArray
-        |>! printfn "%A"
+        //|>! printfn "%A"
     
     cleanLines
     |> Array.filter(fun l ->
@@ -217,25 +218,27 @@ let readTablesActions fileName =
     |> Map.ofArray
 
 let validateStruct (m: Map<int, (char * char)[]>) (s: TyStruct) : Map<int, (char * char)[]> =
-    printfn "now in struct %s:" s.name
+    printfn "now in struct %s (0x%X):" s.name s.idx
     match m.TryFind s.idx with
     | None   -> m
     | Some l -> 
-        let arr =
+        let arrLen =
             l
             |> Array.filter (fun (s, d) -> d <> 'x')
+            |> Array.length
 
         s.tyFields
         |> Array.mapi (fun i f -> i, f)
-        |> Array.fold(fun (state: Map<int, (char * char)[]>) (i, f) ->
-            if i < arr.Length
+        |> Array.fold(fun (arrPos: int) (i, f) ->
+            if arrPos < arrLen
             then
-                let o, n = l.[i]
+                let o, n = l.[arrPos]
                 match f.ty, n  with
                 | _, 'x'
                 | Ty.Name "STRING", 'p'
                 | Ty.Name "BLOB_", 'p'
                 | Ty.Name "HEAP_PTR", 'p'
+                | Ty.Name "PTR", 'p'
                 | Ty.Name "GUID_", 'p'
                 | Ty.Name "FLAGS16", 's'
                 | Ty.Name "FLAGS32", '*'
@@ -245,26 +248,64 @@ let validateStruct (m: Map<int, (char * char)[]>) (s: TyStruct) : Map<int, (char
                 | Ty.Name "U16", 's' 
                 | Ty.Name "I16", 's' 
                 | Ty.Name "U32", '*' 
-                | Ty.Name "I32", '*' -> m
-                | Ty.Name s, c -> printfn "\tfield %s has different destination '%c'" s c
-                | Ty.Ptr _, '*' -> printfn "\tfield %s is a pointer" f.name
-                | _, _ -> failwith "unsupported"
+                | Ty.Name "I32", '*'
+                | Ty.Ptr _, 'p' -> arrPos + 1
+                | Ty.Ptr _, '*'
+                | Ty.Name "STRING", '*'
+                | Ty.Name "BLOB_", '*'
+                | Ty.Name "HEAP_PTR", '*'
+                | Ty.Name "PTR", '*'
+                | Ty.Name "GUID_", '*' ->
+                    //printfn "\tfield %s is a pointer but destination is '*'" f.name
+                    l.[arrPos] <- (o, 'p')
+                    arrPos + 1
+                | Ty.Name s, c ->
+                    printfn "\tfield %s : %s has different destination '%c'" f.name s c
+                    arrPos + 1
+
+                | _, c ->
+                    printfn "\tunsupported %s: %A - '%c'" f.name f.ty c
+                    arrPos + 1
             else
-                printfn "\tfield %s is not covered" f.name) m
+                printfn "\tfield %s is not covered" f.name
+                arrPos + 1) 0
+        |> ignore
+        m.Add (s.idx, l)
 
-
+let formatLine (l: (char * char) array) =
+    l
+    |> Array.map(fun (s, d) ->
+        match s with
+        | c when (c |> int) >= 0 && (c |> int) <= 0x2C -> sprintf "\\x%02x%c" (c |> int) d |> Seq.toArray
+        | _ -> sprintf "%c%c" s d |> Seq.toArray)
+    |> Seq.concat
+    |> Seq.toArray
+    |> String
+    |> sprintf "\"%s\","
 
 [<EntryPoint>]
 let main args =
-    let tables =
-        readTableFile "/home/wael/Projects/personal/dotnet-js/scripts/meta-tables.h"
-        |>! printfn "%A"
 
     let actions =
-        readTablesActions "/home/wael/Projects/personal/dotnet-js/scripts/tables-actions.h"
-        |>! printfn "%A"
+        readTablesActions "tables-actions.h"
+        //|>! printfn "%A"
     
-    tables
-    |> List.iter (validateStruct actions) 
+    let tables =
+        readTableFile "meta-tables.h"
+        //|>! printfn "%A"
+        |> List.fold (fun state s -> validateStruct state s) actions
+        //|>! printfn "%A"
 
+    let arr = seq {
+        for i in 0..0x2c do
+            yield sprintf "// 0x%02x" i
+            match tables.TryFind i with
+            | None   -> yield "NULL,"
+            | Some l -> yield formatLine l
+        }
+    
+    let arr = arr |> Array.ofSeq
+    File.WriteAllLines("table-actions-gen.h", arr)
+
+    printf "%A" arr
     0

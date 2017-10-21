@@ -18,11 +18,13 @@
     <ErrorReport>prompt</ErrorReport>
     <ExternalConsole>true</ExternalConsole>
     <PlatformTarget>x86</PlatformTarget>
+    <StartWorkingDirectory>D:\Projects\dotnet-js\scripts\</StartWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <Optimize>true</Optimize>
     <OutputPath>bin\Release</OutputPath>
-    <DefineConstants></DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <ExternalConsole>true</ExternalConsole>
     <GenerateTailCalls>true</GenerateTailCalls>
@@ -34,6 +36,13 @@
   <PropertyGroup Condition="'$(VisualStudioVersion)' == '10.0' OR '$(VisualStudioVersion)' == '11.0'">
     <FSharpTargetsPath>$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets</FSharpTargetsPath>
   </PropertyGroup>
+  <Import Project="$(FSharpTargetsPath)" />
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Program.fs" />
+    <None Include="meta-tables.h" />
+    <None Include="tables-actions.h" />
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
@@ -46,10 +55,4 @@
       <HintPath>packages\FSharp.Core.4.1.0.2\lib\net45\FSharp.Core.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Program.fs" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <Import Project="$(FSharpTargetsPath)" />
 </Project>

@@ -50,7 +50,12 @@ struct tMDC_ToTypeDef_ {
 	tMD_TypeDef *pTypeDef;
 };
 
-#define PACKED __attribute__((packed))
+#ifndef _MSC_VER
+#   define PACKED __attribute__((packed))
+#else
+#   define PACKED
+#   pragma pack(push,1)
+#endif
 
 // Second, the raw metadata tables
 
@@ -573,4 +578,7 @@ struct PACKED tMD_GenericParamConstraint_ {
 	IDX_TABLE constraint;
 };
 
+#ifdef _MSC_VER
+#   pragma pack(pop)
+#endif
 #endif

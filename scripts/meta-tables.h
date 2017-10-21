@@ -70,7 +70,7 @@ struct PACKED tMD_TypeDef_ {
 	// have been pre-set.
 	U8 isPrimed;
 	// padding
-	U8 padding0[1];
+	U8 padding0;
 	// If this type has a static constructor, then store it here. NULL if no static constructor
 	tMD_MethodDef *pStaticConstructor;
 	// The size of this type when in an array
@@ -238,7 +238,8 @@ struct PACKED tMD_Constant_ {
 	// The ELEMENT_TYPE of the constant - 'void' is ELEMENT_TYPE_CLASS with a 0 blob index
 	U8 type;
 	// Padding
-	U8 padding0[3];
+	U8 padding0;
+	U16 padding1;
 	// The parent of this constant - HasConstant encoded table index
 	IDX_TABLE parent;
 	// The value of the constant, index in the BLOB heap

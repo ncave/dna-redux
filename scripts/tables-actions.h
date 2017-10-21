@@ -3,7 +3,7 @@
 	// 0x01
     "x*;*SpSp",
 	// 0x02
-    "x*mpi*SpSp0*\x04*\x06*xclcxcxcx*x*x*x*x*x*x*x*x*x*x*I*x*x*x*x*x*x*x*x*x*x*x*x*",
+    "x*mpi*SpSp0*\x04*\x06*xclcxcxcx*x*x*x*x*xcxcxcxcx*x*x*x*x*I*x*x*x*x*x*x*x*x*x*x*x*x*",
 	// 0x03
 	NULL,
 	// 0x04
@@ -11,7 +11,7 @@
 	// 0x05
 	NULL,
 	// 0x06
-    "x*mp^pssssSpBp\x08*x*x*x*x*x*x*I*x*x*x*x*",
+    "x*mp^pssssSpBp\x08*x*xcxcxsx*x*x*x*I*x*x*x*x*",
 	// 0x07
 	NULL,
 	// 0x08
@@ -57,7 +57,7 @@
 	// 0x1C
     "ssxs8*Sp\x1a*",
 	// 0x1D
-    "^p\x04*",
+    "^*\x04*",
 	// 0x1E
 	NULL,
 	// 0x1F
