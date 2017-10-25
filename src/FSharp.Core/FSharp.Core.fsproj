@@ -82,7 +82,7 @@
       <Link>Primitives/prim-types-prelude.fs</Link>
     </Compile>
     <Compile Include="extra/FSCore_res.fs" />
-    <Compile Include="extra/sr_shim.fs" />
+    <Compile Include="extra/SR_shim.fs" />
     <!--<Compile Include="SR.fs">
       <Link>Primitives/SR.fs</Link>
     </Compile>-->
