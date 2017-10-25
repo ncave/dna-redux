@@ -126,14 +126,19 @@ tJITCodeInfo jitCodeGoNext;
 	pCurOp = pOps + pCurrentMethodState->ipOffset
 
 #ifdef DIAG_CALL_STACK
+I32 nested = 0;
+char callBuffer[8192] = ""; //increase if needed
+char *pNextChar = callBuffer;
+
 #define INCREMENT_NESTED_LEVEL() nested = nested + 1
+#define DECREMENT_NESTED_LEVEL() nested = nested - 1
 #else
 #define INCREMENT_NESTED_LEVEL()
+#define DECREMENT_NESTED_LEVEL()
 #endif
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \
 	SAVE_METHOD_STATE(); \
-	INCREMENT_NESTED_LEVEL(); \
 	pThread->pCurrentMethodState = pNewMethodState; \
 	LOAD_METHOD_STATE()
 
@@ -153,21 +158,13 @@ static void CheckIfCurrentInstructionHasBreakpoint(tMethodState* pMethodState, U
 	}
 }
 
-// Note: newObj is only set if a constructor is being called
-static U32 CreateParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pCurEvalStack, HEAP_PTR newObj) {
-	U32 ofs = 0;
-
-	if (newObj != NULL) {
-		// If this is being called from JIT_NEW_OBJECT then need to specially push the new object
-		// onto parameter stack position 0
-		*(HEAP_PTR*)pParamsLocals = newObj;
-		ofs = 4;
+static void CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pParamsOrigin, HEAP_PTR obj) {
+	memcpy(pParamsLocals, pParamsOrigin, pCallMethod->parameterStackSize);
+	// Note: obj is only set if a constructor or delegate is being called
+	if (obj != NULL) {
+		// push the object onto parameter stack position 0
+		*(HEAP_PTR*)pParamsLocals = obj;
 	}
-	Assert(pCallMethod->parameterStackSize >= ofs);
-	U32 sz = pCallMethod->parameterStackSize - ofs;
-	memcpy(pParamsLocals + ofs, pCurEvalStack - sz, sz);
-
-	return sz;
 }
 
 static tMethodState* RunFinalizer(tThread *pThread) {
@@ -189,12 +186,6 @@ static tMethodState* RunFinalizer(tThread *pThread) {
 	}
 	return NULL;
 }
-
-#ifdef DIAG_CALL_STACK
-I32 nested = 0;
-char callBuffer[8192] = ""; //increase if needed
-char *pNextChar = callBuffer;
-#endif
 
 #ifdef DIAG_OPCODE_TIMES
 U64 opcodeTimes[JIT_OPCODE_MAXNUM];
@@ -1135,9 +1126,8 @@ JIT_CALL_NATIVE_end:
 JIT_RETURN_start:
 	OPCODE_USE(JIT_RETURN);
 	// dprintfn("Returned from %s() to %s()", pCurrentMethodState->pMethod->name, (pCurrentMethodState->pCaller)?pCurrentMethodState->pCaller->pMethod->name:(STRING)"<none>");
-#ifdef DIAG_CALL_STACK
-	nested = nested - 1;
-#endif
+	DECREMENT_NESTED_LEVEL();
+
 	if (pCurrentMethodState->pCaller == NULL) {
 		// End of thread!
 		if (pCurrentMethodState->pMethod->pReturnType == types[TYPE_SYSTEM_INT32]) {
@@ -1180,8 +1170,6 @@ JIT_INVOKE_DELEGATE_start:
 		tMD_MethodDef *pDelegateMethod, *pCallMethod;
 		void *pDelegate;
 		HEAP_PTR pDelegateThis;
-		tMethodState *pCallMethodState;
-		U32 ofs;
 
 		if (pCurrentMethodState->pNextDelegate == NULL) {
 			// First delegate, so get the Invoke() method defined within the delegate class
@@ -1190,12 +1178,12 @@ JIT_INVOKE_DELEGATE_start:
 			//pCurrentMethodState->stackOfs -= pDelegateMethod->parameterStackSize;
 			POP(pDelegateMethod->parameterStackSize);
 			// Allocate memory for delegate params
-			pCurrentMethodState->pDelegateParams = malloc(pDelegateMethod->parameterStackSize - sizeof(void*));
+			pCurrentMethodState->pDelegateParams = malloc(pDelegateMethod->parameterStackSize);
 			memcpy(
 				pCurrentMethodState->pDelegateParams,
 				//pCurrentMethodState->pEvalStack + pCurrentMethodState->stackOfs + sizeof(void*),
-				pCurEvalStack + sizeof(void*),
-				pDelegateMethod->parameterStackSize - sizeof(void*));
+				pCurEvalStack,
+				pDelegateMethod->parameterStackSize);
 			// Get the actual delegate heap pointer
 			pDelegate = *(void**)pCurEvalStack;
 		} else {
@@ -1211,17 +1199,14 @@ JIT_INVOKE_DELEGATE_start:
 		}
 		// Get the real method to call; the target of the delegate.
 		pCallMethod = Delegate_GetMethodAndStore(pDelegate, &pDelegateThis, &pCurrentMethodState->pNextDelegate);
+
 		// Set up the call method state for the call.
-		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
-		if (pDelegateThis != NULL) {
-			*(HEAP_PTR*)pCallMethodState->pParamsLocals = pDelegateThis;
-			ofs = sizeof(void*);
-		} else {
-			ofs = 0;
-		}
-		memcpy(pCallMethodState->pParamsLocals + ofs,
-			pCurrentMethodState->pDelegateParams,
-			pCallMethod->parameterStackSize - ofs);
+		INCREMENT_NESTED_LEVEL();
+		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
+		// Fill in the parameters
+		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurrentMethodState->pDelegateParams, pDelegateThis);
+
+		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
 JIT_INVOKE_DELEGATE_end:
@@ -1235,7 +1220,6 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 
 		// Take the MethodBase.Invoke params off the stack.
 		POP(pInvokeMethod->parameterStackSize);
-		Assert(pCurEvalStack >= pCurrentMethodState->pEvalStack);
 
 		// Get a pointer to the MethodBase instance (e.g., a MethodInfo or ConstructorInfo),
 		// and from that, determine which method we're going to invoke
@@ -1251,7 +1235,6 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));
 
 		// Put the new 'this' on the stack
-		PTR pPrevEvalStack = pCurEvalStack;
 		if (invocationThis != NULL) {
 			PUSH_PTR(invocationThis);
 		}
@@ -1270,11 +1253,14 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 				}
 			}
 		}
-		pCurEvalStack = pPrevEvalStack;
 
 		// Change interpreter state so we continue execution inside the method being invoked
+		INCREMENT_NESTED_LEVEL();
 		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
-		memcpy(pCallMethodState->pParamsLocals, pCurEvalStack, pCallMethod->parameterStackSize);
+		// Fill in the parameters
+		POP(pCallMethod->parameterStackSize);
+		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
+		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
 JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_end:
@@ -1400,12 +1386,11 @@ allCallStart:
 		}
 callMethodSet:
 		// Set up the new method state for the called method
+		INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
 		// Set up the parameter stack for the method being called
-		U32 paramStackSize = CreateParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
-		pCurEvalStack -= paramStackSize;
-		Assert(pCurEvalStack >= pCurrentMethodState->pEvalStack);
-
+		POP(pCallMethod->parameterStackSize);
+		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
@@ -2674,18 +2659,15 @@ JIT_NEWOBJECT_start:
 	OPCODE_USE(JIT_NEWOBJECT);
 	{
 		tMD_MethodDef *pConstructorDef;
-		HEAP_PTR obj;
 		tMethodState *pCallMethodState;
+		HEAP_PTR obj = NULL;
 
 		pConstructorDef = (tMD_MethodDef*)GET_OP();
 		U32 isInternalConstructor = (pConstructorDef->implFlags & METHODIMPLATTRIBUTES_INTERNALCALL) != 0;
 
+		// All internal constructors MUST allocate their own 'this' objects
 		if (!isInternalConstructor) {
 			obj = Heap_AllocType(pConstructorDef->pParentType);
-		} else {
-			// All internal constructors MUST allocate their own 'this' objects
-			// Need to set this to something non-NULL so that CreateParameters() works properly
-			obj = (HEAP_PTR)-1;
 		}
 
 #ifdef DIAG_METHOD_CALLS
@@ -2693,18 +2675,20 @@ JIT_NEWOBJECT_start:
 #endif
 
 		// Set up the new method state for the called method
+		INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
 		// Fill in the parameters
-		U32 paramStackSize = CreateParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, obj);
-		pCurEvalStack -= paramStackSize;
-		Assert(pCurEvalStack >= pCurrentMethodState->pEvalStack);
+		POP(pConstructorDef->parameterStackSize);
+		CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, obj);
+		PUSH(sizeof(HEAP_PTR));
 
+		// Push the object here, so it's on the stack when the constructor returns
 		if (!isInternalConstructor) {
-			// Push the object here, so it's on the stack when the constructor returns
 			PUSH_O(obj);
 		}
-		// Set up the local variables for the new method state (for the obj constructor)
+		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
+
 		// Run any pending Finalizers
 		RUN_FINALIZER();
 	}
@@ -2726,14 +2710,17 @@ JIT_NEWOBJECT_VALUETYPE_start:
 		Assert(pMem >= pCurrentMethodState->pEvalStack);
 
 		// Set up the new method state for the called method
+		INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
 		// Fill in the parameters
-		U32 paramStackSize = CreateParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, pMem);
-		pCurEvalStack -= paramStackSize;
-		Assert(pCurEvalStack >= pCurrentMethodState->pEvalStack);
+		POP(pConstructorDef->parameterStackSize);
+		CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, pMem);
+		PUSH(sizeof(PTR));
 
 		// Set the stack state so it's correct for the constructor return
-		PUSH(pConstructorDef->pParentType->stackSize);
+		if (!isInternalConstructor) {
+			PUSH(pConstructorDef->pParentType->stackSize);
+		}
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 		// Run any pending Finalizers
@@ -3168,6 +3155,7 @@ loadStaticFieldStart:
 				// Need to re-run this instruction when we return from static constructor call
 				//pCurrentMethodState->ipOffset -= 2;
 				pCurOp -= 2;
+				INCREMENT_NESTED_LEVEL();
 				pCallMethodState = MethodState_Direct(pThread, pParentType->pStaticConstructor, pCurrentMethodState, 0);
 				// There can be no parameters, so don't need to set them up
 				CHANGE_METHOD_STATE(pCallMethodState);

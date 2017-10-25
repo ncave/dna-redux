@@ -259,13 +259,13 @@ namespace System {
 			return Concat(str0, str1);
 		}
 
-		// public static string Concat(object obj0, object obj1, object obj2) {
-		// 	return Concat(new object[] { obj0, obj1, obj2 });
-		// }
+		public static string Concat(object obj0, object obj1, object obj2) {
+			return Concat(new object[] { obj0, obj1, obj2 });
+		}
 
-		// public static string Concat(object obj0, object obj1, object obj2, object obj3) {
-		// 	return Concat(new object[] { obj0, obj1, obj2, obj3 });
-		// }
+		public static string Concat(object obj0, object obj1, object obj2, object obj3) {
+			return Concat(new object[] { obj0, obj1, obj2, obj3 });
+		}
 
 		public static string Concat(params object[] values) {
 			if (values == null) {
