@@ -192,7 +192,7 @@ static tMethodState* RunFinalizer(tThread *pThread) {
 
 #ifdef DIAG_CALL_STACK
 I32 nested = 0;
-char callBuffer[8192] = "";
+char callBuffer[8192] = ""; //increase if needed
 char *pNextChar = callBuffer;
 #endif
 
@@ -323,6 +323,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 goNext:
 	CHECK_FOR_BREAKPOINT();
 	op = GET_OP();
+
 	switch (op) {
 
 #else
@@ -1107,6 +1108,13 @@ JIT_CALL_NATIVE_start:
 		// Internal constructors MUST leave the newly created object in the return value
 		// (ie on top of the evaluation stack)
 		pAsync = pCallNative->fn(pThis, pCurrentMethodState->pParamsLocals + thisOfs, pCurrentMethodState->pEvalStack);
+		// push return value
+		if (pCallNative->pMethodDef->pReturnType != NULL) {
+			PUSH(pCallNative->pMethodDef->pReturnType->stackSize);
+		} else if (pCurrentMethodState->isInternalNewObjCall) {
+			PUSH(sizeof(void*));
+		}
+
 		if (pAsync != NULL) {
 			// Save the method state
 			SAVE_METHOD_STATE();
@@ -1147,8 +1155,8 @@ JIT_RETURN_start:
 		u32Value = 0;
 	}
 	{
-		PTR pMem = max(pCurEvalStack - u32Value, pCurrentMethodState->pEvalStack);
-		//Assert(pMem >= pCurrentMethodState->pEvalStack);
+		Assert(pCurEvalStack - u32Value >= pCurrentMethodState->pEvalStack);
+		PTR pMem = pCurEvalStack - u32Value;
 		tMethodState *pOldMethodState = pCurrentMethodState;
 		pThread->pCurrentMethodState = pCurrentMethodState->pCaller;
 		LOAD_METHOD_STATE();
@@ -1227,6 +1235,7 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 
 		// Take the MethodBase.Invoke params off the stack.
 		POP(pInvokeMethod->parameterStackSize);
+		Assert(pCurEvalStack >= pCurrentMethodState->pEvalStack);
 
 		// Get a pointer to the MethodBase instance (e.g., a MethodInfo or ConstructorInfo),
 		// and from that, determine which method we're going to invoke
@@ -1321,8 +1330,10 @@ allCallStart:
 
 		pCallMethod = (tMD_MethodDef*)GET_OP();
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
+
 #ifdef DIAG_CALL_STACK
-		//for (I32 i = min(nested, 99); i > 0; i--) { *pNextChar++ = '|'; } // print call nested level (optional)
+		for (I32 i = nested/10; i > 0; i--) { *pNextChar++ = '*'; } // (optional) print call nested level, each '*' is 10 levels
+		for (I32 i = nested%10; i > 0; i--) { *pNextChar++ = '|'; } // (optional) print call nested level, each '|' is 1 level
 		I32 n = sizeof(callBuffer) - (pNextChar - callBuffer); // space left in buffer
 		I32 c = snprintf(pNextChar, n, "%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
 		pNextChar = (c >= 0 && c < n && (n-c) > 200) ? pNextChar + c : callBuffer; // circular buffer
@@ -2677,6 +2688,10 @@ JIT_NEWOBJECT_start:
 			obj = (HEAP_PTR)-1;
 		}
 
+#ifdef DIAG_METHOD_CALLS
+		pCurrentMethodState->pMethod->heapAlloc++;
+#endif
+
 		// Set up the new method state for the called method
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
 		// Fill in the parameters
@@ -2708,6 +2723,7 @@ JIT_NEWOBJECT_VALUETYPE_start:
 
 		// Allocate space on the eval-stack for the new value-type here
 		PTR pMem = pCurEvalStack - (pConstructorDef->parameterStackSize - sizeof(PTR));
+		Assert(pMem >= pCurrentMethodState->pEvalStack);
 
 		// Set up the new method state for the called method
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);

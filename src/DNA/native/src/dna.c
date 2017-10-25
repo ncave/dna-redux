@@ -77,11 +77,12 @@ void Diag_Print() {
 // The default sort is by method call counts, unless redefined below:
 //#define SORT_BY_TOTAL_TIME   // sort by method total time (inclusive)
 //#define SORT_BY_START_TIME   // sort by method start time (call order)
+//#define SORT_BY_HEAP_ALLOC   // sort by method heap alloc count
 //#define SORT_BY_PARAMS_STACK // sort by method params stack size
 //#define SORT_BY_LOCALS_STACK // sort by method locals stack size
 //#define SORT_BY_EVAL_STACK   // sort by method eval stack size
 	{
-		tMD_MethodDef* topMethods[50]; // change top number if needed
+		tMD_MethodDef* topMethods[50]; // increase if needed
 		U32 numTop = sizeof(topMethods) / sizeof(topMethods[0]);
 		for (U32 t = 0; t < numTop; t++) { topMethods[t] = NULL; }
 
@@ -103,6 +104,8 @@ void Diag_Print() {
 					if (topMethods[t]->totalTime < pMethod->totalTime) {
 #elif defined(SORT_BY_START_TIME)
 					if (topMethods[t]->startTime < pMethod->startTime) {
+#elif defined(SORT_BY_HEAP_ALLOC)
+					if (topMethods[t]->heapAlloc < pMethod->heapAlloc) {
 #elif defined(SORT_BY_PARAMS_STACK)
 					if (topMethods[t]->parameterStackSize < pMethod->parameterStackSize) {
 #elif defined(SORT_BY_LOCALS_STACK)
@@ -129,6 +132,7 @@ void Diag_Print() {
 			printf(", total: %.3f sec", pMethod->totalTime / 1000000.0);
 			printf(", max: %f sec", pMethod->maxTime / 1000000.0);
 			printf(", avg: %f sec", pMethod->totalTime / max(pMethod->callCount, 1) / 1000000.0);
+			printf(", alloc: %llu", pMethod->heapAlloc);
 			printf(", params: %u bytes", pMethod->parameterStackSize);
 			printf(", locals: %u bytes", pMethod->pJITted == NULL ? 0 : pMethod->pJITted->localsStackSize);
 			printf(", eval stack: %u bytes", pMethod->pJITted == NULL ? 0 : pMethod->pJITted->maxStack);

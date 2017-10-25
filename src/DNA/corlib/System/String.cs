@@ -61,6 +61,9 @@ namespace System {
 		extern private static string InternalConcat(string str0, string str1);
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern private void InternalCopyTo(int sourceIndex, char[] destination, int destinationIndex, int count);
+
+		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern private string InternalReplace(string oldValue, string newValue);
 
 		// trimType: bit 0 = start; bit 1 = end
@@ -93,11 +96,9 @@ namespace System {
 		#region Misc Methods
 
 		public char[] ToCharArray () {
-			char[] tmp = new char [this.Length];
-			for (int i = 0; i < tmp.Length; i++) {
-				tmp[i] = this[i];
-			}
-			return tmp;
+			char[] chars = new char [this.length];
+			InternalCopyTo(0, chars, 0, this.length);
+			return chars;
 		}
 
 		public static string Join(string separator, string[] values) {
@@ -159,7 +160,7 @@ namespace System {
 			for (; count > 0; count--) {
 				int sepPos = this.IndexOfAny(separator, pos);
 				if (sepPos < 0) {
-					ret.Add(new string(this, pos, this.Length - pos));
+					ret.Add(new string(this, pos, this.length - pos));
 					break;
 				}
 				if (options != StringSplitOptions.RemoveEmptyEntries || sepPos > pos) {
@@ -172,11 +173,11 @@ namespace System {
 		}
 
 		public bool StartsWith(string str) {
-			return this.Length < str.Length ? false : this.Substring(0, str.Length) == str;
+			return this.length < str.Length ? false : this.Substring(0, str.Length) == str;
 		}
 
 		public bool EndsWith(string str) {
-			return this.Length < str.Length ? false : this.Substring(this.Length - str.Length, str.Length) == str;
+			return this.length < str.Length ? false : this.Substring(this.length - str.Length, str.Length) == str;
 		}
 
 		public bool StartsWith(string str, StringComparison comparisonType) {
@@ -239,46 +240,40 @@ namespace System {
 		
 		public static string Concat(IEnumerable<string> values) {
 			if (values == null) {
-				throw new ArgumentNullException("args");
+				throw new ArgumentNullException("values");
 			}
-			StringBuilder sb = new StringBuilder();
-			foreach (var s in values) {
-				sb.Append(s);
-			}
+			int capacity = 0;
+			foreach (var s in values) { if (s != null) { capacity += s.Length; } }
+			StringBuilder sb = new StringBuilder(capacity);
+			foreach (var s in values) { if (s != null) { sb.Append(s); } }
 			return sb.ToString();
 		}
 
 		public static string Concat(object obj0) {
-			return obj0.ToString();
+			return (obj0 == null) ? null : obj0.ToString();
 		}
 
 		public static string Concat(object obj0, object obj1) {
 			string str0 = (obj0 == null) ? null : obj0.ToString();
 			string str1 = (obj1 == null) ? null : obj1.ToString();
-			if (str0 == null) {
-				return str1 ?? string.Empty;
-			}
-			if (str1 == null) {
-				return str0;
-			}
-			return InternalConcat(str0, str1);
+			return Concat(str0, str1);
 		}
 
-		public static string Concat(object obj0, object obj1, object obj2) {
-			return Concat(new object[] { obj0, obj1, obj2 });
-		}
+		// public static string Concat(object obj0, object obj1, object obj2) {
+		// 	return Concat(new object[] { obj0, obj1, obj2 });
+		// }
 
-		public static string Concat(object obj0, object obj1, object obj2, object obj3) {
-			return Concat(new object[] { obj0, obj1, obj2, obj3 });
-		}
+		// public static string Concat(object obj0, object obj1, object obj2, object obj3) {
+		// 	return Concat(new object[] { obj0, obj1, obj2, obj3 });
+		// }
 
-		public static string Concat(params object[] objs) {
-			if (objs == null) {
-				throw new ArgumentNullException("args");
+		public static string Concat(params object[] values) {
+			if (values == null) {
+				throw new ArgumentNullException("values");
 			}
 			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < objs.Length; i++) {
-				sb.Append(objs[i]);
+			for (int i = 0; i < values.Length; i++) {
+				sb.Append(values[i]);
 			}
 			return sb.ToString();
 		}
@@ -317,15 +312,15 @@ namespace System {
 		#region Substring Methods
 
 		public string Substring(int startIndex) {
-			if (startIndex < 0 || startIndex > this.Length) {
+			if (startIndex < 0 || startIndex > this.length) {
 				throw new ArgumentOutOfRangeException();
 			}
 
-			return new string(this, startIndex, this.Length - startIndex);
+			return new string(this, startIndex, this.length - startIndex);
 		}
 
 		public string Substring(int startIndex, int length) {
-			if (startIndex < 0 || length < 0 || startIndex + length > this.Length) {
+			if (startIndex < 0 || length < 0 || startIndex + length > this.length) {
 				throw new ArgumentOutOfRangeException();
 			}
 
@@ -374,7 +369,7 @@ namespace System {
 			if (oldValue.Length == 0) {
 				throw new ArgumentException("oldValue is an empty string.");
 			}
-			if (this.Length == 0) {
+			if (this.length == 0) {
 				return this;
 			}
 			if (newValue == null) {
@@ -384,31 +379,34 @@ namespace System {
 		}
 
 		public string Remove(int startIndex) {
-			if (startIndex < 0 || startIndex >= this.Length) {
+			if (startIndex < 0 || startIndex >= this.length) {
 				throw new ArgumentOutOfRangeException("startIndex");
 			}
 			return new string(this, 0, startIndex);
 		}
 
 		public string Remove(int startIndex, int count) {
-			if (startIndex < 0 || count < 0 || startIndex + count >= this.Length) {
+			if (startIndex < 0 || count < 0 || startIndex + count >= this.length) {
 				throw new ArgumentOutOfRangeException();
 			}
 			int pos2 = startIndex+count;
-			return (new string(this, 0, startIndex)) + (new string(this, pos2, this.Length - pos2));
+			return (new string(this, 0, startIndex)) + (new string(this, pos2, this.length - pos2));
 		}
 
-		public void CopyTo(
-			int sourceIndex,
-			char[] destination,
-			int destinationIndex,
-			int count
-		)
-		{
-			for (var i = 0; i < count; i++)
-			{
-				destination[destinationIndex + i] = this[sourceIndex + i];
+		public void CopyTo(int sourceIndex, char[] destination, int destinationIndex, int count) {
+			if (destination == null) {
+				throw new ArgumentNullException("destination");
 			}
+			if (sourceIndex < 0 || sourceIndex > this.length) {
+				throw new ArgumentOutOfRangeException ("sourceIndex");
+			}
+			if (destinationIndex < 0 || destinationIndex > destination.Length) {
+				throw new ArgumentOutOfRangeException ("destinationIndex");
+			}
+			if (count < 0 || count > this.length - sourceIndex || count > destination.Length - destinationIndex) {
+				throw new ArgumentOutOfRangeException ("count");
+			}
+			InternalCopyTo(sourceIndex, destination, destinationIndex, count);
 		}
 
 		#endregion
@@ -451,11 +449,11 @@ namespace System {
 		#region IndexOf... Methods
 
 		public int IndexOf(string value) {
-			return IndexOfOrdinal(value, 0, this.Length, forward: true);
+			return IndexOfOrdinal(value, 0, this.length, forward: true);
 		}
 
 		public int IndexOf(string value, int startIndex) {
-			return IndexOfOrdinal(value, startIndex, this.Length - startIndex, forward: true);
+			return IndexOfOrdinal(value, startIndex, this.length - startIndex, forward: true);
 		}
 
 		public int IndexOf(string value, int startIndex, int count) {
@@ -463,11 +461,11 @@ namespace System {
 		}
 
 		public int IndexOf(string value, StringComparison comparisonType) {
-			return IndexOf(value, 0, this.Length, comparisonType);
+			return IndexOf(value, 0, this.length, comparisonType);
 		}
 
 		public int IndexOf(string value, int startIndex, StringComparison comparisonType) {
-			return IndexOf(value, startIndex, this.Length - startIndex, comparisonType);
+			return IndexOf(value, startIndex, this.length - startIndex, comparisonType);
 		}
 
 		public int IndexOf(string value, int startIndex, int count, StringComparison comparisonType) {
@@ -487,7 +485,7 @@ namespace System {
 		}
 
 		public int LastIndexOf(string value) {
-			return IndexOfOrdinal(value, this.Length - 1, this.Length, forward: false);
+			return IndexOfOrdinal(value, this.length - 1, this.length, forward: false);
 		}
 
 		public int LastIndexOf(string value, int startIndex) {
@@ -499,7 +497,7 @@ namespace System {
 		}
 
 		public int LastIndexOf(string value, StringComparison comparisonType) {
-			return LastIndexOf(value, this.Length - 1, this.Length, comparisonType);
+			return LastIndexOf(value, this.length - 1, this.length, comparisonType);
 		}
 
 		public int LastIndexOf(string value, int startIndex, StringComparison comparisonType) {
@@ -526,24 +524,24 @@ namespace System {
 			if (value == null) {
 				throw new ArgumentNullException("value");
 			}
-			if (this.Length == 0) {
+			if (this.length == 0) {
 				return value.Length == 0 ? 0 : -1;
 			}
-			if (startIndex < 0 || startIndex > this.Length) {
+			if (startIndex < 0 || startIndex > this.length) {
 				throw new ArgumentOutOfRangeException ("startIndex");
 			}
-			if (count < 0 || count > (forward ? this.Length - startIndex : startIndex + 1)) {
+			if (count < 0 || count > (forward ? this.length - startIndex : startIndex + 1)) {
 				throw new ArgumentOutOfRangeException ("count");
 			}
 			return InternalIndexOfStr(value, startIndex, count, forward);
 		}
 
 		public int IndexOf(char value) {
-			return IndexOfOrdinal(value, 0, this.Length, forward: true);
+			return IndexOfOrdinal(value, 0, this.length, forward: true);
 		}
 
 		public int IndexOf(char value, int startIndex) {
-			return IndexOfOrdinal(value, startIndex, this.Length - startIndex, forward: true);
+			return IndexOfOrdinal(value, startIndex, this.length - startIndex, forward: true);
 		}
 
 		public int IndexOf(char value, int startIndex, int count) {
@@ -551,7 +549,7 @@ namespace System {
 		}
 
 		public int LastIndexOf(char value) {
-			return IndexOfOrdinal(value, this.Length - 1, this.Length, forward: false);
+			return IndexOfOrdinal(value, this.length - 1, this.length, forward: false);
 		}
 
 		public int LastIndexOf(char value, int startIndex) {
@@ -563,24 +561,24 @@ namespace System {
 		}
 
 		private int IndexOfOrdinal(char value, int startIndex, int count, bool forward) {
-			if (this.Length == 0) {
+			if (this.length == 0) {
 				return -1;
 			}
-			if (startIndex < 0 || startIndex > this.Length) {
+			if (startIndex < 0 || startIndex > this.length) {
 				throw new ArgumentOutOfRangeException ("startIndex");
 			}
-			if (count < 0 || count > (forward ? this.Length - startIndex: startIndex + 1)) {
+			if (count < 0 || count > (forward ? this.length - startIndex: startIndex + 1)) {
 				throw new ArgumentOutOfRangeException ("count");
 			}
 			return InternalIndexOf(value, startIndex, count, forward);
 		}
 
 		public int IndexOfAny(char[] anyOf) {
-			return IndexOfOrdinal(anyOf, 0, this.Length, forward: true);
+			return IndexOfOrdinal(anyOf, 0, this.length, forward: true);
 		}
 
 		public int IndexOfAny(char[] anyOf, int startIndex) {
-			return IndexOfOrdinal(anyOf, startIndex, this.Length - startIndex, forward: true);
+			return IndexOfOrdinal(anyOf, startIndex, this.length - startIndex, forward: true);
 		}
 
 		public int IndexOfAny(char[] anyOf, int startIndex, int count) {
@@ -588,7 +586,7 @@ namespace System {
 		}
 
 		public int LastIndexOfAny(char[] anyOf) {
-			return IndexOfOrdinal(anyOf, this.Length - 1, this.Length, forward: false);
+			return IndexOfOrdinal(anyOf, this.length - 1, this.length, forward: false);
 		}
 
 		public int LastIndexOfAny(char[] anyOf, int startIndex) {
@@ -600,13 +598,13 @@ namespace System {
 		}
 
 		private int IndexOfOrdinal(char[] anyOf, int startIndex, int count, bool forward) {
-			if (this.Length == 0) {
+			if (this.length == 0) {
 				return -1;
 			}
-			if (startIndex < 0 || startIndex > this.Length) {
+			if (startIndex < 0 || startIndex > this.length) {
 				throw new ArgumentOutOfRangeException ("startIndex");
 			}
-			if (count < 0 || count > (forward ? this.Length - startIndex: startIndex + 1)) {
+			if (count < 0 || count > (forward ? this.length - startIndex: startIndex + 1)) {
 				throw new ArgumentOutOfRangeException ("count");
 			}
 			return InternalIndexOfAny(anyOf, startIndex, count, forward);
@@ -746,13 +744,26 @@ namespace System {
 		#region Parsing
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern internal int InternalToInt32(out int error);
+		extern internal static string InternalFromInt32(int value);
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern internal long InternalToInt64(out int error);
+		extern internal static string InternalFromInt64(long value);
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern internal uint InternalToUInt32(out int error);
+		extern internal static string InternalFromUInt32(uint value);
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern internal ulong InternalToUInt64(out int error);
+		extern internal static string InternalFromUInt64(ulong value);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal static string InternalFromSingle(float value);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal static string InternalFromDouble(double value);
+
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal int InternalToInt32(out int error, int radix);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal long InternalToInt64(out int error, int radix);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal uint InternalToUInt32(out int error, int radix);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern internal ulong InternalToUInt64(out int error, int radix);
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern internal float InternalToSingle(out int error);
 		[MethodImpl(MethodImplOptions.InternalCall)]

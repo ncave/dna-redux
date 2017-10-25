@@ -153,8 +153,15 @@ static const unsigned char* tableDefs[] = {
     // 0x05
     NULL,
     // 0x06
-    "xpmp^pssssSpBp\x08*xpxcxcxsxpx*xpxpI*x*x*xpxp",
-    // 0x07
+    "xpmp^pssssSpBp\x08*xpxcxcxsxpx*xpxpI*x*x*xpxp"
+#ifdef GEN_COMBINED_OPCODES
+	"x*x*x*x*x*x*"
+#endif
+#ifdef DIAG_METHOD_CALLS
+	"x*x*x*x*x*x*x*x*x*x*"
+#endif
+	,
+	// 0x07
     NULL,
     // 0x08
     "ssssSp",
@@ -250,7 +257,7 @@ static const unsigned char* tableDefs[] = {
 	"x*x*x*x*x*x*"
 #endif
 #ifdef DIAG_METHOD_CALLS
-	"x*x*x*x*x*x*x*x*"
+	"x*x*x*x*x*x*x*x*x*x*"
 #endif
 	,
 	// 0x07
@@ -481,8 +488,8 @@ static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **p
 					case '<':
 						{
 							int ofs = pDef[i] - '0';
-							char* pCoding = codedTags[ofs];
-							int tagBits = codedTagBits[ofs];
+							const char* pCoding = codedTags[ofs];
+							const int tagBits = codedTagBits[ofs];
 							unsigned char tag = *pSource & ((1 << tagBits) - 1);
 							int idxIntoTableID = pCoding[tag]; // The actual table index that we're looking for
 							if (idxIntoTableID < 0 || idxIntoTableID > MAX_TABLES) {
@@ -613,8 +620,8 @@ void MetaData_LoadTables(tMetaData *pThis, tRVA *pRVA, void *pStream, unsigned i
 
 	// Determine if each coded index lookup type needs to use 16 or 32 bit indexes
 	for (i=0; i<13; i++) {
-		char* pCoding = codedTags[i];
-		int tagBits = codedTagBits[i];
+		const char* pCoding = codedTags[i];
+		const int tagBits = codedTagBits[i];
 		// Discover max table size
 		unsigned int maxTableLen = 0;
 		for (k=0; k < (1<<tagBits); k++) {

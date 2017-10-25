@@ -147,7 +147,8 @@ namespace System {
 		extern public static char ToLowerInvariant(char c);
 
 		public static char ToLower(char c) {
-			return ToLower(c, CultureInfo.CurrentCulture);
+			// return ToLower(c, CultureInfo.CurrentCulture);
+			return ToLowerInvariant(c); //TODO: current culture
 		}
 
 		public static char ToLower(char c, CultureInfo culture) {
@@ -166,7 +167,8 @@ namespace System {
 		extern public static char ToUpperInvariant(char c);
 
 		public static char ToUpper(char c) {
-			return ToUpper(c, CultureInfo.CurrentCulture);
+			// return ToUpper(c, CultureInfo.CurrentCulture);
+			return ToUpperInvariant(c); //TODO: current culture
 		}
 
 		public static char ToUpper(char c, CultureInfo culture) {

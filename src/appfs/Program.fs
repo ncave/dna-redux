@@ -52,6 +52,9 @@ module Program =
     [<EntryPoint>]
     let main argv =
 
+        // let s = sprintf "%s%s%s%s%s" "a" "b" "c" "d" "e"
+        // System.Console.WriteLine("result: {0}", s)
+
         hello "World"
 
         // printfn works now!!!

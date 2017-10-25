@@ -274,6 +274,8 @@ struct PACKED tMD_MethodDef_ {
 	U64 maxTime;
 	// Last start time
 	U64 startTime;
+	// Heap allocation count
+	U64 heapAlloc;
 #endif
 };
 #define MD_TABLE_METHODDEF 0x06
