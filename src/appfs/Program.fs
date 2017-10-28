@@ -14,15 +14,14 @@ module Program =
         GC.Collect()
         Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
 
-        let n = 30;
-        let sum n = [1..n] |> List.fold (+) 0
-        let fibSeq n = fibSequence |> Seq.item (n+1)
-        cw "sum(1..{0}) = {1}" sum n
+        let n = 31;
+        cw "sum(1..{0}) = {1}" sum_to_n n
         cw "sqr({0}) = {1}" sqr (double n)
         cw "fastFib({0}) = {1}" fastFib n
         cw "slowFib({0}) = {1}" slowFib n
-        cw "memoFib({0}) = {1}" memoizedFib n
-        cw "fib_Seq({0}) = {1}" fibSeq n
+        cw "memoFib({0}) = {1}" memoFib n
+        cw "cps_Fib({0}) = {1}" cps_Fib n
+        cw "seq_Fib({0}) = {1}" seq_Fib n
 
         let x,y = 100,100
         cw "RayTrace {0} = {1}" (fun (x,y) -> RayTrace.computeScene x y) (x,y)
@@ -54,10 +53,11 @@ module Program =
 
         hello "World"
 
+        // sprintf works
         let s = sprintf "%d,%s,%.0f,%d,%s" 1 "2" 3.0 4L "5"
         System.Console.WriteLine("Numbers: {0}", s)
 
-        // printfn works now!!!
+        // printfn works
         printfn "The %s is: %d" "answer" 42
 
         testFunctions ()

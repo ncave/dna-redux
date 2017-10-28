@@ -1235,7 +1235,6 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));
 
 		// Change interpreter state so we continue execution inside the method being invoked
-		//INCREMENT_NESTED_LEVEL();
 		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
 
 		// store current eval stack ptr for later
