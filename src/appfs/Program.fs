@@ -52,10 +52,10 @@ module Program =
     [<EntryPoint>]
     let main argv =
 
-        // let s = sprintf "%s%s%s%s%s" "a" "b" "c" "d" "e"
-        // System.Console.WriteLine("result: {0}", s)
-
         hello "World"
+
+        let s = sprintf "%d,%s,%.0f,%d,%s" 1 "2" 3.0 4L "5"
+        System.Console.WriteLine("Numbers: {0}", s)
 
         // printfn works now!!!
         printfn "The %s is: %d" "answer" 42

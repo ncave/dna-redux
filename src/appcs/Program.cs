@@ -1,11 +1,10 @@
 namespace AppCS {
     using System;
-    using System.Reflection;
     using static LibCS.Library;
 
     public class GenericMethodClassExample {
-        public static void GenericMethod<T1, T2>(T1 t1, T2 t2) {
-            Console.WriteLine("The answer is: {0}{1}", t1, t2);
+        public static object[] GenericMethod<T1, T2, T3, T4, T5>(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) {
+            return new object[] { t1, t2, t3, t4, t5 };
         }
     }
 
@@ -26,10 +25,14 @@ namespace AppCS {
         }
 
         static void TestGeneric() {
-            MethodInfo mi = typeof(GenericMethodClassExample).GetMethod("GenericMethod");
-            MethodInfo miConstructed = mi.MakeGenericMethod(typeof(long), typeof(string));
-            object[] args = { 4L, "2" };
-            miConstructed.Invoke(null, args);
+            object callGenericMethod(object[] args, Type[] argTypes) {
+                var mi = typeof(GenericMethodClassExample).GetMethod("GenericMethod");
+                return mi.MakeGenericMethod(argTypes).Invoke(null, args);
+            }
+            object[] objects = { 1, "2", 3.0, 4L, "5" };
+            Type[] objTypes = { typeof(int), typeof(string), typeof(double), typeof(long), typeof(string) };
+            var a = (object[]) callGenericMethod(objects, objTypes);
+            System.Console.WriteLine("Numbers: {0},{1},{2},{3},{4}", a[0], a[1], a[2], a[3], a[4]);
         }
 
         static void TestNBody(int N) {

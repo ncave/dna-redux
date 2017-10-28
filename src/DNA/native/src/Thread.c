@@ -104,7 +104,7 @@ PTR Thread_StackAlloc(tThread *pThread, U32 size) {
 #endif
 	pStack->ofs += size;
 	if (pStack->ofs > THREADSTACK_CHUNK_SIZE) {
-		Crash("Thread-local stack is too large: size = %lu", pStack->ofs);
+		Crash("Thread-local stack is too large: size = %u", pStack->ofs);
 	}
 #if _DEBUG
 	memset(pAddr, 0xcd, size);
