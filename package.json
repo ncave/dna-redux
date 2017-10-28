@@ -15,11 +15,11 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/emscripten": "^0.0.30",
-    "@types/node": "^8.0.34",
+    "@types/emscripten": "^0.0.31",
+    "@types/node": "^8.0.47",
     "http-server": "^0.10.0",
     "rollup": "^0.50.0",
-    "tslint": "^5.7.0",
+    "tslint": "^5.8.0",
     "typescript": "^2.5.3"
   }
 }

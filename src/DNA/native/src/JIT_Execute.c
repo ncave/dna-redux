@@ -1234,6 +1234,15 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		PTR invocationThis = *(PTR*)(pCurEvalStack + sizeof(HEAP_PTR));
 		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));
 
+		// Change interpreter state so we continue execution inside the method being invoked
+		//INCREMENT_NESTED_LEVEL();
+		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
+
+		// store current eval stack ptr for later
+		PTR pLastEvalStack = pCurEvalStack;
+		// use eval stack ptr to copy parameters to paramslocals
+		pCurEvalStack = pCallMethodState->pParamsLocals;
+
 		// Put the new 'this' on the stack
 		if (invocationThis != NULL) {
 			PUSH_PTR(invocationThis);
@@ -1254,12 +1263,9 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 			}
 		}
 
-		// Change interpreter state so we continue execution inside the method being invoked
-		INCREMENT_NESTED_LEVEL();
-		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
-		// Fill in the parameters
-		POP(pCallMethod->parameterStackSize);
-		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
+		// restore current eval stack ptr
+		pCurEvalStack = pLastEvalStack;
+
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
@@ -2806,7 +2812,7 @@ JIT_LOAD_ELEMENT_I8_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I8);
 	{
 		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		HEAP_PTR heapPtr = POP_O(); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((I8)value);
 	}
@@ -2817,7 +2823,7 @@ JIT_LOAD_ELEMENT_U8_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_U8);
 	{
 		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		HEAP_PTR heapPtr = POP_O(); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((U8)value);
 	}
@@ -2828,7 +2834,7 @@ JIT_LOAD_ELEMENT_I16_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I16);
 	{
 		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		HEAP_PTR heapPtr = POP_O(); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((I16)value);
 	}
@@ -2839,7 +2845,7 @@ JIT_LOAD_ELEMENT_U16_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_U16);
 	{
 		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		HEAP_PTR heapPtr = POP_O(); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((U16)value);
 	}
@@ -2852,7 +2858,7 @@ JIT_LOAD_ELEMENT_R32_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I32);
 	{
 		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		HEAP_PTR heapPtr = POP_O(); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32(value);
 	}
@@ -2865,8 +2871,8 @@ JIT_LOAD_ELEMENT_I64_start:
 JIT_LOAD_ELEMENT_R64_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I64);
 	{
-		U32 idx = POP_U32(); // array index
-		HEAP_PTR heapPtr = POP_O();
+		U32 idx = POP_U32();        // Array index
+		HEAP_PTR heapPtr = POP_O(); // Array object
 		U64 value;
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U64(value);
@@ -2878,8 +2884,8 @@ JIT_LOAD_ELEMENT_R64_end:
 JIT_LOAD_ELEMENT_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT);
 	{
-		U32 idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O(); // array object
+		U32 idx = POP_U32();        // Array index
+		HEAP_PTR heapPtr = POP_O(); // Array object
 		U32 size = GET_OP(); // size of type on stack
 		*(U32*)pCurEvalStack = 0; // This is required to zero out the stack for types that are stored in <4 bytes in arrays
 		SystemArray_LoadElement(heapPtr, idx, pCurEvalStack);
@@ -2891,8 +2897,8 @@ JIT_LOAD_ELEMENT_end:
 JIT_LOAD_ELEMENT_ADDR_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_ADDR);
 	{
-		U32 idx = POP_U32(); // Array index
-		PTR heapPtr = POP_O();
+		U32 idx = POP_U32();   // Array index
+		PTR heapPtr = POP_O(); // Array object
 		PTR pMem = SystemArray_LoadElementAddress(heapPtr, idx);
 		PUSH_PTR(pMem);
 	}
@@ -2903,8 +2909,8 @@ JIT_STORE_ELEMENT_32_start:
 	OPCODE_USE(JIT_STORE_ELEMENT_32);
 	{
 		U32 value = POP_U32(); // Value
-		U32 idx = POP_U32(); // Array index
-		PTR heapPtr = POP_O();
+		U32 idx = POP_U32();   // Array index
+		PTR heapPtr = POP_O(); // Array object
 		SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
 	}
 JIT_STORE_ELEMENT_32_end:
@@ -2914,8 +2920,8 @@ JIT_STORE_ELEMENT_64_start:
 	OPCODE_USE(JIT_STORE_ELEMENT_64);
 	{
 		U64 value = POP_U64(); // Value
-		U32 idx = POP_U32(); // Array index
-		PTR heapPtr = POP_O();
+		U32 idx = POP_U32();   // Array index
+		PTR heapPtr = POP_O(); // Array object
 		SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
 	}
 JIT_STORE_ELEMENT_64_end:
@@ -2929,8 +2935,8 @@ JIT_STORE_ELEMENT_start:
 		U32 idx, size = GET_OP(); // Size in bytes of value on stack
 		POP(size);
 		pMem = pCurEvalStack;
-		idx = POP_U32(); // Array index
-		heapPtr = POP_O(); // Array on heap
+		idx = POP_U32();   // Array index
+		heapPtr = POP_O(); // Array object
 		SystemArray_StoreElement(heapPtr, idx, pMem);
 	}
 JIT_STORE_ELEMENT_end:
