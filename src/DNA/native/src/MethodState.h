@@ -64,7 +64,7 @@ struct tMethodState_ {
 };
 
 //void MethodState_Init();
-tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMethodState *pCaller, U32 isInternalNewObjCall);
+tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMethodState *pCaller, U32 isInternalNewObjCall, U32 isTailCall);
 tMethodState* MethodState(tThread *pThread, tMetaData *pMetaData, IDX_TABLE methodToken, tMethodState *pCaller);
 void MethodState_Delete(tThread *pThread, tMethodState **ppMethodState);
 
