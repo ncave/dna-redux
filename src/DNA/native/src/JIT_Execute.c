@@ -138,8 +138,10 @@ char *pNextChar = callBuffer;
 #endif
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \
-	SAVE_METHOD_STATE(); \
-	pThread->pCurrentMethodState = pNewMethodState; \
+	if (pThread->pCurrentMethodState != pNewMethodState) { \
+		SAVE_METHOD_STATE(); \
+		pThread->pCurrentMethodState = pNewMethodState; \
+	} \
 	LOAD_METHOD_STATE()
 
 // Easy access to method parameters and local variables
@@ -159,7 +161,9 @@ static void CheckIfCurrentInstructionHasBreakpoint(tMethodState* pMethodState, U
 }
 
 static void CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pParamsOrigin, HEAP_PTR obj) {
-	memcpy(pParamsLocals, pParamsOrigin, pCallMethod->parameterStackSize);
+	if (pParamsLocals != pParamsOrigin) {
+		memmove(pParamsLocals, pParamsOrigin, pCallMethod->parameterStackSize);
+	}
 	// Note: obj is only set if a constructor or delegate is being called
 	if (obj != NULL) {
 		// push the object onto parameter stack position 0
@@ -174,7 +178,7 @@ static tMethodState* RunFinalizer(tThread *pThread) {
 		tMethodState *pFinalizerMethodState;
 		tMD_TypeDef *pFinalizerType = Heap_GetType(heapPtr);
 
-		pFinalizerMethodState = MethodState_Direct(pThread, pFinalizerType->pFinalizer, pThread->pCurrentMethodState, 0);
+		pFinalizerMethodState = MethodState_Direct(pThread, pFinalizerType->pFinalizer, pThread->pCurrentMethodState, 0, 0);
 		// Mark this methodState as a Finalizer
 		pFinalizerMethodState->finalizerThis = heapPtr;
 		// Put the object on the stack (the object that is being Finalized)
@@ -341,6 +345,7 @@ goNext:
 		GET_LABELS_DYNAMIC(JIT_LOAD_I32, 4);
 		GET_LABELS(JIT_BRANCH);
 		GET_LABELS(JIT_LOAD_STRING);
+		GET_LABELS(JIT_TAILCALL_PREFIX);
 		GET_LABELS(JIT_CALLVIRT_O);
 		GET_LABELS(JIT_CALL_NATIVE);
 		GET_LABELS(JIT_CALL_O);
@@ -702,6 +707,11 @@ JIT_CONV_U64_I64_end:
 JIT_GoNext_start:
 	GO_NEXT();
 JIT_GoNext_end:
+
+JIT_TAILCALL_PREFIX_start:
+	OPCODE_USE(JIT_TAILCALL_PREFIX);
+JIT_TAILCALL_PREFIX_end:
+	GO_NEXT();
 
 JIT_LOAD_NULL_start:
 	OPCODE_USE(JIT_LOAD_NULL);
@@ -1168,6 +1178,7 @@ JIT_INVOKE_DELEGATE_start:
 	OPCODE_USE(JIT_INVOKE_DELEGATE);
 	{
 		tMD_MethodDef *pDelegateMethod, *pCallMethod;
+		tMethodState *pCallMethodState;
 		void *pDelegate;
 		HEAP_PTR pDelegateThis;
 
@@ -1202,7 +1213,7 @@ JIT_INVOKE_DELEGATE_start:
 
 		// Set up the call method state for the call.
 		INCREMENT_NESTED_LEVEL();
-		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
+		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, 0);
 		// Fill in the parameters
 		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurrentMethodState->pDelegateParams, pDelegateThis);
 
@@ -1215,6 +1226,9 @@ JIT_INVOKE_DELEGATE_end:
 JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 	OPCODE_USE(JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE);
 	{
+		// check if it's a tail call
+		U32 isTailCall = *(pCurOp - 2) == JIT_TAILCALL_PREFIX;
+
 		// Get the reference to MethodBase.Invoke
 		tMD_MethodDef *pInvokeMethod = (tMD_MethodDef*)GET_OP();
 
@@ -1235,7 +1249,7 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));
 
 		// Change interpreter state so we continue execution inside the method being invoked
-		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
+		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
 
 		// store current eval stack ptr for later
 		PTR pLastEvalStack = pCurEvalStack;
@@ -1308,12 +1322,16 @@ JIT_CALL_O_start:
 	goto allCallStart;
 JIT_CALL_INTERFACE_start:
 	op = JIT_CALL_INTERFACE;
+	goto allCallStart;
 allCallStart:
 	OPCODE_USE(op);
 	{
 		tMD_MethodDef *pCallMethod;
 		tMethodState *pCallMethodState;
 		tMD_TypeDef *pBoxCallType;
+
+		// check if it's a tail call
+		U32 isTailCall = *(pCurOp - 2) == JIT_TAILCALL_PREFIX;
 
 		if (op == JIT_BOX_CALLVIRT) {
 			pBoxCallType = (tMD_TypeDef*)GET_OP();
@@ -1392,7 +1410,7 @@ allCallStart:
 callMethodSet:
 		// Set up the new method state for the called method
 		INCREMENT_NESTED_LEVEL();
-		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
+		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
 		// Set up the parameter stack for the method being called
 		POP(pCallMethod->parameterStackSize);
 		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
@@ -2681,7 +2699,7 @@ JIT_NEWOBJECT_start:
 
 		// Set up the new method state for the called method
 		INCREMENT_NESTED_LEVEL();
-		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
+		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 		// Fill in the parameters
 		POP(pConstructorDef->parameterStackSize);
 		CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, obj);
@@ -2716,7 +2734,7 @@ JIT_NEWOBJECT_VALUETYPE_start:
 
 		// Set up the new method state for the called method
 		INCREMENT_NESTED_LEVEL();
-		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
+		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 		// Fill in the parameters
 		POP(pConstructorDef->parameterStackSize);
 		CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, pMem);
@@ -3161,7 +3179,7 @@ loadStaticFieldStart:
 				//pCurrentMethodState->ipOffset -= 2;
 				pCurOp -= 2;
 				INCREMENT_NESTED_LEVEL();
-				pCallMethodState = MethodState_Direct(pThread, pParentType->pStaticConstructor, pCurrentMethodState, 0);
+				pCallMethodState = MethodState_Direct(pThread, pParentType->pStaticConstructor, pCurrentMethodState, 0, 0);
 				// There can be no parameters, so don't need to set them up
 				CHANGE_METHOD_STATE(pCallMethodState);
 				GO_NEXT_CHECK();
