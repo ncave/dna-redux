@@ -67,6 +67,24 @@ void log_f(U32 level, char *pMsg, ...) {
 	}
 }
 
+static char circularBuffer[8192] = ""; // increase size if needed
+static char *pNextBufferChar = circularBuffer;
+
+void printbuf(const char* format, ...) {
+	va_list args;
+	I32 n = sizeof(circularBuffer) - (pNextBufferChar - circularBuffer); // space left in buffer
+	va_start(args, format);
+	I32 c = vsnprintf(pNextBufferChar, n, format, args);
+	va_end(args);
+	const I32 padding = 200;
+	pNextBufferChar = (c >= 0 && c < n && (n - c) > padding) ? pNextBufferChar + c : circularBuffer;
+}
+
+void PrintBufferContents() {
+	printf("%s", pNextBufferChar + 1);
+	printf("%s", circularBuffer);
+}
+
 static char methodName[8192]; // must be big enough to handle the biggest types
 char* Sys_GetMethodDesc(tMD_MethodDef *pMethod) {
 	U32 i;

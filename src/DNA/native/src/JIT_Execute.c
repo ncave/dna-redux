@@ -132,9 +132,6 @@ tJITCodeInfo jitCodeGoNext;
 
 #ifdef DIAG_CALL_STACK
 I32 nested = 0;
-char callBuffer[8192] = ""; //increase if needed
-char *pNextChar = callBuffer;
-
 #define INCREMENT_NESTED_LEVEL() nested = nested + 1
 #define DECREMENT_NESTED_LEVEL() nested = nested - 1
 #else
@@ -215,7 +212,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #else
 
-#define OPCODE_USE(op) //dprintfn("JIT op: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op))
+#define OPCODE_USE(op) //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
 #endif
 
@@ -1359,72 +1356,83 @@ allCallStart:
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
 #ifdef DIAG_CALL_STACK
-		for (I32 i = nested / 10; i > 0; i--) { *pNextChar++ = '*'; } // (optional) print call nested level, each '*' is 10 levels
-		for (I32 i = nested % 10; i > 0; i--) { *pNextChar++ = '|'; } // (optional) print call nested level, each '|' is 1 level
-		I32 n = sizeof(callBuffer) - (pNextChar - callBuffer); // space left in buffer
-		I32 c = snprintf(pNextChar, n, "%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
-		pNextChar = (c >= 0 && c < n && (n - c) > 200) ? pNextChar + c : callBuffer; // circular buffer
+		for (I32 i = nested / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
+		for (I32 i = nested % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
+		printbuf("%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
 #endif
 
 		HEAP_PTR heapPtr = NULL;
 		PTR pMem = pCurEvalStack - pCallMethod->parameterStackSize;
 		Assert(pMem >= pCurrentMethodState->pEvalStack);
 
-		if (curr_op == JIT_BOX_CALLVIRT) {
-			// Need to de-ref and box the value-type before calling the function
-			// TODO: Will this work on value-types that are not 4 bytes long?
-			heapPtr = Heap_Box(pBoxCallType, *(PTR*)pMem);
-			*(HEAP_PTR*)pMem = heapPtr;
-		} else if (curr_op == JIT_DEREF_CALLVIRT) {
-			heapPtr = **(HEAP_PTR**)pMem;
-			*(HEAP_PTR*)pMem = heapPtr;
-		} else if (!METHOD_ISSTATIC(pCallMethod)) {
-			// Get the actual object that is becoming 'this'
-			heapPtr = *(HEAP_PTR*)pMem;
+		switch (curr_op) {
+			case JIT_BOX_CALLVIRT: {
+				// Need to de-ref and box the value-type before calling the function
+				// TODO: Will this work on value-types that are not 4 bytes long?
+				heapPtr = Heap_Box(pBoxCallType, *(PTR*)pMem);
+				*(HEAP_PTR*)pMem = heapPtr;
+				break;
+			}
+			case JIT_DEREF_CALLVIRT: {
+				heapPtr = **(HEAP_PTR**)pMem;
+				*(HEAP_PTR*)pMem = heapPtr;
+				break;
+			}
+			default: {
+				// Get the actual object that is becoming 'this'
+				heapPtr = METHOD_ISSTATIC(pCallMethod) ? NULL : *(HEAP_PTR*)pMem;
+				break;
+			}
 		}
 
-		// If it's a virtual call then find the real correct method to call
-		if (curr_op == JIT_CALLVIRT_O || curr_op == JIT_BOX_CALLVIRT || curr_op == JIT_DEREF_CALLVIRT) {
-
-			if (heapPtr == NULL) {
-				//Crash("NULL 'this' in Virtual call: %s", Sys_GetMethodDesc(pCallMethod));
-				THROW(types[TYPE_SYSTEM_NULLREFERENCEEXCEPTION]);
-			}
-			if (METHOD_ISVIRTUAL(pCallMethod)) {
-				tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
-				tMD_MethodDef* pVirtualMethod = pThisType->pVTable[pCallMethod->vTableOfs];
-				if (pVirtualMethod->isGenericDefinition) {
-					tMD_MethodDef* pInstMethod = Generics_GetMethodDefFromCoreMethod(pVirtualMethod, pVirtualMethod->pParentType, pCallMethod->numMethodTypeArgs, pCallMethod->ppMethodTypeArgs);
-					pCallMethod = pInstMethod;
-				} else {
-					//Assert(pCallMethod->parameterStackSize == pVirtualMethod->parameterStackSize);
-					pCallMethod = pVirtualMethod;
+		switch (curr_op) {
+			case JIT_CALLVIRT_O:
+			case JIT_BOX_CALLVIRT:
+			case JIT_DEREF_CALLVIRT: {
+				if (heapPtr == NULL) {
+					//Crash("NULL 'this' in Virtual call: %s", Sys_GetMethodDesc(pCallMethod));
+					THROW(types[TYPE_SYSTEM_NULLREFERENCEEXCEPTION]);
 				}
-				//dprintfn("Calling virtual method: %s", pCallMethod->name);
-			}
-		} else if (curr_op == JIT_CALL_INTERFACE) {
-			tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
-			tMD_TypeDef *pInterface = pCallMethod->pParentType;
-
-			// Find the interface mapping on the 'this' type.
-			// This must be searched backwards so if an interface is implemented more than
-			// once in the type hierarchy, the most recent definition gets called
-			I32 i = (I32)pThisType->numInterfaces;
-			while (--i >= 0) {
-				if (pThisType->pInterfaceMaps[i].pInterface == pInterface) {
-					// Found the right interface map
-					if (pThisType->pInterfaceMaps[i].pVTableLookup != NULL) {
-						U32 vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
-						pCallMethod = pThisType->pVTable[vIndex];
+				// if it's a virtual call, find the correct method to call
+				if (METHOD_ISVIRTUAL(pCallMethod)) {
+					tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
+					tMD_MethodDef* pVirtualMethod = pThisType->pVTable[pCallMethod->vTableOfs];
+					if (pVirtualMethod->isGenericDefinition) {
+						tMD_MethodDef* pInstMethod = Generics_GetMethodDefFromCoreMethod(pVirtualMethod, pVirtualMethod->pParentType, pCallMethod->numMethodTypeArgs, pCallMethod->ppMethodTypeArgs);
+						pCallMethod = pInstMethod;
 					} else {
-						pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
+						//Assert(pCallMethod->parameterStackSize == pVirtualMethod->parameterStackSize);
+						pCallMethod = pVirtualMethod;
 					}
-					//dprintfn("Calling interface method: %s", pCallMethod->name);
-					break;
+					//dprintfn("Calling virtual method: %s", pCallMethod->name);
 				}
+				break;
 			}
-			if (i < 0) {
-				Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
+			case JIT_CALL_INTERFACE: {
+				tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
+				tMD_TypeDef *pInterface = pCallMethod->pParentType;
+
+				// Find the interface mapping on the 'this' type.
+				// This must be searched backwards so if an interface is implemented more than
+				// once in the type hierarchy, the most recent definition gets called
+				I32 i = (I32)pThisType->numInterfaces;
+				while (--i >= 0) {
+					if (pThisType->pInterfaceMaps[i].pInterface == pInterface) {
+						// Found the right interface map
+						if (pThisType->pInterfaceMaps[i].pVTableLookup != NULL) {
+							U32 vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
+							pCallMethod = pThisType->pVTable[vIndex];
+						} else {
+							pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
+						}
+						//dprintfn("Calling interface method: %s", pCallMethod->name);
+						break;
+					}
+				}
+				if (i < 0) {
+					Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
+				}
+				break;
 			}
 		}
 
@@ -3411,10 +3419,3 @@ void JIT_Execute_Init() {
 	// Initialise the JIT code addresses
 	JIT_Execute(NULL, 0);
 }
-
-#ifdef DIAG_CALL_STACK
-void PrintCallStackBuffer() {
-	printf(pNextChar + 1);
-	printf(callBuffer);
-}
-#endif

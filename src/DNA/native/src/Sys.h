@@ -60,6 +60,9 @@ void Crash(char *pMsg, ...);
 extern U32 logLevel;
 void log_f(U32 level, char *pMsg, ...);
 
+void printbuf(const char* format, ...);
+void PrintBufferContents();
+
 char* Sys_GetMethodDesc(tMD_MethodDef *pMethod);
 
 void* mallocForever(U32 size);

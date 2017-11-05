@@ -61,7 +61,7 @@ void Diag_Print() {
 
 #ifdef DIAG_CALL_STACK
 	printf("\nCall stack buffer:\n\n");
-	PrintCallStackBuffer();
+	PrintBufferContents();
 	printf("\n");
 #endif
 
