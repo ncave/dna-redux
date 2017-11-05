@@ -36,9 +36,7 @@ void Crash(char *pMsg, ...) {
 	printf("\n\n*** CRASH ***\n");
 
 	va_start(va, pMsg);
-
 	vprintf(pMsg, va);
-
 	va_end(va);
 
 	printf("\n\n");

@@ -20,8 +20,8 @@ module Program =
         cw "fastFib({0}) = {1}" fastFib n
         cw "slowFib({0}) = {1}" slowFib n
         cw "memoFib({0}) = {1}" memoFib n
-        cw "cps_Fib({0}) = {1}" cps_Fib n
         cw "seq_Fib({0}) = {1}" seq_Fib n
+        cw "cps_Fib({0}) = {1}" cps_Fib n
 
         let x,y = 100,100
         cw "RayTrace {0} = {1}" (fun (x,y) -> RayTrace.computeScene x y) (x,y)

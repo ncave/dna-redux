@@ -20,6 +20,6 @@
     "http-server": "^0.10.0",
     "rollup": "^0.50.0",
     "tslint": "^5.8.0",
-    "typescript": "^2.5.3"
+    "typescript": "^2.6.1"
   }
 }
