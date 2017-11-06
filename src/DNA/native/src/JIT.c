@@ -286,6 +286,8 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 	tDebugMetaDataEntry* pDebugMetadataEntry = NULL;
 	int sequencePointIndex;
 
+	//dprintfn("JIT-ting method: %s.%s", pMethodDef->pParentType->nameSpace, pMethodDef->name);
+
 	pMetaData = pMethodDef->pMetaData;
 	pDebugMetadata = pMetaData->debugMetadata;
 
@@ -696,9 +698,10 @@ cilCallAll:
 					}
 					MetaData_Fill_TypeDef(pStackType, NULL, NULL);
 
-					if (TYPE_ISINTERFACE(pCallMethod->pParentType) && op == CIL_CALLVIRT) {
-						PushOp(JIT_CALL_INTERFACE);
-					} else if (pCallMethod->pParentType->pParent == types[TYPE_SYSTEM_MULTICASTDELEGATE]) {
+					//if (TYPE_ISINTERFACE(pCallMethod->pParentType) && op == CIL_CALLVIRT) {
+					//	PushOp(JIT_CALL_INTERFACE);
+					//} else 
+					if (pCallMethod->pParentType->pParent == types[TYPE_SYSTEM_MULTICASTDELEGATE]) {
 						PushOp(JIT_INVOKE_DELEGATE);
 					} else if (pCallMethod->pParentType == types[TYPE_SYSTEM_REFLECTION_METHODBASE] && strcmp(pCallMethod->name, "Invoke") == 0) {
 						PushOp(JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE);

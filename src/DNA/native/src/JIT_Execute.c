@@ -383,7 +383,7 @@ goNext:
 		GET_LABELS(JIT_LOAD_VECTOR_LEN);
 		GET_LABELS(JIT_SWITCH);
 		GET_LABELS(JIT_LOAD_ELEMENT_ADDR);
-		GET_LABELS(JIT_CALL_INTERFACE);
+		//GET_LABELS(JIT_CALL_INTERFACE);
 		GET_LABELS(JIT_CAST_CLASS);
 		GET_LABELS(JIT_LOAD_ELEMENT);
 		GET_LABELS(JIT_LOADFIELD_VALUETYPE);
@@ -1336,8 +1336,8 @@ JIT_CALLVIRT_O_start:
 	SET_OP(JIT_CALLVIRT_O, allCallStart);
 JIT_CALL_O_start:
 	SET_OP(JIT_CALL_O, allCallStart);
-JIT_CALL_INTERFACE_start:
-	SET_OP(JIT_CALL_INTERFACE, allCallStart);
+//JIT_CALL_INTERFACE_start:
+//	SET_OP(JIT_CALL_INTERFACE, allCallStart);
 allCallStart:
 	OPCODE_USE(curr_op);
 	{
@@ -1356,8 +1356,8 @@ allCallStart:
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
 #ifdef DIAG_CALL_STACK
-		for (I32 i = nested / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
-		for (I32 i = nested % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
+		//for (I32 i = nested / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
+		//for (I32 i = nested % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
 		printbuf("%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
 #endif
 
@@ -1385,6 +1385,7 @@ allCallStart:
 			}
 		}
 
+		// if it's a virtual call, find the correct method to call
 		switch (curr_op) {
 			case JIT_CALLVIRT_O:
 			case JIT_BOX_CALLVIRT:
@@ -1393,8 +1394,33 @@ allCallStart:
 					//Crash("NULL 'this' in Virtual call: %s", Sys_GetMethodDesc(pCallMethod));
 					THROW(types[TYPE_SYSTEM_NULLREFERENCEEXCEPTION]);
 				}
-				// if it's a virtual call, find the correct method to call
-				if (METHOD_ISVIRTUAL(pCallMethod)) {
+				if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
+					tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
+					tMD_TypeDef *pInterface = pCallMethod->pParentType;
+
+					// Find the interface mapping on the 'this' type.
+					// This must be searched backwards so if an interface is implemented more than
+					// once in the type hierarchy, the most recent definition gets called
+					I32 i = (I32)pThisType->numInterfaces;
+					while (--i >= 0) {
+						if (pThisType->pInterfaceMaps[i].pInterface == pInterface) {
+							// Found the right interface map
+							if (pThisType->pInterfaceMaps[i].pVTableLookup != NULL) {
+								U32 vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
+								pCallMethod = pThisType->pVTable[vIndex];
+							}
+							else {
+								pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
+							}
+							//dprintfn("Calling interface method: %s", pCallMethod->name);
+							break;
+						}
+					}
+					if (i < 0) {
+						Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
+					}
+				}
+				else if (METHOD_ISVIRTUAL(pCallMethod)) {
 					tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
 					tMD_MethodDef* pVirtualMethod = pThisType->pVTable[pCallMethod->vTableOfs];
 					if (pVirtualMethod->isGenericDefinition) {
@@ -1406,32 +1432,7 @@ allCallStart:
 					}
 					//dprintfn("Calling virtual method: %s", pCallMethod->name);
 				}
-				break;
-			}
-			case JIT_CALL_INTERFACE: {
-				tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
-				tMD_TypeDef *pInterface = pCallMethod->pParentType;
 
-				// Find the interface mapping on the 'this' type.
-				// This must be searched backwards so if an interface is implemented more than
-				// once in the type hierarchy, the most recent definition gets called
-				I32 i = (I32)pThisType->numInterfaces;
-				while (--i >= 0) {
-					if (pThisType->pInterfaceMaps[i].pInterface == pInterface) {
-						// Found the right interface map
-						if (pThisType->pInterfaceMaps[i].pVTableLookup != NULL) {
-							U32 vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
-							pCallMethod = pThisType->pVTable[vIndex];
-						} else {
-							pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
-						}
-						//dprintfn("Calling interface method: %s", pCallMethod->name);
-						break;
-					}
-				}
-				if (i < 0) {
-					Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
-				}
 				break;
 			}
 		}
@@ -1452,7 +1453,7 @@ JIT_BOX_CALLVIRT_end:
 JIT_CALL_PTR_end:
 JIT_CALLVIRT_O_end:
 JIT_CALL_O_end:
-JIT_CALL_INTERFACE_end:
+//JIT_CALL_INTERFACE_end:
 	GO_NEXT_CHECK();
 
 JIT_BRANCH_start:
