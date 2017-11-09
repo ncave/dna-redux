@@ -134,7 +134,11 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 		U32 callerStackSize = pCaller->pMethod->pJITted->maxStack + pCaller->pMethod->parameterStackSize + pCaller->pMethod->pJITted->localsStackSize;
 		isTailCall = isTailCall && (stackSize <= callerStackSize)
 			&& (pMethod->pReturnType == pCaller->pMethod->pReturnType)
-			&& (pMethod->numberOfParameters == pCaller->pMethod->numberOfParameters);
+			&& (pMethod->numberOfParameters == pCaller->pMethod->numberOfParameters)
+#ifdef _DEBUG
+			&& (pCaller->pMethod->pJITted->numExceptionHandlers == 0)
+#endif
+			;
 		//TODO: more tail call optimization checks if needed
 		//TODO: relax tail call optimization checks if possible
 	}

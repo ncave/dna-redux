@@ -196,18 +196,12 @@ tMD_TypeDef* Type_GetArrayTypeDef(tMD_TypeDef *pElementType, tMD_TypeDef **ppCla
 
 U32 Type_IsValueType(tMD_TypeDef *pTypeDef) {
 	// If this type is an interface, then return 0
-	if (TYPE_ISINTERFACE(pTypeDef)) {
-		return 0;
-	}
+	if (TYPE_ISINTERFACE(pTypeDef)) return 0;
+
 	// If this type is Object or ValueType then return an answer
-	if (strcmp(pTypeDef->nameSpace, "System") == 0) {
-		if (strcmp(pTypeDef->name, "ValueType") == 0) {
-			return 1;
-		}
-		if (strcmp(pTypeDef->name, "Object") == 0) {
-			return 0;
-		}
-	}
+	if (pTypeDef == types[TYPE_SYSTEM_VALUETYPE]) return 1;
+	if (pTypeDef == types[TYPE_SYSTEM_OBJECT]) return 0;
+
 	// Return the isValueType determined by parent type
 	pTypeDef = MetaData_GetTypeDefFromDefRefOrSpec(pTypeDef->pMetaData, pTypeDef->extends, NULL, NULL);
 	MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
@@ -414,6 +408,8 @@ static tTypeInit typeInit[] = {
 	{mscorlib, SystemReflection, "InternalCustomAttributeInfo", EVALSTACK_VALUETYPE, sizeof(tInternalCustomAttributeInfo),
 		sizeof(tInternalCustomAttributeInfo), sizeof(tInternalCustomAttributeInfo)         , TYPE_SYSTEM_REFLECTION_INTERNALCUSTOMATTRIBUTEINFO },  // 53
 	{mscorlib, SystemGlobalization, "NumberStyles", EVALSTACK_INT32, 4, 4, 4               , TYPE_SYSTEM_GLOBALIZATION_NUMBERSTYLES },  // 54
+	{mscorlib, System, "ValueType", EVALSTACK_VALUETYPE, 0, 0, 0                           , TYPE_SYSTEM_VALUETYPE },  // 55
+	{mscorlib, SystemReflection, "TypeInfo", EVALSTACK_O, 4, 4, 0                          , TYPE_SYSTEM_REFLECTION_TYPEINFO },  // 56
 };
 
 int CorLibDone = 0;

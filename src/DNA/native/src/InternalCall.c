@@ -203,7 +203,8 @@ static tInternalCall internalCalls[] = {
 
 	{"System.Reflection", "MethodInfo", "MakeGenericMethod", Reflection_MethodInfo_MakeGenericMethod, TYPE_SYSTEM_REFLECTION_METHODINFO, 1, {TYPE_SYSTEM_ARRAY_TYPE}},
 
-	{"System.Runtime.CompilerServices", "RuntimeHelpers", "InitializeArray", System_Runtime_CompilerServices_InitializeArray, TYPE_SYSTEM_VOID, 2, {TYPE_SYSTEM_ARRAY_NO_TYPE, TYPE_SYSTEM_RUNTIMEFIELDHANDLE}},
+	{"System.Runtime.CompilerServices", "RuntimeHelpers", "InitializeArray", System_Runtime_CompilerServices_RuntimeHelpers_InitializeArray, TYPE_SYSTEM_VOID, 2, {TYPE_SYSTEM_ARRAY_NO_TYPE, TYPE_SYSTEM_RUNTIMEFIELDHANDLE}},
+	{NULL,                              NULL,             "GetHashCode", System_Runtime_CompilerServices_RuntimeHelpers_GetHashCode, TYPE_SYSTEM_INT32, 1, {TYPE_SYSTEM_OBJECT}},
 
 	{"System.Diagnostics", "Debugger", "Break", System_Diagnostics_Debugger_Break, TYPE_SYSTEM_VOID, 0},
 

@@ -3297,7 +3297,7 @@ throwStart:
 		// Find any catch exception clauses; look in the complete call stack
 		tExceptionHeader *pCatch = NULL;
 		tMethodState *pCatchMethodState = pCurrentMethodState;
-		for (;;) {
+		while (pCatchMethodState != NULL) {
 			for (U32 i = 0; i<pCatchMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
 				tExceptionHeader *pEx = &pCatchMethodState->pMethod->pJITted->pExceptionHeaders[i];
 				if (pEx->flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION &&
@@ -3315,12 +3315,22 @@ throwStart:
 				break;
 			}
 			pCatchMethodState = pCatchMethodState->pCaller;
-			if (pCatchMethodState == NULL) {
-				Crash("Unhandled exception in %s.%s(): %s.%s",
-					pCurrentMethodState->pMethod->pParentType->name,
-					pCurrentMethodState->pMethod->name, pExType->nameSpace, pExType->name);
-			}
 		}
+		if (pCatchMethodState == NULL) {
+#ifdef _DEBUG
+			// print exception callstack
+			tMethodState *pCallMethodState = pCurrentMethodState;
+			dprintfn("Unhandled exception: %s.%s:", pExType->nameSpace, pExType->name);
+			while (pCallMethodState != NULL) {
+				dprintfn("  at %s.%s", pCallMethodState->pMethod->pParentType->nameSpace, pCallMethodState->pMethod->name);
+				pCallMethodState = pCallMethodState->pCaller;
+			}
+#endif
+			Crash("Unhandled exception: in %s.%s(): %s.%s",
+				pCurrentMethodState->pMethod->pParentType->name,
+				pCurrentMethodState->pMethod->name, pExType->nameSpace, pExType->name);
+		}
+
 		// Unwind the stack down to the exception handler's stack frame (MethodState)
 		// Run all finally clauses during unwinding
 		pThread->pCatchMethodState = pCatchMethodState;

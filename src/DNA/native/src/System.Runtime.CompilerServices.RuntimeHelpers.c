@@ -28,8 +28,9 @@
 #include "Heap.h"
 #include "Type.h"
 #include "System.Array.h"
+#include "System.Object.h"
 
-tAsyncCall* System_Runtime_CompilerServices_InitializeArray(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* System_Runtime_CompilerServices_RuntimeHelpers_InitializeArray(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	HEAP_PTR pArray;
 	PTR pRawData;
 	tMD_TypeDef *pArrayTypeDef;
@@ -44,4 +45,9 @@ tAsyncCall* System_Runtime_CompilerServices_InitializeArray(PTR pThis_, PTR pPar
 	memcpy(pElements, pRawData, pArrayTypeDef->pArrayElementType->arrayElementSize * arrayLength);
 
 	return NULL;
+}
+
+tAsyncCall* System_Runtime_CompilerServices_RuntimeHelpers_GetHashCode(PTR pThis_, PTR pParams, PTR pReturnValue) {
+	PTR pThis = pParams; // object is param 0
+	return System_Object_GetHashCode(pThis, pParams, pReturnValue);
 }
