@@ -143,6 +143,22 @@ void* mallocTrace(int s, char *pFile, int line) {
 #endif
 */
 
+#ifdef _WIN32
+U64 GetTicks() {
+	LARGE_INTEGER time;
+	QueryPerformanceCounter(&time);
+	return time.QuadPart;
+}
+
+double TicksToSeconds(U64 ticks) {
+	static LARGE_INTEGER freq = { 0,0 };
+	if (freq.QuadPart == 0) {
+		QueryPerformanceFrequency(&freq);
+	}
+	return (double)ticks / (double)freq.QuadPart;
+}
+#endif
+
 U64 microTime() {
 #ifdef _WIN32
 	static LARGE_INTEGER freq = {0,0};

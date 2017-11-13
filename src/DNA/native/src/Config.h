@@ -33,15 +33,14 @@
 // Maintain and print a callstack buffer
 //#define DIAG_CALL_STACK
 
-// Measure how much time is spent in each .NET opcode
+// Measure how much time is spent in each JIT opcode
 // This only works on Windows
-// This is not currently implemented, after the change to threaded code
+#ifdef _WIN32
 //#define DIAG_OPCODE_TIMES
-
-// Count how many times each .NET opcode is used
-#ifdef _DEBUG
-//#define DIAG_OPCODE_USES
 #endif
+
+// Count how many times each JIT opcode is used
+//#define DIAG_OPCODE_USES
 
 // Measure how much time is spent in the garbage collector
 //#define DIAG_GC
@@ -66,16 +65,14 @@
 // Performance improvements
 
 // minor perf improvement: space vs speed trade-off
-// (disabled by default)
+// (not a big difference, so disabled by default)
 #ifdef _DEBUG
 //#define STORE_HEAPENTRY_SIZE
 #endif
 
-// perf improvement: switch on JIT ops instead of labels
-// (enabled in WIN64 by default, but works well in 32-bit too)
-//#ifdef _WIN64
-#define SWITCH_ON_JIT_OP
-//#endif
+// threaded code: switch on JIT ops instead of using label addresses
+// (mainly for WIN64, but performs well in 32-bit too)
+#define SWITCH_ON_JIT_OPS
 
 // disable GC completely (for perf testing/tuning)
 //#define NO_GC_WHATSOEVER

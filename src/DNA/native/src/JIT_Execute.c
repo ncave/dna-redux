@@ -38,7 +38,7 @@
 #include "System.Reflection.MethodBase.h"
 #include "System.Diagnostics.Debugger.h"
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 // Disable warning about unreferenced labels
 #pragma warning(disable:4102)
 #else
@@ -197,26 +197,24 @@ static tMethodState* RunFinalizer(tThread *pThread) {
 }
 
 #ifdef DIAG_OPCODE_TIMES
-U64 opcodeTimes[JIT_OPCODE_MAXNUM];
-static __inline unsigned __int64 __cdecl rdtsc() {
-	__asm {
-		rdtsc
-	}
-}
+U64 opcodeTicks[JIT_OPCODE_MAXNUM];
+#define ADD_OPCODE_TICKS(op) opcodeTicks[op] += GetTicks() - opcodeStart
+#define SET_OPCODE_START() opcodeStart = GetTicks()
+#else
+#define ADD_OPCODE_TICKS(op)
+#define SET_OPCODE_START()
 #endif
 
 #ifdef DIAG_OPCODE_USES
-U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
-
-#define OPCODE_USE(op) opcodeNumUses[op]++;
-
+U64 opcodeCounts[JIT_OPCODE_MAXNUM];
+#define ADD_OPCODE_COUNT(op) opcodeCounts[op] += 1
 #else
-
-#define OPCODE_USE(op) //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
-
+#define ADD_OPCODE_COUNT(op)
 #endif
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
+
+#define OPCODE_USE(op) //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
 #define CHECK_FOR_BREAKPOINT() \
 	if (pOpSequencePoints != NULL) { \
@@ -232,6 +230,8 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 #define SET_OP(op, label) // already done, see goNext
 
 #else
+
+#define OPCODE_USE(op) ADD_OPCODE_TICKS(op); ADD_OPCODE_COUNT(op); SET_OPCODE_START(); //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
 #define SET_OP(op, label) prev_op = curr_op; curr_op = op; goto label
 
@@ -268,7 +268,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 	if (--numInst == 0) goto done; \
 	GO_NEXT()
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 
 #define GET_LABELS(op) \
 	case op: goto op##_start;
@@ -313,20 +313,29 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 	U32 curr_op = JIT_NOP;
 	U32 prev_op = JIT_NOP;
 
+#ifdef DIAG_OPCODE_TIMES
+	U64 opcodeStart = GetTicks();
+#endif
+
 	if (pThread == NULL) {
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 		// no label initialization needed
 		return 0;
 	}
 
 	LOAD_METHOD_STATE();
+	SET_OPCODE_START();
 	GO_NEXT();
 
 goNext:
+	ADD_OPCODE_TICKS(curr_op);
+	ADD_OPCODE_COUNT(curr_op);
 	CHECK_FOR_BREAKPOINT();
 	prev_op = curr_op;
 	curr_op = GET_OP();
+
+	SET_OPCODE_START();
 
 	switch (curr_op) {
 
@@ -680,22 +689,16 @@ goNext:
 		GET_LABELS_DYNAMIC(JIT_LOADFIELD_4, 4);
 		GET_LABELS_DYNAMIC(JIT_LOADFIELD_8, 8);
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 	default: goto noCode;
 	}
+
 #else
 		return 0;
 }
-#endif
 
-#ifdef DIAG_OPCODE_TIMES
-	U64 opcodeStartTime = rdtsc();
-#endif
-
-#ifdef SWITCH_ON_JIT_OP
-#else
 	LOAD_METHOD_STATE();
-
+	SET_OPCODE_START();
 	GO_NEXT();
 #endif
 
@@ -2651,7 +2654,7 @@ JIT_NEWOBJECT_start:
 		}
 
 #ifdef DIAG_METHOD_CALLS
-		pCurrentMethodState->pMethod->heapAlloc++;
+		pCurrentMethodState->pMethod->heapAllocs++;
 #endif
 
 		// Set up the new method state for the called method

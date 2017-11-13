@@ -69,6 +69,12 @@ void* mallocForever(U32 size);
 void* callocForever(U32 count, U32 size);
 void freeForever();
 
+#ifdef _WIN32
+//#define GetTicks() __rdtsc()
+U64 GetTicks();
+double TicksToSeconds(U64 ticks);
+#endif
+
 U64 microTime();
 U64 msTime();
 void SleepMS(U32 ms);

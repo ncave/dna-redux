@@ -65,7 +65,7 @@ struct tTypeStack_ {
 #define InitOps(ops_, initialCapacity) ops_.capacity = initialCapacity; ops_.ofs = 0; ops_.p = TMALLOC(initialCapacity, U32); ops_.pSequencePoints = TMALLOC(initialCapacity, I32);
 #define DeleteOps(ops_) free(ops_.p); free(ops_.pSequencePoints)
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 #define Translate(op, getDynamic) op
 #else
 // Turn this into a MACRO at some point?
