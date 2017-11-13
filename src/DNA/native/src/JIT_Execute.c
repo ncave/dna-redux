@@ -152,15 +152,13 @@ I32 nested = 0;
 
 #define THROW(exType) pThread->pCurrentExceptionObject = Heap_AllocType(exType); goto JIT_RETHROW_start
 
-static void CheckIfCurrentInstructionHasBreakpoint(tMethodState* pMethodState, U32 opOffset, I32* pOpSequencePoints)
-{
-	if (pOpSequencePoints != NULL) {
-		I32 currentOpSequencePoint = pOpSequencePoints[opOffset];
-		if (currentOpSequencePoint >= 0) {
-			CheckIfSequencePointIsBreakpoint(pMethodState, currentOpSequencePoint);
-		}
+#define CHECK_FOR_BREAKPOINT() \
+	if (pOpSequencePoints != NULL) { \
+		I32 currentOpSequencePoint = pOpSequencePoints[pCurOp - pOps]; \
+		if (currentOpSequencePoint >= 0) { \
+			CheckIfSequencePointIsBreakpoint(pCurrentMethodState, currentOpSequencePoint); \
+		} \
 	}
-}
 
 static U32 CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pCurEvalStack, HEAP_PTR obj) {
 	U32 ofs = 0;
@@ -214,29 +212,16 @@ U64 opcodeCounts[JIT_OPCODE_MAXNUM];
 
 #ifdef SWITCH_ON_JIT_OPS
 
+#define SET_OP(op, label) // already done, see goNext
 #define OPCODE_USE(op) //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
-
-#define CHECK_FOR_BREAKPOINT() \
-	if (pOpSequencePoints != NULL) { \
-		I32 currentOpSequencePoint = pOpSequencePoints[pCurOp - pOps]; \
-		if (currentOpSequencePoint >= 0) { \
-			CheckIfSequencePointIsBreakpoint(pCurrentMethodState, currentOpSequencePoint); \
-		} \
-	}
 
 #define GO_NEXT() \
 	goto goNext;
 
-#define SET_OP(op, label) // already done, see goNext
-
 #else
 
-#define OPCODE_USE(op) ADD_OPCODE_TICKS(op); ADD_OPCODE_COUNT(op); SET_OPCODE_START(); //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
-
 #define SET_OP(op, label) prev_op = curr_op; curr_op = op; goto label
-
-#define CHECK_FOR_BREAKPOINT() \
-	CheckIfCurrentInstructionHasBreakpoint(pCurrentMethodState, pCurOp - pOps, pOpSequencePoints);
+#define OPCODE_USE(op) ADD_OPCODE_TICKS(op); ADD_OPCODE_COUNT(op); SET_OPCODE_START(); //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
 #ifdef __GNUC__
 
