@@ -112,4 +112,6 @@ void Thread_StackFree(tThread *pThread, PTR pAddr);
 
 void Thread_GetHeapRoots(tHeapRoots *pHeapRoots);
 
+void Thread_PrintCallStack(tThread *pThread);
+
 #endif

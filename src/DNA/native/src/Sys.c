@@ -41,7 +41,7 @@ void Crash(char *pMsg, ...) {
 
 	printf("\n\n");
 
-#if defined(DIAG_METHOD_CALLS) || defined(DIAG_CALL_STACK)
+#if defined(DIAG_METHOD_CALLS) || defined(DIAG_CALL_HISTORY)
 	abort();
 #endif
 	

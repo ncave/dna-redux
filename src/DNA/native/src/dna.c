@@ -57,8 +57,8 @@ void Diag_Init() {
 
 void Diag_Print() {
 
-#ifdef DIAG_CALL_STACK
-	printf("\nCall stack buffer:\n\n");
+#ifdef DIAG_CALL_HISTORY
+	printf("\nCall history buffer:\n\n");
 	PrintBufferContents();
 	printf("\n");
 #endif
@@ -143,7 +143,7 @@ void Diag_Print() {
 
 #ifdef DIAG_OPCODE_TIMES
 	{
-		I32 howMany = 25;
+		I32 howMany = 50;
 		printf("\n--- JIT OpCode times:\n");
 		for (U32 j=1; howMany > 0; howMany--, j++) {
 			U64 maxTicks = 0;
@@ -165,7 +165,7 @@ void Diag_Print() {
 #else
 #ifdef DIAG_OPCODE_USES
 	{
-		I32 howMany = 25;
+		I32 howMany = 50;
 		printf("\n--- JIT OpCode usage:\n");
 		for (U32 j=1; howMany > 0; howMany--, j++) {
 			U64 maxCount = 0;

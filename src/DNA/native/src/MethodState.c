@@ -156,12 +156,9 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 		// make new stack frame
 		pThis = (tMethodState*)Thread_StackAlloc(pThread, sizeof(tMethodState) + stackFrameSize);
 		pThis->pCaller = pCaller;
-		pThis->pEvalStack = (PTR)pThis + sizeof(tMethodState);
-		memset(pThis->pEvalStack, 0, stackFrameSize);
 	}
 
 	pThis->finalizerThis = NULL;
-	pThis->pMetaData = pMethod->pMetaData;
 	pThis->pMethod = pMethod;
 	pThis->pJIT = pMethod->pJITted;
 	pThis->ipOffset = 0;
@@ -169,8 +166,6 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	pThis->isInternalNewObjCall = isInternalNewObjCall;
 	pThis->pNextDelegate = NULL;
 	pThis->pDelegateParams = NULL;
-
-	pThis->pParamsLocals = pThis->pEvalStack + pMethod->pJITted->maxStack;
 
 #ifdef GEN_COMBINED_OPCODES
 	AddCall(pMethod);

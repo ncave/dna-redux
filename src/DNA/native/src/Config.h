@@ -30,8 +30,8 @@
 // Count how many times each .NET method is called
 //#define DIAG_METHOD_CALLS
 
-// Maintain and print a callstack buffer
-//#define DIAG_CALL_STACK
+// Maintain and print a call history buffer
+//#define DIAG_CALL_HISTORY
 
 // Measure how much time is spent in each JIT opcode
 // This only works on Windows

@@ -48,13 +48,16 @@ tJITCodeInfo jitCodeInfo[JIT_OPCODE_MAXNUM];
 tJITCodeInfo jitCodeGoNext;
 #endif
 
+#define EVAL_STACK_PTR ((PTR)pCurrentMethodState + sizeof(tMethodState))
+#define PARAMETERS_PTR(pMethodState) ((PTR)pMethodState + sizeof(tMethodState) + pMethodState->pMethod->pJITted->maxStack)
+
 // Get the next op-code
 #define GET_OP() (*(pCurOp++))
-//#define GET_OP() (dprintfn("GETOP : stackOfs = %d", pCurEvalStack - pCurrentMethodState->pEvalStack), *(pCurOp++))
+//#define GET_OP() (dprintfn("GETOP : stackOfs = %d", pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
 
 // PUSH and POP return nothing, they just alter the stack offset
-#define PUSH(numBytes) pCurEvalStack += numBytes; if (pCurEvalStack < pCurrentMethodState->pEvalStack || pCurEvalStack > pCurrentMethodState->pParamsLocals) abort()
-#define POP(numBytes) pCurEvalStack -= numBytes;  if (pCurEvalStack < pCurrentMethodState->pEvalStack || pCurEvalStack > pCurrentMethodState->pParamsLocals) abort()
+#define PUSH(numBytes) pCurEvalStack += numBytes; if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
+#define POP(numBytes) pCurEvalStack -= numBytes;  if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
 
 // Push a U32 value on the top of the stack
 #define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); PUSH(4)
@@ -103,7 +106,7 @@ tJITCodeInfo jitCodeGoNext;
 #define POP_F64_F64(v1,v2) POP(16); double v1 = *(double*)pCurEvalStack; double v2 = *(double*)(pCurEvalStack + 8)
 
 // POP_ALL() empties the evaluation stack
-#define POP_ALL() pCurEvalStack = pCurrentMethodState->pEvalStack
+#define POP_ALL() pCurEvalStack = EVAL_STACK_PTR
 
 #define STACK_ADDR(type) *(type*)(pCurEvalStack - sizeof(type))
 
@@ -118,26 +121,16 @@ tJITCodeInfo jitCodeGoNext;
 
 // Set the new method state (for use when the method state changes - in calls mainly)
 #define SAVE_METHOD_STATE() \
-	pCurrentMethodState->stackOfs = (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack); \
+	pCurrentMethodState->stackOfs = (U32)(pCurEvalStack - EVAL_STACK_PTR); \
 	pCurrentMethodState->ipOffset = (U32)(pCurOp - pOps) \
 
 #define LOAD_METHOD_STATE() \
 	pCurrentMethodState = pThread->pCurrentMethodState; \
-	/*pParamsLocals = pCurrentMethodState->pParamsLocals;*/ \
-	pCurEvalStack = pCurrentMethodState->pEvalStack + pCurrentMethodState->stackOfs; \
-	/*pJIT = pCurrentMethodState->pJIT;*/ \
+	pParamsLocals = PARAMETERS_PTR(pCurrentMethodState); \
+	pCurEvalStack = EVAL_STACK_PTR + pCurrentMethodState->stackOfs; \
 	pOps = pCurrentMethodState->pJIT->pOps; \
 	pOpSequencePoints = pCurrentMethodState->pJIT->pOpSequencePoints; \
 	pCurOp = pOps + pCurrentMethodState->ipOffset
-
-#ifdef DIAG_CALL_STACK
-I32 nested = 0;
-#define INCREMENT_NESTED_LEVEL() nested = nested + 1
-#define DECREMENT_NESTED_LEVEL() nested = nested - 1
-#else
-#define INCREMENT_NESTED_LEVEL()
-#define DECREMENT_NESTED_LEVEL()
-#endif
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \
 	if (pThread->pCurrentMethodState != pNewMethodState) { \
@@ -147,8 +140,8 @@ I32 nested = 0;
 	LOAD_METHOD_STATE()
 
 // Easy access to method parameters and local variables
-#define PARAMLOCAL_U32(offset) *(U32*)(pCurrentMethodState->pParamsLocals + offset)
-#define PARAMLOCAL_U64(offset) *(U64*)(pCurrentMethodState->pParamsLocals + offset)
+#define PARAMLOCAL_U32(offset) *(U32*)(pParamsLocals + offset)
+#define PARAMLOCAL_U64(offset) *(U64*)(pParamsLocals + offset)
 
 #define THROW(exType) pThread->pCurrentExceptionObject = Heap_AllocType(exType); goto JIT_RETHROW_start
 
@@ -159,6 +152,15 @@ I32 nested = 0;
 			CheckIfSequencePointIsBreakpoint(pCurrentMethodState, currentOpSequencePoint); \
 		} \
 	}
+
+#ifdef DIAG_CALL_HISTORY
+I32 nested = 0;
+#define INCREMENT_NESTED_LEVEL() nested = nested + 1
+#define DECREMENT_NESTED_LEVEL() nested = nested - 1
+#else
+#define INCREMENT_NESTED_LEVEL()
+#define DECREMENT_NESTED_LEVEL()
+#endif
 
 static U32 CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pCurEvalStack, HEAP_PTR obj) {
 	U32 ofs = 0;
@@ -186,7 +188,7 @@ static tMethodState* RunFinalizer(tThread *pThread) {
 		pFinalizerMethodState->finalizerThis = heapPtr;
 		// Put the object on the stack (the object that is being Finalized)
 		// Finalizers always have no parameters
-		*(HEAP_PTR*)(pFinalizerMethodState->pParamsLocals) = heapPtr;
+		*(HEAP_PTR*)(PARAMETERS_PTR(pFinalizerMethodState)) = heapPtr;
 		//printf("--- FINALIZE ---\n");
 
 		return pFinalizerMethodState;
@@ -285,8 +287,6 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 
 	// Local copies of thread state variables, to speed up execution
 	tMethodState *pCurrentMethodState;
-	//tJITted *pJIT;
-	//PTR pParamsLocals;
 	U32 *pOps;
 	I32 *pOpSequencePoints;
 
@@ -294,6 +294,8 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 	register U32 *pCurOp;
 	// Pointer to eval-stack position
 	register PTR pCurEvalStack;
+	// Pointer to params and locals
+	PTR pParamsLocals;
 
 	U32 curr_op = JIT_NOP;
 	U32 prev_op = JIT_NOP;
@@ -1095,7 +1097,7 @@ JIT_CALL_PINVOKE_start:
 	OPCODE_USE(JIT_CALL_PINVOKE);
 	{
 		tJITCallPInvoke *pCallPInvoke = (tJITCallPInvoke*)(pCurOp - 1);
-		U32 res = PInvoke_Call(pCallPInvoke, pCurrentMethodState->pParamsLocals, pCurrentMethodState->pEvalStack, pThread);
+		U32 res = PInvoke_Call(pCallPInvoke, pParamsLocals, EVAL_STACK_PTR, pThread);
 		pCurrentMethodState->stackOfs = res;
 	}
 	goto JIT_RETURN_start;
@@ -1109,18 +1111,17 @@ JIT_CALL_NATIVE_start:
 		U32 thisOfs;
 		tAsyncCall *pAsync;
 
-		//pCallNative = (tJITCallNative*)&(pJIT->pOps[pCurrentMethodState->ipOffset - 1]);
 		pCallNative = (tJITCallNative*)(pCurOp - 1);
 		if (METHOD_ISSTATIC(pCallNative->pMethodDef)) {
 			pThis = NULL;
 			thisOfs = 0;
 		} else {
-			pThis = *(PTR*)pCurrentMethodState->pParamsLocals;
+			pThis = *(PTR*)pParamsLocals;
 			thisOfs = 4;
 		}
 		// Internal constructors MUST leave the newly created object in the return value
 		// (i.e. on top of the evaluation stack)
-		pAsync = pCallNative->fn(pThis, pCurrentMethodState->pParamsLocals + thisOfs, pCurrentMethodState->pEvalStack);
+		pAsync = pCallNative->fn(pThis, pParamsLocals + thisOfs, EVAL_STACK_PTR);
 
 		// fix the stack offset to match the return value size
 		if (pCallNative->pMethodDef->pReturnType != NULL) {
@@ -1169,7 +1170,7 @@ JIT_RETURN_start:
 			u32Value = sizeof(void*);
 		}
 
-		Assert(pCurEvalStack - u32Value >= pCurrentMethodState->pEvalStack);
+		Assert(pCurEvalStack - u32Value >= EVAL_STACK_PTR);
 		PTR pMem = pCurEvalStack - u32Value;
 		tMethodState *pOldMethodState = pCurrentMethodState;
 		pThread->pCurrentMethodState = pCurrentMethodState->pCaller;
@@ -1226,7 +1227,7 @@ JIT_INVOKE_DELEGATE_start:
 
 		// Fill in the parameters
 		PTR pDelegateParams = (PTR)pCurrentMethodState->pDelegateParams + pDelegateMethod->parameterStackSize;
-		U32 paramSize = CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pDelegateParams, pDelegateThis);
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pCallMethod, pDelegateParams, pDelegateThis);
 
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
@@ -1264,12 +1265,12 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
 
 		// temp ptr to copy parameters
-		PTR pParamsLocals = pCallMethodState->pParamsLocals;
+		PTR pParams = PARAMETERS_PTR(pCallMethodState);
 
 		// Put the new 'this' on the stack
 		if (invocationThis != NULL) {
-			*(PTR*)pParamsLocals = (PTR)(invocationThis);
-			pParamsLocals += sizeof(PTR);
+			*(PTR*)pParams = (PTR)(invocationThis);
+			pParams += sizeof(PTR);
 		}
 
 		// Put any other params on the stack
@@ -1280,11 +1281,11 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 				HEAP_PTR currentParam = invocationParamsArrayElements[paramIndex];
 				tMD_TypeDef *pParamType = Heap_GetType(currentParam);
 				if (pParamType->isValueType) {
-					memcpy(pParamsLocals, currentParam, pParamType->stackSize);
-					pParamsLocals += pParamType->stackSize;
+					memcpy(pParams, currentParam, pParamType->stackSize);
+					pParams += pParamType->stackSize;
 				} else {
-					*(HEAP_PTR*)pParamsLocals = (HEAP_PTR)(currentParam);
-					pParamsLocals += 4;
+					*(HEAP_PTR*)pParams = (HEAP_PTR)(currentParam);
+					pParams += sizeof(HEAP_PTR);
 				}
 			}
 		}
@@ -1341,9 +1342,13 @@ allCallStart:
 		}
 
 		pCallMethod = (tMD_MethodDef*)GET_OP();
+
+		// recognize tail calls without prefix (may not work)
+		//isTailCall = isTailCall || (*pCurOp == JIT_RETURN);
+
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
-#ifdef DIAG_CALL_STACK
+#ifdef DIAG_CALL_HISTORY
 		//for (I32 i = nested / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
 		//for (I32 i = nested % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
 		printbuf("%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
@@ -1351,7 +1356,7 @@ allCallStart:
 
 		HEAP_PTR heapPtr = NULL;
 		PTR pMem = pCurEvalStack - pCallMethod->parameterStackSize;
-		Assert(pMem >= pCurrentMethodState->pEvalStack);
+		Assert(pMem >= EVAL_STACK_PTR);
 
 		switch (curr_op) {
 			case JIT_BOX_CALLVIRT: {
@@ -1430,7 +1435,7 @@ allCallStart:
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
 
 		// Set up the parameter stack for the method being called
-		U32 paramSize = CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pCallMethod, pCurEvalStack, NULL);
 		POP(paramSize);
 
 		// Set up the local variables for the new method state
@@ -2615,7 +2620,7 @@ JIT_LOAD_STRING_start:
 	OPCODE_USE(JIT_LOAD_STRING);
 	{
 		U32 value = GET_OP();
-		HEAP_PTR heapPtr = SystemString_FromUserStrings(pCurrentMethodState->pMetaData, value);
+		HEAP_PTR heapPtr = SystemString_FromUserStrings(pCurrentMethodState->pMethod->pMetaData, value);
 		PUSH_O(heapPtr);
 	}
 JIT_LOAD_STRING_end:
@@ -2647,7 +2652,7 @@ JIT_NEWOBJECT_start:
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 
 		// Fill in the parameters
-		U32 paramSize = CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, obj);
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pConstructorDef, pCurEvalStack, obj);
 		POP(paramSize);
 
 		// Push the object so it's on the stack when the constructor returns
@@ -2674,14 +2679,14 @@ JIT_NEWOBJECT_VALUETYPE_start:
 
 		// Allocate space on the eval-stack for the new value-type here
 		PTR pMem = pCurEvalStack - (pConstructorDef->parameterStackSize - sizeof(PTR));
-		Assert(pMem >= pCurrentMethodState->pEvalStack);
+		Assert(pMem >= EVAL_STACK_PTR);
 
 		// Set up the new method state for the called method
 		INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 
 		// Fill in the parameters
-		U32 paramSize = CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, pMem);
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pConstructorDef, pCurEvalStack, pMem);
 		POP(paramSize);
 
 		// Set the stack state so it's correct for the constructor return
@@ -3306,13 +3311,8 @@ throwStart:
 		}
 		if (pCatchMethodState == NULL) {
 #ifdef _DEBUG
-			// print exception callstack
-			tMethodState *pCallMethodState = pCurrentMethodState;
 			dprintfn("Unhandled exception: %s.%s:", pExType->nameSpace, pExType->name);
-			while (pCallMethodState != NULL) {
-				dprintfn("  at %s.%s", pCallMethodState->pMethod->pParentType->nameSpace, pCallMethodState->pMethod->name);
-				pCallMethodState = pCallMethodState->pCaller;
-			}
+			Thread_PrintCallStack(pThread);
 #endif
 			Crash("Unhandled exception: in %s.%s(): %s.%s",
 				pCurrentMethodState->pMethod->pParentType->name,
