@@ -123,36 +123,43 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 		tMD_TypeDef *pTypeDef = MetaData_GetTypeDefFromMethodDef(pMethod);
 		MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 	}
+	// If method has not already been JITted, do it
 	if (pMethod->pJITted == NULL) {
-		// If method has not already been JITted
 		JIT_Prepare(pMethod, 0);
 	}
-	U32 stackSize = pMethod->pJITted->maxStack + pMethod->parameterStackSize + pMethod->pJITted->localsStackSize;
+	// the new stack frame size
+	U32 stackFrameSize = pMethod->pJITted->maxStack + pMethod->parameterStackSize + pMethod->pJITted->localsStackSize;
 
-	// check if tail call optimization is possible
-	if (isTailCall) {
-		U32 callerStackSize = pCaller->pMethod->pJITted->maxStack + pCaller->pMethod->parameterStackSize + pCaller->pMethod->pJITted->localsStackSize;
-		isTailCall = isTailCall && (stackSize <= callerStackSize)
-			&& (pMethod->pReturnType == pCaller->pMethod->pReturnType)
-			&& (pMethod->numberOfParameters == pCaller->pMethod->numberOfParameters)
 #ifdef _DEBUG
+	//dprintfn("%s => %s, stack: %u %s", (pCaller == NULL ? "" : pCaller->pMethod->name), pMethod->name,
+	//	pThread->pThreadStack->ofs + sizeof(tMethodState) + stackFrameSize, isTailCall ? "(tail)" : "");
+#else
+	// check if caller stack frame reuse is possible
+	if (isTailCall && pMethod != pCaller->pMethod) {
+		isTailCall = isTailCall
+			&& (pMethod->pReturnType == pCaller->pMethod->pReturnType)
 			&& (pCaller->pMethod->pJITted->numExceptionHandlers == 0)
-#endif
+			// add more tail call checks if needed here
 			;
-		//TODO: more tail call optimization checks if needed
-		//TODO: relax tail call optimization checks if possible
+	}
+	if (isTailCall) {
+		// reuse the caller stack frame, and keep the original caller
+		pThis = pCaller;
+		// if the new stack frame size is different, correct for it
+		PTR pOldStackEnd = (PTR)pThread->pThreadStack->memory + pThread->pThreadStack->ofs;
+		PTR pNewStackEnd = (PTR)pCaller + sizeof(tMethodState) + stackFrameSize;
+		I32 ofsDiff = (pNewStackEnd - pOldStackEnd);
+		pThread->pThreadStack->ofs += ofsDiff;
+	} else
+#endif
+	{
+		// make new stack frame
+		pThis = (tMethodState*)Thread_StackAlloc(pThread, sizeof(tMethodState) + stackFrameSize);
+		pThis->pCaller = pCaller;
+		pThis->pEvalStack = (PTR)pThis + sizeof(tMethodState);
+		memset(pThis->pEvalStack, 0, stackFrameSize);
 	}
 
-	if (isTailCall) {
-		pThis = pCaller; // reuse the stack
-		// keep the original pCaller
-		// keep the original pEvalStack
-	} else {
-		pThis = (tMethodState*)Thread_StackAlloc(pThread, sizeof(tMethodState));
-		pThis->pCaller = pCaller;
-		pThis->pEvalStack = Thread_StackAlloc(pThread, stackSize);
-		memset(pThis->pEvalStack, 0, stackSize);
-	}
 	pThis->finalizerThis = NULL;
 	pThis->pMetaData = pMethod->pMetaData;
 	pThis->pMethod = pMethod;
