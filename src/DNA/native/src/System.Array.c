@@ -262,7 +262,7 @@ void SystemArray_StoreElement(HEAP_PTR pThis_, U32 index, PTR value) {
 #if defined(_WIN32) && defined(_DEBUG)
 	// Do a bounds check
 	if (index >= pArray->length) {
-		printf("SystemArray_StoreElement() Bounds check failed. Array length: %d  index: %d\n", pArray->length, index);
+		printf("SystemArray_StoreElement() Bounds check failed. Array length: %u  index: %u\n", pArray->length, index);
 		__debugbreak();
 	}
 #endif

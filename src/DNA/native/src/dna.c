@@ -85,7 +85,7 @@ void Diag_Print() {
 		for (U32 t = 0; t < numTop; t++) { topMethods[t] = NULL; }
 
 		// Report on most-used methods
-		printf("\nTop %d methods:\n\n", numTop);
+		printf("\nTop %u methods:\n\n", numTop);
 
 		// enumerate and sort all methods in all assemblies
 		tFilesLoaded *pFiles = CLIFile_GetLoadedAssemblies();
@@ -126,7 +126,7 @@ void Diag_Print() {
 		for (U32 t = 0; t < numTop; t++) {
 			tMD_MethodDef *pMethod = topMethods[t];
 			char* methodName = pMethod->isFilled ? Sys_GetMethodDesc(pMethod) : (char*)pMethod->name;
-			printf("%02d - %s\n     calls: %llu", t+1, methodName, pMethod->callCount);
+			printf("%02u - %s\n     calls: %llu", t+1, methodName, pMethod->callCount);
 			printf(", total: %.3f sec", pMethod->totalTime / 1000000.0);
 			printf(", max: %f sec", pMethod->maxTime / 1000000.0);
 			printf(", avg: %f sec", pMethod->totalTime / max(pMethod->callCount, 1) / 1000000.0);
@@ -154,7 +154,7 @@ void Diag_Print() {
 					maxIndex = i;
 				}
 			}
-			printf("%02d - op: 0x%03x, time: %f sec", j, maxIndex, TicksToSeconds(maxTicks));
+			printf("%02u - op: 0x%03x, time: %f sec", j, maxIndex, TicksToSeconds(maxTicks));
 #ifdef DIAG_OPCODE_USES
 			printf(", count: %llu", opcodeCounts[maxIndex]);
 #endif
@@ -176,7 +176,7 @@ void Diag_Print() {
 					maxIndex = i;
 				}
 			}
-			printf("%02d - op: 0x%03x, count: %llu", j, maxIndex, maxCount);
+			printf("%02u - op: 0x%03x, count: %llu", j, maxIndex, maxCount);
 #ifdef DIAG_OPCODE_TIMES
 			printf(", time: %f sec", TicksToSeconds(opcodeTicks[maxIndex]));
 #endif

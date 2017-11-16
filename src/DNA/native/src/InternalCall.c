@@ -226,10 +226,6 @@ static tInternalCall internalCalls[] = {
 };
 
 fnInternalCall InternalCall_Map(tMD_MethodDef *pMethod) {
-	tInternalCall *pCall;
-	STRING curNameSpace;
-	STRING curType;
-
 	if (pMethod->pParentType->pParent == types[TYPE_SYSTEM_MULTICASTDELEGATE]) {
 		// Special case to handle delegates
 		fnInternalCall fn = Map_Delegate(pMethod);
@@ -237,6 +233,9 @@ fnInternalCall InternalCall_Map(tMD_MethodDef *pMethod) {
 			return fn;
 		}
 	} else {
+		tInternalCall *pCall;
+		STRING curNameSpace = NULL;
+		STRING curType = NULL;
 
 		for (pCall = internalCalls; pCall->method != NULL; pCall++) {
 			if (pCall->nameSpace != NULL) {

@@ -307,7 +307,7 @@ tAsyncCall* System_String_InternalReplace(PTR pThis_, PTR pParams, PTR pReturnVa
 	pResultChar0 = pResult->chars;
 	dstIndex = 0;
 	for (i=0; i<thisLen; i++) {
-		U32 match;
+		U32 match = 0;
 		if (i<thisLen-oldLen+1) {
 			for (j=0; j<oldLen; j++) {
 				match = 1;
