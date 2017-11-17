@@ -72,6 +72,10 @@ struct tThread_ {
 	tAsyncCall *pAsync;
 	// Does this thread start with a parameter?
 	U32 hasParam;
+#ifdef DIAG_CALL_HISTORY
+	// nested method level
+	I32 nestedLevel;
+#endif
 	// Pointer to the first chunk of thread-stack memory
 	tThreadStack *pThreadStack;
 

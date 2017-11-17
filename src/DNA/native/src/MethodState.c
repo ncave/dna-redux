@@ -137,8 +137,9 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	// check if caller stack frame reuse is possible
 	if (isTailCall && pMethod != pCaller->pMethod) {
 		isTailCall = isTailCall
-			&& (pMethod->pReturnType == pCaller->pMethod->pReturnType)
-			&& (pCaller->pMethod->pJITted->numExceptionHandlers == 0)
+			&& (pCaller->pMethod->pReturnType == pMethod->pReturnType) // same return type
+			&& (pCaller->pMethod->pJITted->numExceptionHandlers == 0)  // no exception handlers
+			&& (pCaller->pNextDelegate == NULL)                        // no delegates
 			// add more tail call checks if needed here
 			;
 	}
@@ -156,16 +157,25 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 		// make new stack frame
 		pThis = (tMethodState*)Thread_StackAlloc(pThread, sizeof(tMethodState) + stackFrameSize);
 		pThis->pCaller = pCaller;
+
+#ifdef DIAG_CALL_HISTORY
+		pThread->nestedLevel += 1;
+		//for (I32 i = pThread->nestedLevel / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
+		//for (I32 i = pThread->nestedLevel % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
+		printbuf("%d %s.%s\n", pThread->nestedLevel, pMethod->pParentType->name, pMethod->name);
+#endif
 	}
 
-	pThis->finalizerThis = NULL;
 	pThis->pMethod = pMethod;
 	pThis->pJIT = pMethod->pJITted;
 	pThis->ipOffset = 0;
 	pThis->stackOfs = 0;
 	pThis->isInternalNewObjCall = isInternalNewObjCall;
+	pThis->finalizerThis = NULL;
 	pThis->pNextDelegate = NULL;
 	pThis->pDelegateParams = NULL;
+	pThis->pOpEndFinally = NULL;
+	pThis->pReflectionInvokeReturnType = NULL;
 
 #ifdef GEN_COMBINED_OPCODES
 	AddCall(pMethod);
@@ -225,6 +235,9 @@ tMethodState* MethodState(tThread *pThread, tMetaData *pMetaData, IDX_TABLE meth
 void MethodState_Delete(tThread *pThread, tMethodState **ppMethodState) {
 	tMethodState *pThis = *ppMethodState;
 
+#ifdef DIAG_CALL_HISTORY
+	pThread->nestedLevel -= 1;
+#endif
 
 #ifdef GEN_COMBINED_OPCODES
 	if (pThis->pJIT != pThis->pMethod->pJITted) {

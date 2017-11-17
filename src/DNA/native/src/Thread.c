@@ -61,6 +61,9 @@ tThread* Thread() {
 	pThis->nextFinallyUnwindStack = 0;
 	pThis->pAsync = NULL;
 	pThis->hasParam = 0;
+#ifdef DIAG_CALL_HISTORY
+	pThis->nestedLevel = 0;
+#endif
 
 	pThis->startDelegate = NULL;
 	pThis->param = NULL;
@@ -104,9 +107,6 @@ PTR Thread_StackAlloc(tThread *pThread, U32 size) {
 #endif
 	pStack->ofs += size;
 	if (pStack->ofs > THREADSTACK_CHUNK_SIZE) {
-#ifdef _DEBUG
-		//Thread_PrintCallStack(pThread);
-#endif
 		Crash("Thread-local stack is too large: size = %u", pStack->ofs);
 	}
 	memset(pAddr, 0, size);

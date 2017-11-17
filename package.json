@@ -18,7 +18,7 @@
     "@types/emscripten": "^0.0.31",
     "@types/node": "^8.0.53",
     "http-server": "^0.10.0",
-    "rollup": "^0.51.5",
+    "rollup": "^0.51.7",
     "tslint": "^5.8.0",
     "typescript": "^2.6.1"
   }

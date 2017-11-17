@@ -153,15 +153,6 @@ tJITCodeInfo jitCodeGoNext;
 		} \
 	}
 
-#ifdef DIAG_CALL_HISTORY
-I32 nested = 0;
-#define INCREMENT_NESTED_LEVEL() nested = nested + 1
-#define DECREMENT_NESTED_LEVEL() nested = nested - 1
-#else
-#define INCREMENT_NESTED_LEVEL()
-#define DECREMENT_NESTED_LEVEL()
-#endif
-
 static U32 CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pCurEvalStack, HEAP_PTR obj) {
 	U32 ofs = 0;
 	if (obj != NULL) {
@@ -1150,7 +1141,6 @@ JIT_CALL_NATIVE_end:
 JIT_RETURN_start:
 	OPCODE_USE(JIT_RETURN);
 	// dprintfn("Returned from %s() to %s()", pCurrentMethodState->pMethod->name, (pCurrentMethodState->pCaller)?pCurrentMethodState->pCaller->pMethod->name:(STRING)"<none>");
-	DECREMENT_NESTED_LEVEL();
 
 	if (pCurrentMethodState->pCaller == NULL) {
 		// End of thread!
@@ -1222,7 +1212,6 @@ JIT_INVOKE_DELEGATE_start:
 		pCallMethod = Delegate_GetMethodAndStore(pDelegate, &pDelegateThis, &pCurrentMethodState->pNextDelegate);
 
 		// Set up the call method state for the call.
-		//INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, 0);
 
 		// Fill in the parameters
@@ -1261,7 +1250,6 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));
 
 		// Change interpreter state so we continue execution inside the method being invoked
-		//INCREMENT_NESTED_LEVEL();
 		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
 
 		// temp ptr to copy parameters
@@ -1348,11 +1336,11 @@ allCallStart:
 
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
-#ifdef DIAG_CALL_HISTORY
-		//for (I32 i = nested / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
-		//for (I32 i = nested % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
-		printbuf("%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
-#endif
+//#ifdef DIAG_CALL_HISTORY
+//		//for (I32 i = nested / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
+//		//for (I32 i = nested % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
+//		printbuf("%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
+//#endif
 
 		HEAP_PTR heapPtr = NULL;
 		PTR pMem = pCurEvalStack - pCallMethod->parameterStackSize;
@@ -1431,7 +1419,6 @@ allCallStart:
 		}
 
 		// Set up the new method state for the called method
-		INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
 
 		// Set up the parameter stack for the method being called
@@ -2648,7 +2635,6 @@ JIT_NEWOBJECT_start:
 #endif
 
 		// Set up the new method state for the called method
-		INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 
 		// Fill in the parameters
@@ -2682,7 +2668,6 @@ JIT_NEWOBJECT_VALUETYPE_start:
 		Assert(pMem >= EVAL_STACK_PTR);
 
 		// Set up the new method state for the called method
-		INCREMENT_NESTED_LEVEL();
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 
 		// Fill in the parameters
@@ -3089,7 +3074,6 @@ loadStaticFieldStart:
 				// Need to re-run this instruction when we return from static constructor call
 				//pCurrentMethodState->ipOffset -= 2;
 				pCurOp -= 2;
-				INCREMENT_NESTED_LEVEL();
 				pCallMethodState = MethodState_Direct(pThread, pParentType->pStaticConstructor, pCurrentMethodState, 0, 0);
 				// There can be no parameters, so don't need to set them up
 				CHANGE_METHOD_STATE(pCallMethodState);
@@ -3310,11 +3294,7 @@ throwStart:
 			pCatchMethodState = pCatchMethodState->pCaller;
 		}
 		if (pCatchMethodState == NULL) {
-#ifdef _DEBUG
-			dprintfn("Unhandled exception: %s.%s:", pExType->nameSpace, pExType->name);
-			Thread_PrintCallStack(pThread);
-#endif
-			Crash("Unhandled exception: in %s.%s(): %s.%s",
+			Crash("Unhandled exception in %s.%s(): %s.%s",
 				pCurrentMethodState->pMethod->pParentType->name,
 				pCurrentMethodState->pMethod->name, pExType->nameSpace, pExType->name);
 		}
