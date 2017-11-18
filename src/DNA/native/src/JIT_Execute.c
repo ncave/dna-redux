@@ -1227,11 +1227,11 @@ JIT_INVOKE_DELEGATE_end:
 JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 	OPCODE_USE(JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE);
 	{
-		// check if the previous op was a tail call
-		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX);
-
 		// Get the reference to MethodBase.Invoke
 		tMD_MethodDef *pInvokeMethod = (tMD_MethodDef*)GET_OP();
+
+		// if previous op was a tail call and next op is a return
+		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX) && (*pCurOp == JIT_RETURN);
 
 		// Take the MethodBase.Invoke params off the stack.
 		POP(pInvokeMethod->parameterStackSize);
@@ -1322,25 +1322,16 @@ allCallStart:
 		tMethodState *pCallMethodState;
 		tMD_TypeDef *pBoxCallType;
 
-		// check if the previous op was a tail call
-		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX);
-
 		if (curr_op == JIT_BOX_CALLVIRT) {
 			pBoxCallType = (tMD_TypeDef*)GET_OP();
 		}
 
 		pCallMethod = (tMD_MethodDef*)GET_OP();
 
-		// recognize tail calls without prefix (may not work)
-		//isTailCall = isTailCall || (*pCurOp == JIT_RETURN);
+		// if previous op was a tail call and next op is a return
+		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX) && (*pCurOp == JIT_RETURN);
 
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
-
-//#ifdef DIAG_CALL_HISTORY
-//		//for (I32 i = nested / 10; i > 0; i--) { printbuf("*"); } // (optional) print call nested level, each '*' is 10 levels
-//		//for (I32 i = nested % 10; i > 0; i--) { printbuf("|"); } // (optional) print call nested level, each '|' is 1 level
-//		printbuf("%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
-//#endif
 
 		HEAP_PTR heapPtr = NULL;
 		PTR pMem = pCurEvalStack - pCallMethod->parameterStackSize;
@@ -1375,6 +1366,7 @@ allCallStart:
 					//Crash("NULL 'this' in Virtual call: %s", Sys_GetMethodDesc(pCallMethod));
 					THROW(types[TYPE_SYSTEM_NULLREFERENCEEXCEPTION]);
 				}
+				// if interface method
 				if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
 					tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
 					tMD_TypeDef *pInterface = pCallMethod->pParentType;
@@ -1401,6 +1393,7 @@ allCallStart:
 						Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
 					}
 				}
+				// if virtual method
 				else if (METHOD_ISVIRTUAL(pCallMethod)) {
 					tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
 					tMD_MethodDef* pVirtualMethod = pThisType->pVTable[pCallMethod->vTableOfs];
@@ -1413,7 +1406,6 @@ allCallStart:
 					}
 					//dprintfn("Calling virtual method: %s", pCallMethod->name);
 				}
-
 				break;
 			}
 		}
