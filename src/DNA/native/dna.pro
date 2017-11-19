@@ -7,6 +7,9 @@ LIBS += -lm -ldl
 #QMAKE_CXXFLAGS += -DJS_INTEROP
 #QMAKE_CFLAGS += -DJS_INTEROP
 
+QMAKE_CFLAGS    += -m32
+QMAKE_LFLAGS    += -m32
+
 SOURCES = \
     src/CLIFile.c \
     src/Delegate.c \

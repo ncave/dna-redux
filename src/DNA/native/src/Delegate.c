@@ -57,7 +57,7 @@ tMD_MethodDef* Delegate_GetMethodAndStore(void *pThis_, HEAP_PTR *pTargetObj, vo
 	return pThis->pTargetMethod;
 }
 
-static tAsyncCall* ctor(PTR pThis_, PTR pParams, PTR pReturnValue) {
+static tAsyncCall* ctor(PTR pThis_, PTR pParams, PTR UNUSED pReturnValue) {
 	// Note that the 'this' object is already allocated because this method is not
 	// marked as 'InternalMethod' - it is marked as 'runtime'
 	tDelegate *pThis = (tDelegate*)pThis_;

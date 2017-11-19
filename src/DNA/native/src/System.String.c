@@ -48,7 +48,7 @@ struct tSystemString_ {
 static tSystemString* CreateStringHeapObj(U32 len) {
 	tSystemString *pSystemString;
 	U32 totalSize;
-	
+
 	totalSize = sizeof(tSystemString) + ((len + 1) << 1);
 	pSystemString = (tSystemString*)Heap_Alloc(types[TYPE_SYSTEM_STRING], totalSize);
 	pSystemString->length = len;
@@ -420,7 +420,7 @@ HEAP_PTR SystemString_FromUserStrings(tMetaData *pMetaData, IDX_USERSTRINGS inde
 	unsigned int stringLen;
 	STRING2 string;
 	tSystemString *pSystemString;
-	
+
 	string = MetaData_GetUserString(pMetaData, index, &stringLen);
 	// Note: stringLen is in bytes
 	pSystemString = (tSystemString*)CreateStringHeapObj(stringLen >> 1);
@@ -428,7 +428,7 @@ HEAP_PTR SystemString_FromUserStrings(tMetaData *pMetaData, IDX_USERSTRINGS inde
 	return (HEAP_PTR)pSystemString;
 }
 
-HEAP_PTR SystemString_FromCharPtrASCII(U8 *pStr) {
+HEAP_PTR SystemString_FromCharPtrASCII(char *pStr) {
 	int stringLen, i;
 	tSystemString *pSystemString;
 
