@@ -48,9 +48,9 @@ struct tCombinedOpcodesMem_ {
 
 struct tJITted_ {
 	// The JITted opcodes
-	U32 *pOps;
+	size_t *pOps;
 	// The corresponding sequence points in the original CIL
-	U32 *pOpSequencePoints;
+	size_t *pOpSequencePoints;
 	// The maximum size of the evaluation stack
 	U32 maxStack;
 	// The required size of the locals stack
