@@ -1230,7 +1230,7 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		// Get the reference to MethodBase.Invoke
 		tMD_MethodDef *pInvokeMethod = (tMD_MethodDef*)GET_OP();
 
-		// if previous op was a tail call and next op is a return
+		// if previous op was a tail call prefix and next op is a return
 		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX) && (*pCurOp == JIT_RETURN);
 
 		// Take the MethodBase.Invoke params off the stack.
@@ -1328,7 +1328,7 @@ allCallStart:
 
 		pCallMethod = (tMD_MethodDef*)GET_OP();
 
-		// if previous op was a tail call and next op is a return
+		// if previous op was a tail call prefix and next op is a return
 		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX) && (*pCurOp == JIT_RETURN);
 
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
