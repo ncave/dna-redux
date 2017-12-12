@@ -335,18 +335,17 @@ namespace System {
 		public static void Sort<T>(T[] array, int index, int count) where T: IComparable, IComparable<T> {
 			void swap(T[] a, int i, int j) { T t = a[i]; a[i] = a[j]; a[j] = t; }
 			int gap = count;
-			bool swapped;
-			do {
+			bool swapped = false;
+			while (gap > 1 || swapped) {
+				gap = Math.Max(1, gap * 4 / 5); // 80% gap reduction
 				swapped = false;
-				gap = gap * 4 / 5; // 80% gap reduction
-				gap = gap < 1 ? 1 : (gap == 9 || gap == 10) ? 11 : gap;
 				for (int i = index; i < count - gap; ++i) {
 					if (array[i].CompareTo(array[i + gap]) > 0) {
 						swapped = true;
 						swap(array, i, i + gap);
 					}
 				}
-			} while (gap > 1 || swapped);
+			}
 		}
 
 		public static void Sort<T>(T[] array, Comparison<T> comparison) {
@@ -365,18 +364,17 @@ namespace System {
 			void swap(T[] a, int i, int j) { T t = a[i]; a[i] = a[j]; a[j] = t; }
 			comparer = comparer ?? Comparer<T>.Default;
 			int gap = count;
-			bool swapped;
-			do {
+			bool swapped = false;
+			while (gap > 1 || swapped) {
+				gap = Math.Max(1, gap * 4 / 5); // 80% gap reduction
 				swapped = false;
-				gap = gap * 4 / 5; // 80% gap reduction
-				gap = gap < 1 ? 1 : (gap == 9 || gap == 10) ? 11 : gap;
 				for (int i = index; i < count - gap; ++i) {
 					if (comparer.Compare(array[i], array[i + gap]) > 0) {
 						swapped = true;
 						swap(array, i, i + gap);
 					}
 				}
-			} while (gap > 1 || swapped);
+			}
 		}
 
 		public static void Sort<TKey, TValue>(TKey[] keys, TValue[] items, IComparer<TKey> comparer) {
@@ -387,11 +385,10 @@ namespace System {
 			void swap<V>(V[] a, int i, int j) { V t = a[i]; a[i] = a[j]; a[j] = t; }
 			comparer = comparer ?? Comparer<TKey>.Default;
 			int gap = count;
-			bool swapped;
-			do {
+			bool swapped = false;
+			while (gap > 1 || swapped) {
+				gap = Math.Max(1, gap * 4 / 5); // 80% gap reduction
 				swapped = false;
-				gap = gap * 4 / 5; // 80% gap reduction
-				gap = gap < 1 ? 1 : (gap == 9 || gap == 10) ? 11 : gap;
 				for (int i = index; i < count - gap; ++i) {
 					if (comparer.Compare(keys[i], keys[i + gap]) > 0) {
 						swapped = true;
@@ -399,7 +396,7 @@ namespace System {
 						swap(items, i, i + gap);
 					}
 				}
-			} while (gap > 1 || swapped);
+			}
 		}
 
 		public static T[] Empty<T>() {

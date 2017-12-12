@@ -11,15 +11,16 @@
     "build": "tsc -p wwwroot/ts",
     "postbuild": "rollup -c",
     "rollup": "rollup -c",
-    "start": "http-server -c-1 ./wwwroot -p 5000"
+    "server": "http-server -c-1 ./wwwroot -p 5000",
+    "start": "node ./wwwroot/out/bundle.js"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/emscripten": "^0.0.31",
-    "@types/node": "^8.0.53",
+    "@types/node": "^8.0.58",
     "http-server": "^0.10.0",
-    "rollup": "^0.51.7",
+    "rollup": "^0.51.8",
     "tslint": "^5.8.0",
-    "typescript": "^2.6.1"
+    "typescript": "^2.6.2"
   }
 }

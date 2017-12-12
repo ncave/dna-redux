@@ -33,8 +33,8 @@ Building:
 - `npm run build`
 
 Running:
-- Running in Node.js: `node ./wwwroot/out/bundle.js`
-- Running in Browser: `npm start` to start a web server, then go to localhost:5000 (hint: look in the Console output)
+- Running in Node.js: `npm start`
+- Running in Browser: `npm run server` to start a web server, then go to localhost:5000 (hint: look in the Console output)
 - Running as Native: see src/DNA/native
 - or use `build.cmd` to build, VS Code to edit/run.
 
