@@ -12,7 +12,7 @@
     <DefineConstants>$(DefineConstants);
       <!-- new symbols -->
       INLINE_STRING_RESOURCES;
-      NO_ASYNC_BUILDER;
+      <!-- NO_ASYNC_BUILDER; -->
       NO_ASYNC_READWRITE;
       NO_QUERY_BUILDER;
 
@@ -221,6 +221,7 @@
     <Compile Include="nativeptr.fs">
       <Link>NativeInterop/nativeptr.fs</Link>
     </Compile>
+    <Compile Include="extra/AsyncBuilder.fs"/>
     <!-- <Compile Include="control.fsi">
       <Link>Async/control.fsi</Link>
     </Compile> -->

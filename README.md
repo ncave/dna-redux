@@ -28,15 +28,13 @@ Disclaimer:
 - This is just an experiment to see how far can this be taken without too much effort and what the performance looks like. Obviously it would be nice to have faster GC or highly optimized JIT like RyuJIT to target WebAssembly, but you can still have fun with this now and see what the future of web development may look like.
 
 Building:
-- `dotnet build`
-- `npm install`
-- `npm run build`
+- `dotnet build && npm install && npm run build`
+- or just use `build.cmd` to build, VS Code to edit/run.
 
 Running:
 - Running in Node.js: `npm start`
 - Running in Browser: `npm run server` to start a web server, then go to localhost:5000 (hint: look in the Console output)
 - Running as Native: see src/DNA/native
-- or use `build.cmd` to build, VS Code to edit/run.
 
 You can open/run it in VS Code, just select a debug config and hit F5.
 The C#, C/C++, Ionide-fsharp, Debugger for Chrome and TSLint extensions for VS Code are highly recommended, but optional.

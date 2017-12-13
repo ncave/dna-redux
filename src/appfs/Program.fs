@@ -1,7 +1,6 @@
 namespace AppFS
 open System
 open LibFS.Library
-// open FSharp.Control.Tasks
 
 module Program =
 
@@ -47,7 +46,7 @@ module Program =
     //         printfn "Finished parent workflow"
     //     }
     //     // run the parent workflow
-    //     Async.RunSynchronously parentWorkflow // not actually waiting in DNA (no Task.Wait() yet)
+    //     Async.RunSynchronously parentWorkflow // not actually waiting (no Task.Wait() yet in DNA)
 
 
     [<EntryPoint>]

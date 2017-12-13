@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TaskBuilder.fs" />
     <Compile Include="RayTracer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
