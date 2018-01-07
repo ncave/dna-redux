@@ -244,7 +244,7 @@ fnInternalCall InternalCall_Map(tMD_MethodDef *pMethod) {
 			if (pCall->type != NULL) {
 				curType = pCall->type;
 			}
-			if (strcmp(pMethod->pParentType->nameSpace, curNameSpace) == 0) {
+			if (curNameSpace && curType && strcmp(pMethod->pParentType->nameSpace, curNameSpace) == 0) {
 				if (strcmp(pMethod->pParentType->name, curType) == 0) {
 					if (Type_IsMethod(pMethod, pCall->method, types[pCall->returnType], pCall->numParameters, pCall->parameterTypes)) {
 						return pCall->fn;
