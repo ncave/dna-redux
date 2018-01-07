@@ -266,7 +266,7 @@ static U32 GenCombined(tOps *pOps, tOps *pIsDynamic, U32 startOfs, U32 count, U3
 }
 #endif
 
-static void SetBreakPoint(UNUSED tMD_MethodDef*  pMethodDef, UNUSED U32 cilOfs, UNUSED tOps ops) {
+static UNUSED void SetBreakPoint(UNUSED tMD_MethodDef*  pMethodDef, UNUSED U32 cilOfs, UNUSED tOps ops) {
 
 }
 

@@ -13,7 +13,7 @@ int JSInterop_CallDotNet(char* assemblyName, char* namespace, char* className, c
 	// TODO: Can't we reuse threads? Need to reset their state somehow.
 	tThread *pThread = Thread();
 
-    log_f(1, "JSInterop_CallDotNet(%s, %s, %s, %s, %s)\n", assemblyName, namespace, className, methodName, stringArg);
+	log_f(1, "JSInterop_CallDotNet(%s, %s, %s, %s, %s)\n", assemblyName, namespace, className, methodName, stringArg);
 
 	HEAP_PTR arg = SystemString_FromCharPtrASCII(stringArg);
 	Heap_MakeUndeletable(arg);
@@ -46,19 +46,19 @@ int JSInterop_CallDotNet(char* assemblyName, char* namespace, char* className, c
 	FAKE_RETURN;
 }
 
-tAsyncCall* Framework_JSInterop_ToHeapRef(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* Framework_JSInterop_ToHeapRef(UNUSED PTR pThis_, PTR pParams, PTR pReturnValue) {
 	HEAP_PTR obj = ((HEAP_PTR*)pParams)[0];
 	*(HEAP_PTR*)pReturnValue = obj;
 	return NULL;
 }
 
-tAsyncCall* Framework_JSInterop_FromHeapRefImpl(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* Framework_JSInterop_FromHeapRefImpl(UNUSED PTR pThis_, PTR pParams, PTR pReturnValue) {
 	HEAP_PTR obj = ((HEAP_PTR*)pParams)[0];
 	*(HEAP_PTR*)pReturnValue = obj;
 	return NULL;
 }
 
-tAsyncCall* Framework_JSInterop_Activator_CreateInstance(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* Framework_JSInterop_Activator_CreateInstance(UNUSED PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tMD_TypeDef *pTypeDef = RuntimeType_DeRef((PTR)((tMD_TypeDef**)pParams)[0]);
 	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)Heap_AllocType(pTypeDef);
 	return NULL;
