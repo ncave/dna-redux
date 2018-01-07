@@ -41,7 +41,6 @@
 #ifdef SWITCH_ON_JIT_OPS
 // Disable warning about unreferenced labels
 #		pragma warning(disable:4102)
-#	endif
 #else
 // Global array which stores the absolute addresses of the start and end of all JIT code
 // fragment machine code.
