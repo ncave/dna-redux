@@ -23,6 +23,12 @@
 
 #include <stdint.h>
 
+#ifdef __GNUC__
+#	define UNUSED __attribute__((unused))
+#else
+#	define UNUSED
+#endif
+
 // Indexes into the user-string heap
 typedef uint32_t IDX_USERSTRINGS;
 
@@ -37,7 +43,7 @@ typedef uint16_t FLAGS16;
 typedef unsigned char* HEAP_PTR;
 typedef unsigned char* PTR;
 typedef unsigned char* SIG;
-typedef unsigned char* STRING; // UTF8/ASCII string
+typedef char* STRING; // UTF8/ASCII string
 typedef unsigned short* STRING2; // UTF16 string
 typedef unsigned char* BLOB_;
 typedef unsigned char* GUID_;

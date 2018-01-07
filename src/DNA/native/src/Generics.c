@@ -105,7 +105,8 @@ tMD_TypeDef* Generics_GetGenericTypeFromCoreType(tMD_TypeDef *pCoreType, U32 num
 	tGenericInstance *pInst;
 	tMD_TypeDef *pTypeDef;
 	U32 i;
-	unsigned char name[8192]; // must be big enough to handle the biggest types
+	// TODO: change this: dangerous allocation on the stack, long names will blow up the stack
+	char name[8192]; // must be big enough to handle the biggest types
 	tMetaData *pMetaData;
 
 	pMetaData = pCoreType->pMetaData;
@@ -187,7 +188,7 @@ tMD_MethodDef* Generics_GetMethodDefFromSpec
 	(tMD_MethodSpec *pMethodSpec, tMD_TypeDef **ppCallingClassTypeArgs, tMD_TypeDef **ppCallingMethodTypeArgs) {
 
 	tMD_MethodDef *pCoreMethod, *pMethod;
-	
+
 	pCoreMethod = MetaData_GetMethodDefFromDefRefOrSpec(pMethodSpec->pMetaData, pMethodSpec->method, ppCallingClassTypeArgs, ppCallingMethodTypeArgs);
 	if (pCoreMethod->pParentType == NULL) {
 		pCoreMethod->pParentType = MetaData_GetTypeDefFromMethodDef(pCoreMethod);

@@ -29,8 +29,8 @@ typedef struct tCLIFile_ tCLIFile;
 struct tCLIFile_ {
 	// The filename
 	char *pFileName;
-    // The debug filename
-    char* pDebugFileName;
+	// The debug filename
+	char* pDebugFileName;
 	// The RVA sections of this file
 	tRVA *pRVA;
 	// NULL-terminated UTF8 string of file version
@@ -49,8 +49,8 @@ struct tFilesLoaded_ {
 
 // static methods
 tFilesLoaded* CLIFile_GetLoadedAssemblies();
-tMetaData* CLIFile_GetMetaDataForAssembly(unsigned char *pAssemblyName);
-tMetaData* CLIFile_GetMetaDataForLoadedAssembly(unsigned char *pLoadedAssemblyName);
+tMetaData* CLIFile_GetMetaDataForAssembly(char *pAssemblyName);
+tMetaData* CLIFile_GetMetaDataForLoadedAssembly(char *pLoadedAssemblyName);
 tMD_TypeDef* CLIFile_FindTypeInAllLoadedAssemblies(STRING nameSpace, STRING name);
 void CLIFile_GetHeapRoots(tHeapRoots *pHeapRoots);
 

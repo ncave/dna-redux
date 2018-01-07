@@ -49,8 +49,8 @@
 
 typedef struct tOps_ tOps;
 struct tOps_ {
-	U32 *p;
-	I32 *pSequencePoints;
+	size_t *p;
+	size_t *pSequencePoints;
 	U32 capacity;
 	U32 ofs;
 };
@@ -62,7 +62,7 @@ struct tTypeStack_ {
 	U32 maxBytes; // The max size of the stack in bytes
 };
 
-#define InitOps(ops_, initialCapacity) ops_.capacity = initialCapacity; ops_.ofs = 0; ops_.p = TMALLOC(initialCapacity, U32); ops_.pSequencePoints = TMALLOC(initialCapacity, I32);
+#define InitOps(ops_, initialCapacity) ops_.capacity = initialCapacity; ops_.ofs = 0; ops_.p = TMALLOC(initialCapacity, size_t); ops_.pSequencePoints = TMALLOC(initialCapacity, size_t);
 #define DeleteOps(ops_) free(ops_.p); free(ops_.pSequencePoints)
 
 #ifdef SWITCH_ON_JIT_OPS
@@ -97,7 +97,8 @@ static U32 Translate(U32 op, U32 getDynamic) {
 #define PushI32(v) PushU32_(&ops, (U32)(v), -1)
 #define PushFloat(v) convFloat.f=(float)(v); PushU32_(&ops, convFloat.u32, -1)
 #define PushDouble(v) convDouble.d=(double)(v); PushU32_(&ops, convDouble.u32.a, -1); PushU32_(&ops, convDouble.u32.b, -1)
-#define PushPTR(ptr) PushU32_(&ops, (U32)(ptr), -1)
+#define PushPTR(ptr) PushSizeT_(&ops, (size_t)(ptr), -1)
+
 #define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0), nextOpSequencePoint); //dprintfn("PushOp: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op));
 #define PushOpParam(op, param) PushOp(op); PushU32_(&ops, (U32)(param), -1)
 #endif
@@ -132,8 +133,19 @@ static void PushU32_(tOps *pOps, U32 v, I32 opSequencePoint) {
 	if (pOps->ofs >= pOps->capacity) {
 		pOps->capacity <<= 1;
 		//dprintfn("a.pOps->p = 0x%08x size=%d", pOps->p, pOps->capacity * sizeof(U32));
-		pOps->p = realloc(pOps->p, pOps->capacity * sizeof(U32));
-		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(U32));
+		pOps->p = realloc(pOps->p, pOps->capacity * sizeof(size_t));
+		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(size_t));
+	}
+	pOps->pSequencePoints[pOps->ofs] = opSequencePoint;
+	pOps->p[pOps->ofs++] = v;
+}
+
+static void PushSizeT_(tOps *pOps, size_t v, I32 opSequencePoint) {
+	if (pOps->ofs >= pOps->capacity) {
+		pOps->capacity <<= 1;
+		//dprintfn("a.pOps->p = 0x%08x size=%d", pOps->p, pOps->capacity * sizeof(U32));
+		pOps->p = realloc(pOps->p, pOps->capacity * sizeof(size_t));
+		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(size_t));
 	}
 	pOps->pSequencePoints[pOps->ofs] = opSequencePoint;
 	pOps->p[pOps->ofs++] = v;
@@ -254,11 +266,11 @@ static U32 GenCombined(tOps *pOps, tOps *pIsDynamic, U32 startOfs, U32 count, U3
 }
 #endif
 
-static void SetBreakPoint(tMD_MethodDef *pMethodDef, U32 cilOfs, tOps ops) {
+static UNUSED void SetBreakPoint(UNUSED tMD_MethodDef*  pMethodDef, UNUSED U32 cilOfs, UNUSED tOps ops) {
 
 }
 
-static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter *pLocals, tJITted *pJITted, U32 genCombinedOpcodes, I32 **ppSequencePoints) {
+static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParameter *pLocals, tJITted *pJITted, U32 genCombinedOpcodes, size_t **ppSequencePoints) {
 	U32 maxStack = pJITted->maxStack;
 	U32 i;
 	U32 cilOfs;
@@ -267,7 +279,7 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 	U32 *pJITOffsets;	// To store the JITted code offset of each CIL byte.
 						// Only CIL bytes that are the first byte of an instruction will have meaningful data
 	tTypeStack **ppTypeStacks; // To store the evaluation stack state for forward jumps
-	U32 *pFinalOps;
+	size_t *pFinalOps;
 	tMD_TypeDef *pStackType;
 	tTypeStack typeStack;
 
@@ -327,7 +339,7 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 	for (i=0; i<pJITted->numExceptionHandlers; i++) {
 		tExceptionHeader *pEx;
 
-		pEx = &pJITted->pExceptionHeaders[i]; 
+		pEx = &pJITted->pExceptionHeaders[i];
 		if (pEx->flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION) {
 			tTypeStack *pTypeStack;
 
@@ -640,7 +652,7 @@ cilCallVirtConstrained:
 					pCallMethod = MetaData_GetMethodDefFromDefRefOrSpec(pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
 					if (pCallMethod->isFilled == 0) {
 						tMD_TypeDef *pTypeDef;
-						
+
 						pTypeDef = MetaData_GetTypeDefFromMethodDef(pCallMethod);
 						MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 					}
@@ -1749,7 +1761,7 @@ combineDone:
 	u32Value = ops.ofs * sizeof(U32);
 	pFinalOps = genCombinedOpcodes ? malloc(u32Value) : mallocForever(u32Value);
 	memcpy(pFinalOps, ops.p, u32Value);
-	
+
 	pJITted->pDebugMetadataEntry = pDebugMetadataEntry;
 	if (pDebugMetadataEntry != NULL) {
 		*ppSequencePoints = mallocForever(u32Value);
@@ -1816,7 +1828,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		pCallNative->retOpCode = Translate(JIT_RETURN, 0);
 
 		pJITted->localsStackSize = 0;
-		pJITted->pOps = (U32*)pCallNative;
+		pJITted->pOps = (size_t*)pCallNative;
 		pJITted->pOpSequencePoints = NULL;
 
 		return;
@@ -1839,7 +1851,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 
 		pJITted->localsStackSize = 0;
 		pJITted->maxStack = (pMethodDef->pReturnType == NULL)?0:pMethodDef->pReturnType->stackSize; // For return value
-		pJITted->pOps = (U32*)pCallPInvoke;
+		pJITted->pOps = (size_t*)pCallPInvoke;
 		pJITted->pOpSequencePoints = NULL;
 
 		return;
@@ -1938,7 +1950,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 	}
 
 	// JIT the CIL code
-	I32 *pSequencePoints;
+	size_t *pSequencePoints;
 	pJITted->pOps = JITit(pMethodDef, pCIL, codeSize, pLocals, pJITted, genCombinedOpcodes, &pSequencePoints);
 	pJITted->pOpSequencePoints = pSequencePoints;
 
