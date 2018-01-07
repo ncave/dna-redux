@@ -210,7 +210,9 @@ static tDebugMetaData* LoadDebugFile(PTR pData) {
 		strncpy(pEntry->pID + IdLength, pEntry->pClassName, classLength - 1);
 		IdLength += classLength - 1;
 		strncpy(pEntry->pID + IdLength, pEntry->pMethodName, methodLength);
-		IdLength += methodLength;
+
+		// Static Analysis - Unused:
+		// IdLength += methodLength;
 
 		pEntry->sequencePointsCount = GetU32(pData, &intLength);
 		pData += intLength;
@@ -230,13 +232,21 @@ static tDebugMetaData* LoadDebugFile(PTR pData) {
 		pPrevious = pEntry;
 	}
 
-	pPrevious->next = NULL;
+	if( pPrevious ) {
+		pPrevious->next = NULL;
+	}
+
 	pRet->entries = pFirst;
 
 	return pRet;
 }
 
 static tCLIFile* LoadPEFile(void *pData) {
+	if(pData == NULL) {
+		log_f(0, "LoadPEFile: pData is NULL\n");
+		return NULL;
+	}
+
 	tCLIFile *pRet = TMALLOCFOREVER(1, tCLIFile);
 
 	unsigned char *pMSDOSHeader = (unsigned char*)&(((unsigned char*)pData)[0]);
