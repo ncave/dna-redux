@@ -674,18 +674,16 @@ STRING2 MetaData_GetUserString(tMetaData *pThis, IDX_USERSTRINGS index, unsigned
 }
 
 void* MetaData_GetTableRow(tMetaData *pThis, IDX_TABLE index) {
-	char *pData;
-	
 	if (TABLE_OFS(index) == 0) {
 		return NULL;
 	}
-	pData = (char*)pThis->tables.data[TABLE_ID(index)];
+	char *pData = (char*)pThis->tables.data[TABLE_ID(index)];
 	// Table indexes start at one, hence the -1 here.
 	return pData + (TABLE_OFS(index) - 1) * tableRowSize[TABLE_ID(index)];
 }
 
 void MetaData_GetConstant(tMetaData *pThis, IDX_TABLE idx, PTR pResultMem) {
-	tMD_Constant *pConst;
+	tMD_Constant *pConst = NULL;
 
 	switch (TABLE_ID(idx)) {
 	case MD_TABLE_FIELDDEF:
@@ -710,11 +708,9 @@ void MetaData_GetConstant(tMetaData *pThis, IDX_TABLE idx, PTR pResultMem) {
 }
 
 void MetaData_GetHeapRoots(tHeapRoots *pHeapRoots, tMetaData *pMetaData) {
-	U32 i, top;
 	// Go through all types, getting their static variables.
-
-	top = pMetaData->tables.numRows[MD_TABLE_TYPEDEF];
-	for (i=1; i<=top; i++) {
+	U32 top = pMetaData->tables.numRows[MD_TABLE_TYPEDEF];
+	for (U32 i=1; i<=top; i++) {
 		tMD_TypeDef *pTypeDef;
 
 		pTypeDef = (tMD_TypeDef*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_TYPEDEF, i));

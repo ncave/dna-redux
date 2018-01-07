@@ -152,11 +152,13 @@ tAsyncCall* System_RuntimeType_GetGenericArguments(PTR pThis_, PTR pParams, PTR 
 
 tAsyncCall* System_RuntimeType_IsDefined(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
+	Crash("Not implemented: IsDefined() for %s.%s\n", pThisType->nameSpace, pThisType->name);
 	return NULL;
 }
 
 tAsyncCall* System_RuntimeType_GetCustomAttributes(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tMD_TypeDef *pThisType = RuntimeType_DeRef(pThis_);
+	Crash("Not implemented: GetCustomAttributes() for %s.%s\n", pThisType->nameSpace, pThisType->name);
 	return NULL;
 }
 

@@ -12,7 +12,7 @@
     <DefineConstants>$(DefineConstants);
       <!-- new symbols -->
       INLINE_STRING_RESOURCES;
-      NO_ASYNC_BUILDER;
+      <!-- NO_ASYNC_BUILDER; -->
       NO_ASYNC_READWRITE;
       NO_QUERY_BUILDER;
 
@@ -65,7 +65,7 @@
       <!-- NAN_INFINITY_MEASURES; -->
     </DefineConstants>
     <OtherFlags>$(OtherFlags) --warnon:1182 --compiling-fslib --compiling-fslib-40 --maxerrors:20 --extraoptimizationloops:1</OtherFlags>
-     <!-- <OtherFlags>$(OtherFlags) - - nointerfacedata</OtherFlags>  -->
+    <!-- <OtherFlags>$(OtherFlags) - -nointerfacedata</OtherFlags> -->
     <!-- <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences> -->
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
@@ -221,6 +221,7 @@
     <Compile Include="nativeptr.fs">
       <Link>NativeInterop/nativeptr.fs</Link>
     </Compile>
+    <Compile Include="extra/AsyncBuilder.fs"/>
     <!-- <Compile Include="control.fsi">
       <Link>Async/control.fsi</Link>
     </Compile> -->

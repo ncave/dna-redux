@@ -217,7 +217,7 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 			paramOfs += 4;
 		} else if (pParamType == types[TYPE_SYSTEM_STRING]) {
 			// Allocate a temp bit of memory for the string that's been converted.
-			void *pString;
+			void *pString = NULL;
 			if (IMPLMAP_ISCHARSET_ANSI(pImplMap) || IMPLMAP_ISCHARSET_AUTO(pImplMap) || IMPLMAP_ISCHARSET_NOTSPEC(pImplMap)) {
 				pString = ConvertStringToANSI(*(HEAP_PTR*)(pParams + paramOfs));
 			} else if (IMPLMAP_ISCHARSET_UNICODE(pImplMap)) {

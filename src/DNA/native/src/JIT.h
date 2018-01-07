@@ -116,7 +116,7 @@ struct tJITCallPInvoke_ {
 
 #include "JIT_OpCodes.h"
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 #else
 typedef struct tJITCodeInfo_ {
 	// The beginning and end of the actual native code to run the JIT opcode.
@@ -136,18 +136,14 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes);
 
 U32 JIT_Execute(tThread *pThread, U32 numInst);
 
-#ifdef DIAG_CALL_STACK
-void PrintCallStackBuffer();
-#endif
-
 #ifdef DIAG_OPCODE_TIMES
 #include "JIT_OpCodes.h"
-extern U64 opcodeTimes[JIT_OPCODE_MAXNUM];
+extern U64 opcodeTicks[JIT_OPCODE_MAXNUM];
 #endif
 
 #ifdef DIAG_OPCODE_USES
 #include "JIT_OpCodes.h"
-extern U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
+extern U64 opcodeCounts[JIT_OPCODE_MAXNUM];
 #endif
 
 #endif

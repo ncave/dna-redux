@@ -25,9 +25,11 @@ using System;
 namespace System.Runtime.CompilerServices {
 	public static class RuntimeHelpers {
 
-		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static void InitializeArray(Array array, RuntimeFieldHandle fldHandle);
 
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static int GetHashCode(object o);
 	}
 }
 #endif

@@ -24,16 +24,16 @@ tAsyncCall* Reflection_MemberInfo_GetCustomAttributes(PTR pThis_, PTR pParams, P
 
 	// Figure out what metadata entry we're looking for custom attributes on
 	IDX_TABLE searchForAttributesOnMemberIndex;
-	if (strcmp(pThisType->name, "TypeInfo") == 0) {
+	if (pThisType == types[TYPE_SYSTEM_REFLECTION_TYPEINFO]) {
 		searchForAttributesOnMemberIndex = pMemberOwnerTypeDef->tableIndex;
-	} else if (strcmp(pThisType->name, "PropertyInfo") == 0) {
+	} else if (pThisType == types[TYPE_SYSTEM_REFLECTION_PROPERTYINFO]) {
 		tPropertyInfo *pPropertyInfo = (tPropertyInfo *)pMemberInfo;
 		searchForAttributesOnMemberIndex = pPropertyInfo->index;
-	} else if (strcmp(pThisType->name, "MethodInfo") == 0) {
+	} else if (pThisType == types[TYPE_SYSTEM_REFLECTION_METHODINFO]) {
 		tMethodInfo *pMethodInfo = (tMethodInfo *)pMemberInfo;
 		searchForAttributesOnMemberIndex = pMethodInfo->methodBase.methodDef->tableIndex;
 	} else {
-		Crash("Not implemented: Getting custom attributes for a %s\n", pThisType->name);
+		Crash("Not implemented: GetCustomAttributes() for %s.%s\n", pThisType->nameSpace, pThisType->name);
 		return NULL;
 	}
 

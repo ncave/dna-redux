@@ -38,8 +38,7 @@
 #include "System.Reflection.MethodBase.h"
 #include "System.Diagnostics.Debugger.h"
 
-#ifdef SWITCH_ON_JIT_OP
-#	ifdef _WIN32_
+#ifdef SWITCH_ON_JIT_OPS
 // Disable warning about unreferenced labels
 #		pragma warning(disable:4102)
 #	endif
@@ -50,18 +49,17 @@ tJITCodeInfo jitCodeInfo[JIT_OPCODE_MAXNUM];
 tJITCodeInfo jitCodeGoNext;
 #endif
 
+#define EVAL_STACK_PTR ((PTR)pCurrentMethodState + sizeof(tMethodState))
+#define PARAMETERS_PTR(pMethodState) ((PTR)pMethodState + sizeof(tMethodState) + pMethodState->pMethod->pJITted->maxStack)
+
 // Get the next op-code
 #define GET_OP() (*(pCurOp++))
-//#define GET_OP() (dprintfn("GETOP : stackOfs = %d", (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack)), *(pCurOp++))
+//#define GET_OP() (dprintfn("GETOP : stackOfs = %d", pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
 
-// PUSH/POP returns nothing - it just alters the stack offset correctly
-#define PUSH(numBytes) (pCurEvalStack += numBytes) //, dprintfn("PUSH %d: stackOfs = %d", numBytes, (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack)), pCurEvalStack)
-#define POP(numBytes) (pCurEvalStack -= numBytes) //, dprintfn("POP  %d: stackOfs = %d", numBytes, (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack)), pCurEvalStack)
+// PUSH and POP return nothing, they just alter the stack offset
+#define PUSH(numBytes) pCurEvalStack += numBytes; if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
+#define POP(numBytes) pCurEvalStack -= numBytes;  if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
 
-// Push a PTR value on the top of the stack
-#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*))
-// Push an arbitrarily-sized value-type onto the top of the stack
-#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); PUSH(stackInc)
 // Push a U32 value on the top of the stack
 #define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); PUSH(4)
 // Push a U64 value on the top of the stack
@@ -79,38 +77,47 @@ tJITCodeInfo jitCodeGoNext;
 #define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8)
 // Push a 4-byte heap pointer on to the top of the stack
 #define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(4)
+// Push a PTR value on the top of the stack
+#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*))
+// Push an arbitrarily-sized value-type onto the top of the stack
+#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); PUSH(stackInc)
+
 // DUP4() duplicates the top 4 bytes on the eval stack
 #define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); PUSH(4)
 // DUP8() duplicates the top 4 bytes on the eval stack
 #define DUP8() *(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); PUSH(8)
 // DUP() duplicates numBytes bytes from the top of the stack
 #define DUP(numBytes) memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); PUSH(numBytes)
+
 // Pop a U32 value from the stack
-#define POP_U32() (*(U32*)(POP(4)))
+#define POP_U32(value) POP(4); U32 value = *(U32*)(pCurEvalStack)
 // Pop a U64 value from the stack
-#define POP_U64() (*(U64*)(POP(8)))
+#define POP_U64(value) POP(8); U64 value = *(U64*)(pCurEvalStack)
 // Pop a float value from the stack
-#define POP_FLOAT() (*(float*)(POP(4)))
+#define POP_FLOAT(value) POP(4); float value = *(float*)(pCurEvalStack)
 // Pop a double value from the stack
-#define POP_DOUBLE() (*(double*)(POP(8)))
-// Pop 2 U32's from the stack
-#define POP_U32_U32(v1,v2) POP(8); v1 = *(U32*)pCurEvalStack; v2 = *(U32*)(pCurEvalStack + 4)
-// Pop 2 U64's from the stack
-#define POP_U64_U64(v1,v2) POP(16); v1 = *(U64*)pCurEvalStack; v2 = *(U64*)(pCurEvalStack + 8)
-// Pop 2 F32's from the stack
-#define POP_F32_F32(v1,v2) POP(8); v1 = *(float*)pCurEvalStack; v2 = *(float*)(pCurEvalStack + 4)
-// Pop 2 F64's from the stack
-#define POP_F64_F64(v1,v2) POP(16); v1 = *(double*)pCurEvalStack; v2 = *(double*)(pCurEvalStack + 8)
-// Pop a PTR value from the stack
-#define POP_PTR() (*(PTR*)(POP(sizeof(void*))))
-// Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
-#define POP_VALUETYPE(ptr, valueSize, stackDec) memcpy(ptr, POP(stackDec), valueSize)
+#define POP_DOUBLE(value) POP(8); double value = *(double*)(pCurEvalStack)
 // Pop a Object (heap) pointer value from the stack
-#define POP_O() (*(HEAP_PTR*)(POP(4)))
+#define POP_O(value) POP(4); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack)
+// Pop a PTR value from the stack
+#define POP_PTR(value) POP(sizeof(void*)); PTR value = *(PTR*)(pCurEvalStack)
+// Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
+#define POP_VALUETYPE(ptr, valueSize, stackDec) POP(stackDec); memcpy(ptr, pCurEvalStack, valueSize)
+
+// Pop 2 U32's from the stack
+#define POP_U32_U32(v1,v2) POP(8); U32 v1 = *(U32*)pCurEvalStack; U32 v2 = *(U32*)(pCurEvalStack + 4)
+// Pop 2 U64's from the stack
+#define POP_U64_U64(v1,v2) POP(16); U64 v1 = *(U64*)pCurEvalStack; U64 v2 = *(U64*)(pCurEvalStack + 8)
+// Pop 2 F32's from the stack
+#define POP_F32_F32(v1,v2) POP(8); float v1 = *(float*)pCurEvalStack; float v2 = *(float*)(pCurEvalStack + 4)
+// Pop 2 F64's from the stack
+#define POP_F64_F64(v1,v2) POP(16); double v1 = *(double*)pCurEvalStack; double v2 = *(double*)(pCurEvalStack + 8)
+
 // POP_ALL() empties the evaluation stack
-#define POP_ALL() pCurEvalStack = pCurrentMethodState->pEvalStack
+#define POP_ALL() pCurEvalStack = EVAL_STACK_PTR
 
 #define STACK_ADDR(type) *(type*)(pCurEvalStack - sizeof(type))
+
 // General binary ops
 #define BINARY_OP(returnType, type1, type2, op) \
 	POP(sizeof(type1) + sizeof(type2) - sizeof(returnType)); \
@@ -122,101 +129,29 @@ tJITCodeInfo jitCodeGoNext;
 
 // Set the new method state (for use when the method state changes - in calls mainly)
 #define SAVE_METHOD_STATE() \
-	pCurrentMethodState->stackOfs = (U32)(pCurEvalStack - pCurrentMethodState->pEvalStack); \
+	pCurrentMethodState->stackOfs = (U32)(pCurEvalStack - EVAL_STACK_PTR); \
 	pCurrentMethodState->ipOffset = (U32)(pCurOp - pOps) \
 
 #define LOAD_METHOD_STATE() \
 	pCurrentMethodState = pThread->pCurrentMethodState; \
-	pParamsLocals = pCurrentMethodState->pParamsLocals; \
-	pCurEvalStack = pCurrentMethodState->pEvalStack + pCurrentMethodState->stackOfs; \
-	pJIT = pCurrentMethodState->pJIT; \
-	pOps = pJIT->pOps; \
-	pOpSequencePoints = pJIT->pOpSequencePoints; \
+	pParamsLocals = PARAMETERS_PTR(pCurrentMethodState); \
+	pCurEvalStack = EVAL_STACK_PTR + pCurrentMethodState->stackOfs; \
+	pOps = pCurrentMethodState->pJIT->pOps; \
+	pOpSequencePoints = pCurrentMethodState->pJIT->pOpSequencePoints; \
 	pCurOp = pOps + pCurrentMethodState->ipOffset
 
-#ifdef DIAG_CALL_STACK
-I32 nested = 0;
-char callBuffer[8192] = ""; //increase if needed
-char *pNextChar = callBuffer;
-
-#define INCREMENT_NESTED_LEVEL() nested = nested + 1
-#define DECREMENT_NESTED_LEVEL() nested = nested - 1
-#else
-#define INCREMENT_NESTED_LEVEL()
-#define DECREMENT_NESTED_LEVEL()
-#endif
-
 #define CHANGE_METHOD_STATE(pNewMethodState) \
-	SAVE_METHOD_STATE(); \
-	pThread->pCurrentMethodState = pNewMethodState; \
+	if (pThread->pCurrentMethodState != pNewMethodState) { \
+		SAVE_METHOD_STATE(); \
+		pThread->pCurrentMethodState = pNewMethodState; \
+	} \
 	LOAD_METHOD_STATE()
 
 // Easy access to method parameters and local variables
 #define PARAMLOCAL_U32(offset) *(U32*)(pParamsLocals + offset)
 #define PARAMLOCAL_U64(offset) *(U64*)(pParamsLocals + offset)
 
-#define THROW(exType) heapPtr = Heap_AllocType(exType); goto throwHeapPtr
-
-static void UNUSED CheckIfCurrentInstructionHasBreakpoint(tMethodState* pMethodState, U32 opOffset, I32* pOpSequencePoints)
-{
-	if (pOpSequencePoints != NULL) {
-		I32 currentOpSequencePoint = pOpSequencePoints[opOffset];
-		if (currentOpSequencePoint >= 0) {
-			CheckIfSequencePointIsBreakpoint(pMethodState, currentOpSequencePoint);
-		}
-	}
-}
-
-static void CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pParamsOrigin, HEAP_PTR obj) {
-	memcpy(pParamsLocals, pParamsOrigin, pCallMethod->parameterStackSize);
-	// Note: obj is only set if a constructor or delegate is being called
-	if (obj != NULL) {
-		// push the object onto parameter stack position 0
-		*(HEAP_PTR*)pParamsLocals = obj;
-	}
-}
-
-static tMethodState* RunFinalizer(tThread *pThread) {
-	HEAP_PTR heapPtr = GetNextFinalizer();
-	if (heapPtr != NULL) {
-		// There is a pending finalizer, so create a MethodState for it and put it as next-to-run on the stack
-		tMethodState *pFinalizerMethodState;
-		tMD_TypeDef *pFinalizerType = Heap_GetType(heapPtr);
-
-		pFinalizerMethodState = MethodState_Direct(pThread, pFinalizerType->pFinalizer, pThread->pCurrentMethodState, 0);
-		// Mark this methodState as a Finalizer
-		pFinalizerMethodState->finalizerThis = heapPtr;
-		// Put the object on the stack (the object that is being Finalized)
-		// Finalizers always have no parameters
-		*(HEAP_PTR*)(pFinalizerMethodState->pParamsLocals) = heapPtr;
-		//printf("--- FINALIZE ---\n");
-
-		return pFinalizerMethodState;
-	}
-	return NULL;
-}
-
-#ifdef DIAG_OPCODE_TIMES
-U64 opcodeTimes[JIT_OPCODE_MAXNUM];
-static __inline unsigned __int64 __cdecl rdtsc() {
-	__asm {
-		rdtsc
-	}
-}
-#endif
-
-#ifdef DIAG_OPCODE_USES
-U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
-
-#define OPCODE_USE(op) opcodeNumUses[op]++;
-
-#else
-
-#define OPCODE_USE(op) //dprintfn("JIT op: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op))
-
-#endif
-
-#ifdef SWITCH_ON_JIT_OP
+#define THROW(exType) pThread->pCurrentExceptionObject = Heap_AllocType(exType); goto JIT_RETHROW_start
 
 #define CHECK_FOR_BREAKPOINT() \
 	if (pOpSequencePoints != NULL) { \
@@ -226,13 +161,68 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 		} \
 	}
 
+static U32 CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pCurEvalStack, HEAP_PTR obj) {
+	U32 ofs = 0;
+	if (obj != NULL) {
+		// Note: obj is only set if a constructor or delegate is being called
+		// push the object onto parameter stack position 0
+		*(HEAP_PTR*)pParamsLocals = obj;
+		ofs = sizeof(HEAP_PTR);
+	}
+	Assert(pCallMethod->parameterStackSize >= ofs);
+	U32 sz = pCallMethod->parameterStackSize - ofs;
+	memmove(pParamsLocals + ofs, pCurEvalStack - sz, sz);
+	return sz;
+}
+
+static tMethodState* RunFinalizer(tThread *pThread) {
+	HEAP_PTR heapPtr = GetNextFinalizer();
+	if (heapPtr != NULL) {
+		// There is a pending finalizer, so create a MethodState for it and put it as next-to-run on the stack
+		tMethodState *pFinalizerMethodState;
+		tMD_TypeDef *pFinalizerType = Heap_GetType(heapPtr);
+
+		pFinalizerMethodState = MethodState_Direct(pThread, pFinalizerType->pFinalizer, pThread->pCurrentMethodState, 0, 0);
+		// Mark this methodState as a Finalizer
+		pFinalizerMethodState->finalizerThis = heapPtr;
+		// Put the object on the stack (the object that is being Finalized)
+		// Finalizers always have no parameters
+		*(HEAP_PTR*)(PARAMETERS_PTR(pFinalizerMethodState)) = heapPtr;
+		//printf("--- FINALIZE ---\n");
+
+		return pFinalizerMethodState;
+	}
+	return NULL;
+}
+
+#ifdef DIAG_OPCODE_TIMES
+U64 opcodeTicks[JIT_OPCODE_MAXNUM];
+#define ADD_OPCODE_TICKS(op) opcodeTicks[op] += GetTicks() - opcodeStart
+#define SET_OPCODE_START() opcodeStart = GetTicks()
+#else
+#define ADD_OPCODE_TICKS(op)
+#define SET_OPCODE_START()
+#endif
+
+#ifdef DIAG_OPCODE_USES
+U64 opcodeCounts[JIT_OPCODE_MAXNUM];
+#define ADD_OPCODE_COUNT(op) opcodeCounts[op] += 1
+#else
+#define ADD_OPCODE_COUNT(op)
+#endif
+
+#ifdef SWITCH_ON_JIT_OPS
+
+#define SET_OP(op, label) // already done, see goNext
+#define OPCODE_USE(op) //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
+
 #define GO_NEXT() \
 	goto goNext;
 
 #else
 
-#define CHECK_FOR_BREAKPOINT() \
-	CheckIfCurrentInstructionHasBreakpoint(pCurrentMethodState, pCurOp - pOps, pOpSequencePoints);
+#define SET_OP(op, label) prev_op = curr_op; curr_op = op; goto label
+#define OPCODE_USE(op) ADD_OPCODE_TICKS(op); ADD_OPCODE_COUNT(op); SET_OPCODE_START(); //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
 #ifdef __GNUC__
 
@@ -264,7 +254,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 	if (--numInst == 0) goto done; \
 	GO_NEXT()
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 
 #define GET_LABELS(op) \
 	case op: goto op##_start;
@@ -293,38 +283,47 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 #define RUN_FINALIZER() {tMethodState *pMS = RunFinalizer(pThread);if(pMS) {CHANGE_METHOD_STATE(pMS);}}
 
 U32 JIT_Execute(tThread *pThread, U32 numInst) {
-	tJITted *pJIT;
-	tMethodState *pCurrentMethodState;
-	PTR pParamsLocals;
 
 	// Local copies of thread state variables, to speed up execution
+	tMethodState *pCurrentMethodState;
+	U32 *pOps;
+	I32 *pOpSequencePoints;
+
 	// Pointer to next op-code
-	size_t *pOps;
-	size_t *pOpSequencePoints;
-	size_t *pCurOp;
+	register U32 *pCurOp;
 	// Pointer to eval-stack position
 	register PTR pCurEvalStack;
+	// Pointer to params and locals
+	PTR pParamsLocals;
 
-	U32 op;
-	// General purpose variables
-	U32 u32Value;
-	HEAP_PTR heapPtr;
+	U32 curr_op = JIT_NOP;
+	U32 prev_op = JIT_NOP;
+
+#ifdef DIAG_OPCODE_TIMES
+	U64 opcodeStart = GetTicks();
+#endif
 
 	if (pThread == NULL) {
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 		// no label initialization needed
 		return 0;
 	}
 
 	LOAD_METHOD_STATE();
+	SET_OPCODE_START();
 	GO_NEXT();
 
 goNext:
+	ADD_OPCODE_TICKS(curr_op);
+	ADD_OPCODE_COUNT(curr_op);
 	CHECK_FOR_BREAKPOINT();
-	op = GET_OP();
+	prev_op = curr_op;
+	curr_op = GET_OP();
 
-	switch (op) {
+	SET_OPCODE_START();
+
+	switch (curr_op) {
 
 #else
 		void *pAddr;
@@ -332,7 +331,7 @@ goNext:
 		// Special case to get all the label addresses
 		// Default all op-codes to noCode.
 		GET_LABEL(pAddr, noCode);
-		for (u32Value = 0; u32Value < JIT_OPCODE_MAXNUM; u32Value++) {
+		for (U32 u32Value = 0; u32Value < JIT_OPCODE_MAXNUM; u32Value++) {
 			jitCodeInfo[u32Value].pStart = pAddr;
 			jitCodeInfo[u32Value].pEnd = NULL;
 			jitCodeInfo[u32Value].isDynamic = 0;
@@ -350,6 +349,7 @@ goNext:
 		GET_LABELS_DYNAMIC(JIT_LOAD_I32, 4);
 		GET_LABELS(JIT_BRANCH);
 		GET_LABELS(JIT_LOAD_STRING);
+		GET_LABELS(JIT_TAILCALL_PREFIX);
 		GET_LABELS(JIT_CALLVIRT_O);
 		GET_LABELS(JIT_CALL_NATIVE);
 		GET_LABELS(JIT_CALL_O);
@@ -378,7 +378,7 @@ goNext:
 		GET_LABELS(JIT_LOAD_VECTOR_LEN);
 		GET_LABELS(JIT_SWITCH);
 		GET_LABELS(JIT_LOAD_ELEMENT_ADDR);
-		GET_LABELS(JIT_CALL_INTERFACE);
+		//GET_LABELS(JIT_CALL_INTERFACE);
 		GET_LABELS(JIT_CAST_CLASS);
 		GET_LABELS(JIT_LOAD_ELEMENT);
 		GET_LABELS(JIT_LOADFIELD_VALUETYPE);
@@ -675,27 +675,21 @@ goNext:
 		GET_LABELS_DYNAMIC(JIT_LOADFIELD_4, 4);
 		GET_LABELS_DYNAMIC(JIT_LOADFIELD_8, 8);
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 	default: goto noCode;
 	}
+
 #else
 		return 0;
-	}
-#endif
+}
 
-#ifdef DIAG_OPCODE_TIMES
-	U64 opcodeStartTime = rdtsc();
-#endif
-
-#ifdef SWITCH_ON_JIT_OP
-#else
 	LOAD_METHOD_STATE();
-
+	SET_OPCODE_START();
 	GO_NEXT();
 #endif
 
 noCode:
-	Crash("No code for op-code");
+	Crash("No code for op-code %u", curr_op);
 
 JIT_NOP_start:
 JIT_CONV_R32_R32_start:
@@ -711,6 +705,13 @@ JIT_CONV_U64_I64_start:
 //JIT_GoNext_start:
 	GO_NEXT();
 //JIT_GoNext_end:
+
+JIT_TAILCALL_PREFIX_start:
+	SET_OP(JIT_TAILCALL_PREFIX, tailCallStart);
+tailCallStart:
+	OPCODE_USE(JIT_TAILCALL_PREFIX);
+JIT_TAILCALL_PREFIX_end:
+	GO_NEXT();
 
 JIT_LOAD_NULL_start:
 	OPCODE_USE(JIT_LOAD_NULL);
@@ -834,13 +835,9 @@ JIT_LOADPARAMLOCAL_F64_start:
 JIT_LOADPARAMLOCAL_VALUETYPE_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_VALUETYPE);
 	{
-		tMD_TypeDef *pTypeDef;
-		U32 ofs;
-		PTR pMem;
-
-		ofs = GET_OP();
-		pTypeDef = (tMD_TypeDef*)GET_OP();
-		pMem = pParamsLocals + ofs;
+		U32 ofs = GET_OP();
+		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
+		PTR pMem = (PTR)&PARAMLOCAL_U32(ofs);
 		PUSH_VALUETYPE(pMem, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
 //JIT_LOADPARAMLOCAL_VALUETYPE_end:
@@ -898,7 +895,7 @@ JIT_LOAD_PARAMLOCAL_ADDR_start:
 	OPCODE_USE(JIT_LOAD_PARAMLOCAL_ADDR);
 	{
 		U32 ofs = GET_OP();
-		PTR pMem = pParamsLocals + ofs;
+		PTR pMem = (PTR)&PARAMLOCAL_U32(ofs);
 		PUSH_PTR(pMem);
 	}
 //JIT_LOAD_PARAMLOCAL_ADDR_end:
@@ -908,11 +905,11 @@ JIT_STOREPARAMLOCAL_INT32_start:
 JIT_STOREPARAMLOCAL_F32_start:
 JIT_STOREPARAMLOCAL_O_start:
 JIT_STOREPARAMLOCAL_INTNATIVE_start: // Only on 32-bit
-JIT_STOREPARAMLOCAL_PTR_start: // Onlt on 32-bit
+JIT_STOREPARAMLOCAL_PTR_start: // Only on 32-bit
 	OPCODE_USE(JIT_STOREPARAMLOCAL_INT32);
 	{
 		U32 ofs = GET_OP();
-		U32 value = POP_U32();
+		POP_U32(value);
 		PARAMLOCAL_U32(ofs) = value;
 	}
 //JIT_STOREPARAMLOCAL_INT32_end:
@@ -927,7 +924,7 @@ JIT_STOREPARAMLOCAL_F64_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_INT64);
 	{
 		U32 ofs = GET_OP();
-		U64 value = POP_U64();
+		POP_U64(value);
 		PARAMLOCAL_U64(ofs) = value;
 	}
 //JIT_STOREPARAMLOCAL_INT64_end:
@@ -937,13 +934,9 @@ JIT_STOREPARAMLOCAL_F64_start:
 JIT_STOREPARAMLOCAL_VALUETYPE_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_VALUETYPE);
 	{
-		tMD_TypeDef *pTypeDef;
-		U32 ofs;
-		PTR pMem;
-
-		ofs = GET_OP();
-		pTypeDef = (tMD_TypeDef*)GET_OP();
-		pMem = pParamsLocals + ofs;
+		U32 ofs = GET_OP();
+		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
+		PTR pMem = (PTR)&PARAMLOCAL_U32(ofs);
 		POP_VALUETYPE(pMem, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
 //JIT_STOREPARAMLOCAL_VALUETYPE_end:
@@ -951,50 +944,74 @@ JIT_STOREPARAMLOCAL_VALUETYPE_start:
 
 JIT_STOREPARAMLOCAL_0_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_0);
-	PARAMLOCAL_U32(0) = POP_U32();
-//JIT_STOREPARAMLOCAL_0_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(0) = value;
+	}
+JIT_STOREPARAMLOCAL_0_end:
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_1_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_1);
-	PARAMLOCAL_U32(4) = POP_U32();
-//JIT_STOREPARAMLOCAL_1_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(4) = value;
+	}
+JIT_STOREPARAMLOCAL_1_end:
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_2_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_2);
-	PARAMLOCAL_U32(8) = POP_U32();
-//JIT_STOREPARAMLOCAL_2_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(8) = value;
+	}
+JIT_STOREPARAMLOCAL_2_end:
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_3_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_3);
-	PARAMLOCAL_U32(12) = POP_U32();
-//JIT_STOREPARAMLOCAL_3_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(12) = value;
+	}
+JIT_STOREPARAMLOCAL_3_end:
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_4_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_4);
-	PARAMLOCAL_U32(16) = POP_U32();
-//JIT_STOREPARAMLOCAL_4_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(16) = value;
+	}
+JIT_STOREPARAMLOCAL_4_end:
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_5_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_5);
-	PARAMLOCAL_U32(20) = POP_U32();
-//JIT_STOREPARAMLOCAL_5_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(20) = value;
+	}
+JIT_STOREPARAMLOCAL_5_end:
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_6_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_6);
-	PARAMLOCAL_U32(24) = POP_U32();
-//JIT_STOREPARAMLOCAL_6_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(24) = value;
+	}
+JIT_STOREPARAMLOCAL_6_end:
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_7_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_7);
-	PARAMLOCAL_U32(28) = POP_U32();
-//JIT_STOREPARAMLOCAL_7_end:
+	{
+		POP_U32(value);
+		PARAMLOCAL_U32(28) = value;
+	}
+JIT_STOREPARAMLOCAL_7_end:
 	GO_NEXT();
 
 JIT_LOADINDIRECT_I8_start:
@@ -1007,7 +1024,7 @@ JIT_LOADINDIRECT_R32_start:
 JIT_LOADINDIRECT_REF_start:
 	OPCODE_USE(JIT_LOADINDIRECT_U32);
 	{
-		PTR pMem = POP_PTR();
+		POP_PTR(pMem);
 		U32 value = *(U32*)pMem;
 		PUSH_U32(value);
 	}
@@ -1025,7 +1042,7 @@ JIT_LOADINDIRECT_R64_start:
 JIT_LOADINDIRECT_I64_start:
 	OPCODE_USE(JIT_LOADINDIRECT_I64);
 	{
-		PTR pMem = POP_PTR();
+		POP_PTR(pMem);
 		U64 value = *(U64*)pMem;
 		PUSH_U64(value);
 	}
@@ -1040,8 +1057,8 @@ JIT_STOREINDIRECT_REF_start:
 JIT_STOREINDIRECT_R32_start:
 	OPCODE_USE(JIT_STOREINDIRECT_U32);
 	{
-		U32 value = POP_U32(); // The value to store
-		PTR pMem = POP_PTR(); // The address to store to
+		POP_U32(value); // The value to store
+		POP_PTR(pMem);  // The address to store to
 		*(U32*)pMem = value;
 	}
 //JIT_STOREINDIRECT_U8_end:
@@ -1055,8 +1072,8 @@ JIT_STOREINDIRECT_U64_start:
 JIT_STOREINDIRECT_R64_start:
 	OPCODE_USE(JIT_STOREINDIRECT_U64);
 	{
-		U64 value = POP_U64(); // Value
-		PTR pMem = POP_PTR(); // The address to store to
+		POP_U64(value); // The value to store
+		POP_PTR(pMem);  // The address to store to
 		*(U64*)pMem = value;
 	}
 //JIT_STOREINDIRECT_U64_end:
@@ -1067,7 +1084,7 @@ JIT_STORE_OBJECT_VALUETYPE_start:
 	OPCODE_USE(JIT_STORE_OBJECT_VALUETYPE);
 	{
 		U32 size = GET_OP(); // The size, in bytes, of the value-type to store
-		U32 memSize = (size<4)?4:size;
+		U32 memSize = (size<4) ? 4 : size;
 		PTR pMem = pCurEvalStack - memSize - sizeof(void*);
 		POP_VALUETYPE(*(void**)pMem, size, memSize);
 		POP(4);
@@ -1078,11 +1095,8 @@ JIT_STORE_OBJECT_VALUETYPE_start:
 JIT_CALL_PINVOKE_start:
 	OPCODE_USE(JIT_CALL_PINVOKE);
 	{
-		tJITCallPInvoke *pCallPInvoke;
-		U32 res;
-
-		pCallPInvoke = (tJITCallPInvoke*)(pCurOp - 1);
-		res = PInvoke_Call(pCallPInvoke, pParamsLocals, pCurrentMethodState->pEvalStack, pThread);
+		tJITCallPInvoke *pCallPInvoke = (tJITCallPInvoke*)(pCurOp - 1);
+		U32 res = PInvoke_Call(pCallPInvoke, pParamsLocals, EVAL_STACK_PTR, pThread);
 		pCurrentMethodState->stackOfs = res;
 	}
 	goto JIT_RETURN_start;
@@ -1096,19 +1110,19 @@ JIT_CALL_NATIVE_start:
 		U32 thisOfs;
 		tAsyncCall *pAsync;
 
-		//pCallNative = (tJITCallNative*)&(pJIT->pOps[pCurrentMethodState->ipOffset - 1]);
 		pCallNative = (tJITCallNative*)(pCurOp - 1);
 		if (METHOD_ISSTATIC(pCallNative->pMethodDef)) {
 			pThis = NULL;
 			thisOfs = 0;
 		} else {
-			pThis = *(PTR*)pCurrentMethodState->pParamsLocals;
+			pThis = *(PTR*)pParamsLocals;
 			thisOfs = 4;
 		}
 		// Internal constructors MUST leave the newly created object in the return value
-		// (ie on top of the evaluation stack)
-		pAsync = pCallNative->fn(pThis, pCurrentMethodState->pParamsLocals + thisOfs, pCurrentMethodState->pEvalStack);
-		// push return value
+		// (i.e. on top of the evaluation stack)
+		pAsync = pCallNative->fn(pThis, pParamsLocals + thisOfs, EVAL_STACK_PTR);
+
+		// fix the stack offset to match the return value size
 		if (pCallNative->pMethodDef->pReturnType != NULL) {
 			PUSH(pCallNative->pMethodDef->pReturnType->stackSize);
 		} else if (pCurrentMethodState->isInternalNewObjCall) {
@@ -1135,26 +1149,26 @@ JIT_CALL_NATIVE_start:
 JIT_RETURN_start:
 	OPCODE_USE(JIT_RETURN);
 	// dprintfn("Returned from %s() to %s()", pCurrentMethodState->pMethod->name, (pCurrentMethodState->pCaller)?pCurrentMethodState->pCaller->pMethod->name:(STRING)"<none>");
-	DECREMENT_NESTED_LEVEL();
 
 	if (pCurrentMethodState->pCaller == NULL) {
 		// End of thread!
 		if (pCurrentMethodState->pMethod->pReturnType == types[TYPE_SYSTEM_INT32]) {
 			// If function returned an int32, then make it the thread exit-value
-			pThread->threadExitValue = (I32)POP_U32();
+			POP_U32(value);
+			pThread->threadExitValue = (I32)value;
 		}
 		return THREAD_STATUS_EXIT;
 	}
-	// Make u32Value the number of bytes of the return value from the function
-	if (pCurrentMethodState->pMethod->pReturnType != NULL) {
-		u32Value = pCurrentMethodState->pMethod->pReturnType->stackSize;
-	} else if (pCurrentMethodState->isInternalNewObjCall) {
-		u32Value = sizeof(void*);
-	} else {
-		u32Value = 0;
-	}
 	{
-		Assert(pCurEvalStack - u32Value >= pCurrentMethodState->pEvalStack);
+		U32 u32Value = 0;
+		// Make u32Value the number of bytes of the return value from the function
+		if (pCurrentMethodState->pMethod->pReturnType != NULL) {
+			u32Value = pCurrentMethodState->pMethod->pReturnType->stackSize;
+		} else if (pCurrentMethodState->isInternalNewObjCall) {
+			u32Value = sizeof(void*);
+		}
+
+		Assert(pCurEvalStack - u32Value >= EVAL_STACK_PTR);
 		PTR pMem = pCurEvalStack - u32Value;
 		tMethodState *pOldMethodState = pCurrentMethodState;
 		pThread->pCurrentMethodState = pCurrentMethodState->pCaller;
@@ -1177,6 +1191,7 @@ JIT_INVOKE_DELEGATE_start:
 	OPCODE_USE(JIT_INVOKE_DELEGATE);
 	{
 		tMD_MethodDef *pDelegateMethod, *pCallMethod;
+		tMethodState *pCallMethodState;
 		void *pDelegate;
 		HEAP_PTR pDelegateThis;
 
@@ -1184,15 +1199,10 @@ JIT_INVOKE_DELEGATE_start:
 			// First delegate, so get the Invoke() method defined within the delegate class
 			pDelegateMethod = (tMD_MethodDef*)GET_OP();
 			// Take the params off the stack. This is the pointer to the tDelegate & params
-			//pCurrentMethodState->stackOfs -= pDelegateMethod->parameterStackSize;
 			POP(pDelegateMethod->parameterStackSize);
 			// Allocate memory for delegate params
 			pCurrentMethodState->pDelegateParams = malloc(pDelegateMethod->parameterStackSize);
-			memcpy(
-				pCurrentMethodState->pDelegateParams,
-				//pCurrentMethodState->pEvalStack + pCurrentMethodState->stackOfs + sizeof(void*),
-				pCurEvalStack,
-				pDelegateMethod->parameterStackSize);
+			memcpy(pCurrentMethodState->pDelegateParams, pCurEvalStack, pDelegateMethod->parameterStackSize);
 			// Get the actual delegate heap pointer
 			pDelegate = *(void**)pCurEvalStack;
 		} else {
@@ -1210,10 +1220,11 @@ JIT_INVOKE_DELEGATE_start:
 		pCallMethod = Delegate_GetMethodAndStore(pDelegate, &pDelegateThis, &pCurrentMethodState->pNextDelegate);
 
 		// Set up the call method state for the call.
-		INCREMENT_NESTED_LEVEL();
-		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
+		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, 0);
+
 		// Fill in the parameters
-		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurrentMethodState->pDelegateParams, pDelegateThis);
+		PTR pDelegateParams = (PTR)pCurrentMethodState->pDelegateParams + pDelegateMethod->parameterStackSize;
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pCallMethod, pDelegateParams, pDelegateThis);
 
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
@@ -1226,6 +1237,9 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 	{
 		// Get the reference to MethodBase.Invoke
 		tMD_MethodDef *pInvokeMethod = (tMD_MethodDef*)GET_OP();
+
+		// if previous op was a tail call prefix and next op is a return
+		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX) && (*pCurOp == JIT_RETURN);
 
 		// Take the MethodBase.Invoke params off the stack.
 		POP(pInvokeMethod->parameterStackSize);
@@ -1243,9 +1257,16 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		PTR invocationThis = *(PTR*)(pCurEvalStack + sizeof(HEAP_PTR));
 		HEAP_PTR invocationParamsArray = *(HEAP_PTR*)(pCurEvalStack + sizeof(HEAP_PTR) + sizeof(PTR));
 
+		// Change interpreter state so we continue execution inside the method being invoked
+		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
+
+		// temp ptr to copy parameters
+		PTR pParams = PARAMETERS_PTR(pCallMethodState);
+
 		// Put the new 'this' on the stack
 		if (invocationThis != NULL) {
-			PUSH_PTR(invocationThis);
+			*(PTR*)pParams = (PTR)(invocationThis);
+			pParams += sizeof(PTR);
 		}
 
 		// Put any other params on the stack
@@ -1256,19 +1277,15 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 				HEAP_PTR currentParam = invocationParamsArrayElements[paramIndex];
 				tMD_TypeDef *pParamType = Heap_GetType(currentParam);
 				if (pParamType->isValueType) {
-					PUSH_VALUETYPE(currentParam, pParamType->stackSize, pParamType->stackSize);
+					memcpy(pParams, currentParam, pParamType->stackSize);
+					pParams += pParamType->stackSize;
 				} else {
-					PUSH_O(currentParam);
+					*(HEAP_PTR*)pParams = (HEAP_PTR)(currentParam);
+					pParams += sizeof(HEAP_PTR);
 				}
 			}
 		}
 
-		// Change interpreter state so we continue execution inside the method being invoked
-		INCREMENT_NESTED_LEVEL();
-		tMethodState *pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
-		// Fill in the parameters
-		POP(pCallMethod->parameterStackSize);
-		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
@@ -1291,123 +1308,131 @@ JIT_REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE_start:
 			PUSH_O(heapPtr);
 		}
 	}
-
-//JIT_REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE_end:
+JIT_REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE_end:
 	GO_NEXT_CHECK();
 
 JIT_DEREF_CALLVIRT_start:
-	op = JIT_DEREF_CALLVIRT;
-	goto allCallStart;
+	SET_OP(JIT_DEREF_CALLVIRT, allCallStart);
 JIT_BOX_CALLVIRT_start:
-	op = JIT_BOX_CALLVIRT;
-	goto allCallStart;
+	SET_OP(JIT_BOX_CALLVIRT, allCallStart);
 JIT_CALL_PTR_start: // Note that JIT_CALL_PTR cannot be virtual
-	op = JIT_CALL_PTR;
-	goto allCallStart;
+	SET_OP(JIT_CALL_PTR, allCallStart);
 JIT_CALLVIRT_O_start:
-	op = JIT_CALLVIRT_O;
-	goto allCallStart;
+	SET_OP(JIT_CALLVIRT_O, allCallStart);
 JIT_CALL_O_start:
-	op = JIT_CALL_O;
-	goto allCallStart;
-JIT_CALL_INTERFACE_start:
-	op = JIT_CALL_INTERFACE;
+	SET_OP(JIT_CALL_O, allCallStart);
+//JIT_CALL_INTERFACE_start:
+//	SET_OP(JIT_CALL_INTERFACE, allCallStart);
 allCallStart:
-	OPCODE_USE(op);
+	OPCODE_USE(curr_op);
 	{
 		tMD_MethodDef *pCallMethod;
 		tMethodState *pCallMethodState;
 		tMD_TypeDef *pBoxCallType;
 
-		if (op == JIT_BOX_CALLVIRT) {
+		if (curr_op == JIT_BOX_CALLVIRT) {
 			pBoxCallType = (tMD_TypeDef*)GET_OP();
 		}
 
 		pCallMethod = (tMD_MethodDef*)GET_OP();
+
+		// if previous op was a tail call prefix and next op is a return
+		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX) && (*pCurOp == JIT_RETURN);
+
 		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
-#ifdef DIAG_CALL_STACK
-		for (I32 i = nested/10; i > 0; i--) { *pNextChar++ = '*'; } // (optional) print call nested level, each '*' is 10 levels
-		for (I32 i = nested%10; i > 0; i--) { *pNextChar++ = '|'; } // (optional) print call nested level, each '|' is 1 level
-		I32 n = sizeof(callBuffer) - (pNextChar - callBuffer); // space left in buffer
-		I32 c = snprintf(pNextChar, n, "%d %s.%s\n", nested, pCallMethod->pParentType->name, pCallMethod->name);
-		pNextChar = (c >= 0 && c < n && (n-c) > 200) ? pNextChar + c : callBuffer; // circular buffer
-#endif
-
-		heapPtr = NULL;
+		HEAP_PTR heapPtr = NULL;
 		PTR pMem = pCurEvalStack - pCallMethod->parameterStackSize;
-		Assert(pMem >= pCurrentMethodState->pEvalStack);
+		Assert(pMem >= EVAL_STACK_PTR);
 
-		if (op == JIT_BOX_CALLVIRT) {
-			// Need to de-ref and box the value-type before calling the function
-			// TODO: Will this work on value-types that are not 4 bytes long?
-			heapPtr = Heap_Box(pBoxCallType, *(PTR*)pMem);
-			*(HEAP_PTR*)pMem = heapPtr;
-		} else if (op == JIT_DEREF_CALLVIRT) {
-			heapPtr = **(HEAP_PTR**)pMem;
-			*(HEAP_PTR*)pMem = heapPtr;
-		} else if (!METHOD_ISSTATIC(pCallMethod)) {
-			// Get the actual object that is becoming 'this'
-			heapPtr = *(HEAP_PTR*)pMem;
+		switch (curr_op) {
+			case JIT_BOX_CALLVIRT: {
+				// Need to de-ref and box the value-type before calling the function
+				// TODO: Will this work on value-types that are not 4 bytes long?
+				heapPtr = Heap_Box(pBoxCallType, *(PTR*)pMem);
+				*(HEAP_PTR*)pMem = heapPtr;
+				break;
+			}
+			case JIT_DEREF_CALLVIRT: {
+				heapPtr = **(HEAP_PTR**)pMem;
+				*(HEAP_PTR*)pMem = heapPtr;
+				break;
+			}
+			default: {
+				// Get the actual object that is becoming 'this'
+				heapPtr = METHOD_ISSTATIC(pCallMethod) ? NULL : *(HEAP_PTR*)pMem;
+				break;
+			}
 		}
 
-		// If it's a virtual call then find the real correct method to call
-		if (op == JIT_CALLVIRT_O || op == JIT_BOX_CALLVIRT || op == JIT_DEREF_CALLVIRT) {
-
-			if (heapPtr == NULL) {
-				//Crash("NULL 'this' in Virtual call: %s", Sys_GetMethodDesc(pCallMethod));
-				THROW(types[TYPE_SYSTEM_NULLREFERENCEEXCEPTION]);
-			}
-			if (METHOD_ISVIRTUAL(pCallMethod)) {
-				tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
-				tMD_MethodDef* pVirtualMethod = pThisType->pVTable[pCallMethod->vTableOfs];
-				if (pVirtualMethod->isGenericDefinition) {
-					tMD_MethodDef* pInstMethod = Generics_GetMethodDefFromCoreMethod(pVirtualMethod, pVirtualMethod->pParentType, pCallMethod->numMethodTypeArgs, pCallMethod->ppMethodTypeArgs);
-					pCallMethod = pInstMethod;
-				} else {
-					//Assert(pCallMethod->parameterStackSize == pVirtualMethod->parameterStackSize);
-					pCallMethod = pVirtualMethod;
+		// if it's a virtual call, find the correct method to call
+		switch (curr_op) {
+			case JIT_CALLVIRT_O:
+			case JIT_BOX_CALLVIRT:
+			case JIT_DEREF_CALLVIRT: {
+				if (heapPtr == NULL) {
+					//Crash("NULL 'this' in Virtual call: %s", Sys_GetMethodDesc(pCallMethod));
+					THROW(types[TYPE_SYSTEM_NULLREFERENCEEXCEPTION]);
 				}
-				//dprintfn("Calling virtual method: %s", pCallMethod->name);
-			}
-		} else if (op == JIT_CALL_INTERFACE) {
-			tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
-			tMD_TypeDef *pInterface = pCallMethod->pParentType;
+				// if interface method
+				if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
+					tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
+					tMD_TypeDef *pInterface = pCallMethod->pParentType;
 
-			// Find the interface mapping on the 'this' type.
-			// This must be searched backwards so if an interface is implemented more than
-			// once in the type hierarchy, the most recent definition gets called
-			for (I32 i=(I32)pThisType->numInterfaces-1; i >= 0; i--) {
-				if (pThisType->pInterfaceMaps[i].pInterface == pInterface) {
-					// Found the right interface map
-					if (pThisType->pInterfaceMaps[i].pVTableLookup != NULL) {
-						U32 vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
-						pCallMethod = pThisType->pVTable[vIndex];
-					} else {
-						pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
+					// Find the interface mapping on the 'this' type.
+					// This must be searched backwards so if an interface is implemented more than
+					// once in the type hierarchy, the most recent definition gets called
+					I32 i = (I32)pThisType->numInterfaces;
+					while (--i >= 0) {
+						if (pThisType->pInterfaceMaps[i].pInterface == pInterface) {
+							// Found the right interface map
+							if (pThisType->pInterfaceMaps[i].pVTableLookup != NULL) {
+								U32 vIndex = pThisType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
+								pCallMethod = pThisType->pVTable[vIndex];
+							}
+							else {
+								pCallMethod = pThisType->pInterfaceMaps[i].ppMethodVLookup[pCallMethod->vTableOfs];
+							}
+							//dprintfn("Calling interface method: %s", pCallMethod->name);
+							break;
+						}
 					}
-					//dprintfn("Calling interface method: %s", pCallMethod->name);
-					goto callMethodSet;
+					if (i < 0) {
+						Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
+					}
 				}
+				// if virtual method
+				else if (METHOD_ISVIRTUAL(pCallMethod)) {
+					tMD_TypeDef *pThisType = Heap_GetType(heapPtr);
+					tMD_MethodDef* pVirtualMethod = pThisType->pVTable[pCallMethod->vTableOfs];
+					if (pVirtualMethod->isGenericDefinition) {
+						tMD_MethodDef* pInstMethod = Generics_GetMethodDefFromCoreMethod(pVirtualMethod, pVirtualMethod->pParentType, pCallMethod->numMethodTypeArgs, pCallMethod->ppMethodTypeArgs);
+						pCallMethod = pInstMethod;
+					} else {
+						//Assert(pCallMethod->parameterStackSize == pVirtualMethod->parameterStackSize);
+						pCallMethod = pVirtualMethod;
+					}
+					//dprintfn("Calling virtual method: %s", pCallMethod->name);
+				}
+				break;
 			}
-			Crash("%s.%s is missing interface method: %s", pThisType->nameSpace, pThisType->name, Sys_GetMethodDesc(pCallMethod));
-			//dprintfn("Calling interface method: %s", pCallMethod->name);
 		}
-callMethodSet:
+
 		// Set up the new method state for the called method
-		INCREMENT_NESTED_LEVEL();
-		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
+		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
+
 		// Set up the parameter stack for the method being called
-		POP(pCallMethod->parameterStackSize);
-		CopyParameters(pCallMethodState->pParamsLocals, pCallMethod, pCurEvalStack, NULL);
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pCallMethod, pCurEvalStack, NULL);
+		POP(paramSize);
+
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
-//JIT_DEREF_CALLVIRT_end:
-//JIT_BOX_CALLVIRT_end:
-//JIT_CALL_PTR_end:
-//JIT_CALLVIRT_O_end:
-//JIT_CALL_O_end:
+JIT_DEREF_CALLVIRT_end:
+JIT_BOX_CALLVIRT_end:
+JIT_CALL_PTR_end:
+JIT_CALLVIRT_O_end:
+JIT_CALL_O_end:
 //JIT_CALL_INTERFACE_end:
 	GO_NEXT_CHECK();
 
@@ -1423,18 +1448,17 @@ JIT_BRANCH_start:
 JIT_SWITCH_start:
 	OPCODE_USE(JIT_SWITCH);
 	{
-		U32 ofs;
 		// The number of jump targets
 		U32 numTargets = GET_OP();
 		// The jump target selected
-		U32 target = POP_U32();
+		POP_U32(target);
 		if (target >= numTargets) {
 			// This is not a valid jump target, so fall-through
 			pCurOp += numTargets;
-			goto JIT_SWITCH_end;
+		} else {
+			U32 ofs = *(pCurOp + target);
+			pCurOp = pOps + ofs;
 		}
-		ofs = *(pCurOp + target);
-		pCurOp = pOps + ofs;
 	}
 JIT_SWITCH_end:
 	GO_NEXT_CHECK();
@@ -1442,7 +1466,7 @@ JIT_SWITCH_end:
 JIT_BRANCH_TRUE_start:
 	OPCODE_USE(JIT_BRANCH_TRUE);
 	{
-		U32 value = POP_U32();
+		POP_U32(value);
 		U32 ofs = GET_OP();
 		if (value != 0) {
 			pCurOp = pOps + ofs;
@@ -1454,7 +1478,7 @@ JIT_BRANCH_TRUE_start:
 JIT_BRANCH_FALSE_start:
 	OPCODE_USE(JIT_BRANCH_FALSE);
 	{
-		U32 value = POP_U32();
+		POP_U32(value);
 		U32 ofs = GET_OP();
 		if (value == 0) {
 			pCurOp = pOps + ofs;
@@ -1466,7 +1490,7 @@ JIT_BRANCH_FALSE_start:
 JIT_BRANCH64_TRUE_start:
 	OPCODE_USE(JIT_BRANCH64_TRUE);
 	{
-		U64 value = POP_U64();
+		POP_U64(value);
 		U32 ofs = GET_OP();
 		if (value != 0) {
 			pCurOp = pOps + ofs;
@@ -1478,7 +1502,7 @@ JIT_BRANCH64_TRUE_start:
 JIT_BRANCH64_FALSE_start:
 	OPCODE_USE(JIT_BRANCH64_FALSE);
 	{
-		U64 value = POP_U64();
+		POP_U64(value);
 		U32 ofs = GET_OP();
 		if (value == 0) {
 			pCurOp = pOps + ofs;
@@ -1490,9 +1514,8 @@ JIT_BRANCH64_FALSE_start:
 JIT_BEQ_I32I32_start:
 	OPCODE_USE(JIT_BEQ_I32I32);
 	{
-		U32 v1, v2, ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I32)v1 == (I32)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1503,10 +1526,8 @@ JIT_BEQ_I32I32_start:
 JIT_BEQ_I64I64_start:
 	OPCODE_USE(JIT_BEQ_I64I64);
 	{
-		U64 v1, v2;
-		U32 ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I64)v1 == (I64)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1517,10 +1538,8 @@ JIT_BEQ_I64I64_start:
 JIT_BEQ_F32F32_start:
 	OPCODE_USE(JIT_BEQ_F32F32);
 	{
-		float v1, v2;
-		U32 ofs;
 		POP_F32_F32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 == v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1531,10 +1550,8 @@ JIT_BEQ_F32F32_start:
 JIT_BEQ_F64F64_start:
 	OPCODE_USE(JIT_BEQ_F64F64);
 	{
-		double v1, v2;
-		U32 ofs;
 		POP_F64_F64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 == v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1545,9 +1562,8 @@ JIT_BEQ_F64F64_start:
 JIT_BGE_I32I32_start:
 	OPCODE_USE(JIT_BGE_I32I32);
 	{
-		U32 v1, v2, ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I32)v1 >= (I32)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1558,10 +1574,8 @@ JIT_BGE_I32I32_start:
 JIT_BGE_I64I64_start:
 	OPCODE_USE(JIT_BGE_I64I64);
 	{
-		U64 v1, v2;
-		U32 ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I64)v1 >= (I64)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1573,10 +1587,8 @@ JIT_BGE_F32F32_start:
 JIT_BGE_UN_F32F32_start:
 	OPCODE_USE(JIT_BGE_F32F32);
 	{
-		float v1, v2;
-		U32 ofs;
 		POP_F32_F32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 >= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1589,10 +1601,8 @@ JIT_BGE_F64F64_start:
 JIT_BGE_UN_F64F64_start:
 	OPCODE_USE(JIT_BGE_F64F64);
 	{
-		double v1, v2;
-		U32 ofs;
 		POP_F64_F64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 >= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1604,10 +1614,8 @@ JIT_BGE_UN_F64F64_start:
 JIT_BGT_I32I32_start:
 	OPCODE_USE(JIT_BGT_I32I32);
 	{
-		U32 v1, v2;
-		U32 ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I32)v1 > (I32)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1618,10 +1626,8 @@ JIT_BGT_I32I32_start:
 JIT_BGT_I64I64_start:
 	OPCODE_USE(JIT_BGT_I64I64);
 	{
-		U64 v1, v2;
-		U32 ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I64)v1 > (I64)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1633,10 +1639,8 @@ JIT_BGT_F32F32_start:
 JIT_BGT_UN_F32F32_start:
 	OPCODE_USE(JIT_BGT_F32F32);
 	{
-		float v1, v2;
-		U32 ofs;
 		POP_F32_F32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 > v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1649,10 +1653,8 @@ JIT_BGT_F64F64_start:
 JIT_BGT_UN_F64F64_start:
 	OPCODE_USE(JIT_BGT_F64F64);
 	{
-		double v1, v2;
-		U32 ofs;
 		POP_F64_F64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 > v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1664,10 +1666,8 @@ JIT_BGT_UN_F64F64_start:
 JIT_BLE_I32I32_start:
 	OPCODE_USE(JIT_BLE_I32I32);
 	{
-		U32 v1, v2;
-		U32 ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I32)v1 <= (I32)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1678,10 +1678,8 @@ JIT_BLE_I32I32_start:
 JIT_BLE_I64I64_start:
 	OPCODE_USE(JIT_BLE_I64I64);
 	{
-		U64 v1, v2;
-		U32 ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I64)v1 <= (I64)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1693,10 +1691,8 @@ JIT_BLE_F32F32_start:
 JIT_BLE_UN_F32F32_start:
 	OPCODE_USE(JIT_BLE_F32F32);
 	{
-		float v1, v2;
-		U32 ofs;
 		POP_F32_F32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 <= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1709,10 +1705,8 @@ JIT_BLE_F64F64_start:
 JIT_BLE_UN_F64F64_start:
 	OPCODE_USE(JIT_BLE_F64F64);
 	{
-		double v1, v2;
-		U32 ofs;
 		POP_F64_F64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 <= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1724,10 +1718,8 @@ JIT_BLE_UN_F64F64_start:
 JIT_BLT_I32I32_start:
 	OPCODE_USE(JIT_BLT_I32I32);
 	{
-		U32 v1, v2;
-		U32 ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I32)v1 < (I32)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1738,10 +1730,8 @@ JIT_BLT_I32I32_start:
 JIT_BLT_I64I64_start:
 	OPCODE_USE(JIT_BLT_I64I64);
 	{
-		U64 v1, v2;
-		U32 ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if ((I64)v1 < (I64)v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1753,10 +1743,8 @@ JIT_BLT_F32F32_start:
 JIT_BLT_UN_F32F32_start:
 	OPCODE_USE(JIT_BLT_F32F32);
 	{
-		float v1, v2;
-		U32 ofs;
 		POP_F32_F32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 < v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1769,10 +1757,8 @@ JIT_BLT_F64F64_start:
 JIT_BLT_UN_F64F64_start:
 	OPCODE_USE(JIT_BLT_F64F64);
 	{
-		double v1, v2;
-		U32 ofs;
 		POP_F64_F64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 < v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1784,9 +1770,8 @@ JIT_BLT_UN_F64F64_start:
 JIT_BNE_UN_I32I32_start:
 	OPCODE_USE(JIT_BNE_UN_I32I32);
 	{
-		U32 v1, v2, ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 != v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1797,10 +1782,8 @@ JIT_BNE_UN_I32I32_start:
 JIT_BNE_UN_I64I64_start:
 	OPCODE_USE(JIT_BNE_UN_I64I64);
 	{
-		U64 v1, v2;
-		U32 ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 != v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1811,10 +1794,8 @@ JIT_BNE_UN_I64I64_start:
 JIT_BNE_UN_F32F32_start:
 	OPCODE_USE(JIT_BNE_UN_F32F32);
 	{
-		float v1, v2;
-		U32 ofs;
 		POP_F32_F32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 != v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1825,10 +1806,8 @@ JIT_BNE_UN_F32F32_start:
 JIT_BNE_UN_F64F64_start:
 	OPCODE_USE(JIT_BNE_UN_F64F64);
 	{
-		double v1, v2;
-		U32 ofs;
 		POP_F64_F64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 != v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1839,9 +1818,8 @@ JIT_BNE_UN_F64F64_start:
 JIT_BGE_UN_I32I32_start:
 	OPCODE_USE(JIT_BGE_UN_I32I32);
 	{
-		U32 v1, v2, ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 >= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1852,9 +1830,8 @@ JIT_BGE_UN_I32I32_start:
 JIT_BGT_UN_I32I32_start:
 	OPCODE_USE(JIT_BGT_UN_I32I32);
 	{
-		U32 v1, v2, ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 > v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1865,9 +1842,8 @@ JIT_BGT_UN_I32I32_start:
 JIT_BLE_UN_I32I32_start:
 	OPCODE_USE(JIT_BLE_UN_I32I32);
 	{
-		U32 v1, v2, ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 <= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1878,9 +1854,8 @@ JIT_BLE_UN_I32I32_start:
 JIT_BLT_UN_I32I32_start:
 	OPCODE_USE(JIT_BLT_UN_I32I32);
 	{
-		U32 v1, v2, ofs;
 		POP_U32_U32(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 < v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1892,9 +1867,8 @@ JIT_BLT_UN_I32I32_start:
 JIT_BGE_UN_I64I64_start:
 	OPCODE_USE(JIT_BGE_UN_I64I64);
 	{
-		U64 v1, v2, ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 >= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1905,9 +1879,8 @@ JIT_BGE_UN_I64I64_start:
 JIT_BGT_UN_I64I64_start:
 	OPCODE_USE(JIT_BGT_UN_I64I64);
 	{
-		U64 v1, v2, ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 > v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1918,9 +1891,8 @@ JIT_BGT_UN_I64I64_start:
 JIT_BLE_UN_I64I64_start:
 	OPCODE_USE(JIT_BLE_UN_I64I64);
 	{
-		U64 v1, v2, ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 <= v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -1931,9 +1903,8 @@ JIT_BLE_UN_I64I64_start:
 JIT_BLT_UN_I64I64_start:
 	OPCODE_USE(JIT_BLT_UN_I64I64);
 	{
-		U64 v1, v2, ofs;
 		POP_U64_U64(v1, v2);
-		ofs = GET_OP();
+		U32 ofs = GET_OP();
 		if (v1 < v2) {
 			pCurOp = pOps + ofs;
 		}
@@ -2049,10 +2020,8 @@ JIT_CLT_UN_F64F64_start:
 JIT_ADD_OVF_I32I32_start:
 	OPCODE_USE(JIT_ADD_OVF_I32I32);
 	{
-		U32 v1, v2;
-		I64 res;
 		POP_U32_U32(v1, v2);
-		res = (I64)(I32)v1 + (I64)(I32)v2;
+		I64 res = (I64)(I32)v1 + (I64)(I32)v2;
 		if (res > (I64)0x7fffffff || res < (I64)0xffffffff80000000) {
 			// Overflowed, so throw exception
 			THROW(types[TYPE_SYSTEM_OVERFLOWEXCEPTION]);
@@ -2065,10 +2034,8 @@ JIT_ADD_OVF_I32I32_start:
 JIT_ADD_OVF_UN_I32I32_start:
 	OPCODE_USE(JIT_ADD_OVF_UN_I32I32);
 	{
-		U32 v1, v2;
-		U64 res;
 		POP_U32_U32(v1, v2);
-		res = (U64)v1 + (U64)v2;
+		U64 res = (U64)v1 + (U64)v2;
 		if (res > (U64)0xffffffff) {
 			// Overflowed, so throw exception
 			THROW(types[TYPE_SYSTEM_OVERFLOWEXCEPTION]);
@@ -2081,10 +2048,8 @@ JIT_ADD_OVF_UN_I32I32_start:
 JIT_MUL_OVF_I32I32_start:
 	OPCODE_USE(JIT_MUL_OVF_I32I32);
 	{
-		U32 v1, v2;
-		I64 res;
 		POP_U32_U32(v1, v2);
-		res = (I64)(I32)v1 * (I64)(I32)v2;
+		I64 res = (I64)(I32)v1 * (I64)(I32)v2;
 		if (res > (I64)0x7fffffff || res < (I64)0xffffffff80000000) {
 			// Overflowed, so throw exception
 			THROW(types[TYPE_SYSTEM_OVERFLOWEXCEPTION]);
@@ -2097,10 +2062,8 @@ JIT_MUL_OVF_I32I32_start:
 JIT_MUL_OVF_UN_I32I32_start:
 	OPCODE_USE(JIT_MUL_OVF_UN_I32I32);
 	{
-		U32 v1, v2;
-		U64 res;
 		POP_U32_U32(v1, v2);
-		res = (U64)v1 * (U64)v2;
+		U64 res = (U64)v1 * (U64)v2;
 		if (res > (U64)0xffffffff) {
 			// Overflowed, so throw exception
 			THROW(types[TYPE_SYSTEM_OVERFLOWEXCEPTION]);
@@ -2113,10 +2076,8 @@ JIT_MUL_OVF_UN_I32I32_start:
 JIT_SUB_OVF_I32I32_start:
 	OPCODE_USE(JIT_SUB_OVF_I32I32);
 	{
-		U32 v1, v2;
-		I64 res;
 		POP_U32_U32(v1, v2);
-		res = (I64)(I32)v1 - (I64)(I32)v2;
+		I64 res = (I64)(I32)v1 - (I64)(I32)v2;
 		if (res > (I64)0x7fffffff || res < (I64)0xffffffff80000000) {
 			// Overflowed, so throw exception
 			THROW(types[TYPE_SYSTEM_OVERFLOWEXCEPTION]);
@@ -2129,10 +2090,8 @@ JIT_SUB_OVF_I32I32_start:
 JIT_SUB_OVF_UN_I32I32_start:
 	OPCODE_USE(JIT_SUB_OVF_UN_I32I32);
 	{
-		U32 v1, v2;
-		U64 res;
 		POP_U32_U32(v1, v2);
-		res = (U64)v1 - (U64)v2;
+		U64 res = (U64)v1 - (U64)v2;
 		if (res > (U64)0xffffffff) {
 			// Overflowed, so throw exception
 			THROW(types[TYPE_SYSTEM_OVERFLOWEXCEPTION]);
@@ -2409,8 +2368,8 @@ JIT_CONV_I32_I32_start:
 JIT_CONV_I32_I64_start:
 	OPCODE_USE(JIT_CONV_I32_I64);
 	{
-		I32 value = (I32)POP_U32();
-		PUSH_U64((I64)value);
+		POP_U32(value);
+		PUSH_U64((I64)(I32)value);
 	}
 //JIT_CONV_I32_I64_end:
 	GO_NEXT();
@@ -2420,7 +2379,7 @@ JIT_CONV_U32_U64_start:
 JIT_CONV_U32_I64_start:
 	OPCODE_USE(JIT_CONV_U32_I64);
 	{
-		U32 value = POP_U32();
+		POP_U32(value);
 		PUSH_U64(value);
 	}
 //JIT_CONV_I32_U64_end:
@@ -2431,8 +2390,8 @@ JIT_CONV_U32_I64_start:
 JIT_CONV_I32_R32_start:
 	OPCODE_USE(JIT_CONV_I32_R32);
 	{
-		I32 value = (I32)POP_U32();
-		PUSH_FLOAT(value);
+		POP_U32(value);
+		PUSH_FLOAT((I32)value);
 	}
 //JIT_CONV_I32_R32_end:
 	GO_NEXT();
@@ -2440,8 +2399,8 @@ JIT_CONV_I32_R32_start:
 JIT_CONV_I32_R64_start:
 	OPCODE_USE(JIT_CONV_I32_R64);
 	{
-		I32 value = (I32)POP_U32();
-		PUSH_DOUBLE(value);
+		POP_U32(value);
+		PUSH_DOUBLE((I32)value);
 	}
 //JIT_CONV_I32_R64_end:
 	GO_NEXT();
@@ -2449,7 +2408,7 @@ JIT_CONV_I32_R64_start:
 JIT_CONV_U32_R32_start:
 	OPCODE_USE(JIT_CONV_U32_R32);
 	{
-		U32 value = POP_U32();
+		POP_U32(value);
 		PUSH_FLOAT(value);
 	}
 //JIT_CONV_U32_R32_end:
@@ -2458,7 +2417,7 @@ JIT_CONV_U32_R32_start:
 JIT_CONV_U32_R64_start:
 	OPCODE_USE(JIT_CONV_U32_R64);
 	{
-		U32 value = POP_U32();
+		POP_U32(value);
 		PUSH_DOUBLE(value);
 	}
 //JIT_CONV_U32_R64_end:
@@ -2469,7 +2428,7 @@ JIT_CONV_U64_U32_start:
 	OPCODE_USE(JIT_CONV_I64_U32);
 	{
 		U32 mask = GET_OP();
-		U64 value = POP_U64();
+		POP_U64(value);
 		PUSH_U32(value & mask);
 	}
 //JIT_CONV_I64_U32_end:
@@ -2481,9 +2440,8 @@ JIT_CONV_U64_I32_start:
 	OPCODE_USE(JIT_CONV_I64_U32);
 	{
 		U32 shift = GET_OP();
-		I32 value = (I32)POP_U64();
-		value = (value << shift) >> shift;
-		PUSH_U32(value);
+		POP_U64(value);
+		PUSH_U32(((I32)value << shift) >> shift);
 	}
 //JIT_CONV_I64_I32_end:
 //JIT_CONV_U64_I32_end:
@@ -2492,8 +2450,8 @@ JIT_CONV_U64_I32_start:
 JIT_CONV_I64_R32_start:
 	OPCODE_USE(JIT_CONV_I64_R32);
 	{
-		I64 value = (I64)POP_U64();
-		PUSH_FLOAT(value);
+		POP_U64(value);
+		PUSH_FLOAT((I64)value);
 	}
 //JIT_CONV_I64_R32_end:
 	GO_NEXT();
@@ -2501,8 +2459,8 @@ JIT_CONV_I64_R32_start:
 JIT_CONV_I64_R64_start:
 	OPCODE_USE(JIT_CONV_I64_R64);
 	{
-		I64 value = (I64)POP_U64();
-		PUSH_DOUBLE(value);
+		POP_U64(value);
+		PUSH_DOUBLE((I64)value);
 	}
 //JIT_CONV_I64_R64_end:
 	GO_NEXT();
@@ -2510,7 +2468,7 @@ JIT_CONV_I64_R64_start:
 JIT_CONV_U64_R32_start:
 	OPCODE_USE(JIT_CONV_U64_R32);
 	{
-		U64 value = POP_U64();
+		POP_U64(value);
 		PUSH_FLOAT(value);
 	}
 //JIT_CONV_U64_R32_end:
@@ -2519,7 +2477,7 @@ JIT_CONV_U64_R32_start:
 JIT_CONV_U64_R64_start:
 	OPCODE_USE(JIT_CONV_U64_R64);
 	{
-		U64 value = POP_U64();
+		POP_U64(value);
 		PUSH_DOUBLE(value);
 	}
 //JIT_CONV_U64_R64_end:
@@ -2529,11 +2487,8 @@ JIT_CONV_R32_I32_start:
 	OPCODE_USE(JIT_CONV_R32_I32);
 	{
 		U32 shift = GET_OP();
-		I32 result;
-		float value = POP_FLOAT();
-		result = (I32)value;
-		result = (result << shift) >> shift;
-		PUSH_U32(result);
+		POP_FLOAT(value);
+		PUSH_U32(((I32)value << shift) >> shift);
 	}
 //JIT_CONV_R32_I32_end:
 	GO_NEXT();
@@ -2542,7 +2497,7 @@ JIT_CONV_R32_U32_start:
 	OPCODE_USE(JIT_CONV_R32_U32);
 	{
 		U32 mask = GET_OP();
-		float value = POP_FLOAT();
+		POP_FLOAT(value);
 		PUSH_U32(((U32)value) & mask);
 	}
 //JIT_CONV_R32_U32_end:
@@ -2551,7 +2506,7 @@ JIT_CONV_R32_U32_start:
 JIT_CONV_R32_I64_start:
 	OPCODE_USE(JIT_CONV_R32_I64);
 	{
-		float value = POP_FLOAT();
+		POP_FLOAT(value);
 		PUSH_U64((I64)value);
 	}
 //JIT_CONV_R32_I64_end:
@@ -2560,7 +2515,7 @@ JIT_CONV_R32_I64_start:
 JIT_CONV_R32_U64_start:
 	OPCODE_USE(JIT_CONV_R32_U64);
 	{
-		float value = POP_FLOAT();
+		POP_FLOAT(value);
 		PUSH_U64(value);
 	}
 //JIT_CONV_R32_U64_end:
@@ -2569,7 +2524,7 @@ JIT_CONV_R32_U64_start:
 JIT_CONV_R32_R64_start:
 	OPCODE_USE(JIT_CONV_R32_R64);
 	{
-		float value = POP_FLOAT();
+		POP_FLOAT(value);
 		PUSH_DOUBLE(value);
 	}
 //JIT_CONV_R32_R64_end:
@@ -2579,11 +2534,8 @@ JIT_CONV_R64_I32_start:
 	OPCODE_USE(JIT_CONV_R64_I32);
 	{
 		U32 shift = GET_OP();
-		I32 result;
-		double value = POP_DOUBLE();
-		result = (I32)value;
-		result = (result << shift) >> shift;
-		PUSH_U32(result);
+		POP_DOUBLE(value);
+		PUSH_U32(((I32)value << shift) >> shift);
 	}
 //JIT_CONV_R64_I32_end:
 	GO_NEXT();
@@ -2592,7 +2544,7 @@ JIT_CONV_R64_U32_start:
 	OPCODE_USE(JIT_CONV_R64_U32);
 	{
 		U32 mask = GET_OP();
-		double value = POP_DOUBLE();
+		POP_DOUBLE(value);
 		PUSH_U32(((U32)value) & mask);
 	}
 //JIT_CONV_R64_U32_end:
@@ -2601,7 +2553,7 @@ JIT_CONV_R64_U32_start:
 JIT_CONV_R64_I64_start:
 	OPCODE_USE(JIT_CONV_R64_I64);
 	{
-		double value = POP_DOUBLE();
+		POP_DOUBLE(value);
 		PUSH_U64((I64)value);
 	}
 //JIT_CONV_R64_I64_end:
@@ -2610,7 +2562,7 @@ JIT_CONV_R64_I64_start:
 JIT_CONV_R64_U64_start:
 	OPCODE_USE(JIT_CONV_R64_U64);
 	{
-		double value = POP_DOUBLE();
+		POP_DOUBLE(value);
 		PUSH_U64(value);
 	}
 //JIT_CONV_R64_U64_end:
@@ -2619,8 +2571,8 @@ JIT_CONV_R64_U64_start:
 JIT_CONV_R64_R32_start:
 	OPCODE_USE(JIT_CONV_R64_R32);
 	{
-		float value = (float)POP_DOUBLE();
-		PUSH_FLOAT(value);
+		POP_DOUBLE(value);
+		PUSH_FLOAT((float)value);
 	}
 //JIT_CONV_R64_R32_end:
 	GO_NEXT();
@@ -2638,16 +2590,13 @@ JIT_LOADFUNCTION_start:
 JIT_LOADOBJECT_start:
 	OPCODE_USE(JIT_LOADOBJECT);
 	{
-		tMD_TypeDef *pTypeDef;
-		PTR pMem;
-
-		pMem = POP_PTR(); // address of value-type
-		pTypeDef = (tMD_TypeDef*)GET_OP(); //type of the value-type
+		POP_PTR(pMem); // address of value-type
+		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP(); //type of the value-type
 		//if (pTypeDef->stackSize != pTypeDef->arrayElementSize) {
-			// For bytes and int16s we need some special code to ensure that the stack
-			// does not contain rubbish in the bits unused in this type.
-			// But there is no harm in running this for all types, and it's smaller and probably faster
-			*(U32*)pCurEvalStack = 0;
+		// For bytes and int16s we need some special code to ensure that the stack
+		// does not contain rubbish in the bits unused in this type.
+		// But there is no harm in running this for all types, and it's smaller and probably faster
+		*(U32*)pCurEvalStack = 0;
 		//}
 		PUSH_VALUETYPE(pMem, pTypeDef->arrayElementSize, pTypeDef->stackSize);
 	}
@@ -2658,7 +2607,7 @@ JIT_LOAD_STRING_start:
 	OPCODE_USE(JIT_LOAD_STRING);
 	{
 		U32 value = GET_OP();
-		PTR heapPtr = SystemString_FromUserStrings(pCurrentMethodState->pMetaData, value);
+		HEAP_PTR heapPtr = SystemString_FromUserStrings(pCurrentMethodState->pMethod->pMetaData, value);
 		PUSH_O(heapPtr);
 	}
 //JIT_LOAD_STRING_end:
@@ -2675,29 +2624,29 @@ JIT_NEWOBJECT_start:
 		U32 isInternalConstructor = (pConstructorDef->implFlags & METHODIMPLATTRIBUTES_INTERNALCALL) != 0;
 
 		// All internal constructors MUST allocate their own 'this' objects
-		if (!isInternalConstructor) {
+		if (isInternalConstructor) {
+			obj = (HEAP_PTR)(-1); // dummy 'this' (but not null, so CopyParameters() can calculate proper offset)
+		} else {
 			obj = Heap_AllocType(pConstructorDef->pParentType);
 		}
 
 #ifdef DIAG_METHOD_CALLS
-		pCurrentMethodState->pMethod->heapAlloc++;
+		pCurrentMethodState->pMethod->heapAllocs++;
 #endif
 
 		// Set up the new method state for the called method
-		INCREMENT_NESTED_LEVEL();
-		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
-		// Fill in the parameters
-		POP(pConstructorDef->parameterStackSize);
-		CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, obj);
-		PUSH(sizeof(HEAP_PTR));
+		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 
-		// Push the object here, so it's on the stack when the constructor returns
+		// Fill in the parameters
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pConstructorDef, pCurEvalStack, obj);
+		POP(paramSize);
+
+		// Push the object so it's on the stack when the constructor returns
 		if (!isInternalConstructor) {
 			PUSH_O(obj);
 		}
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
-
 		// Run any pending Finalizers
 		RUN_FINALIZER();
 	}
@@ -2716,15 +2665,14 @@ JIT_NEWOBJECT_VALUETYPE_start:
 
 		// Allocate space on the eval-stack for the new value-type here
 		PTR pMem = pCurEvalStack - (pConstructorDef->parameterStackSize - sizeof(PTR));
-		Assert(pMem >= pCurrentMethodState->pEvalStack);
+		Assert(pMem >= EVAL_STACK_PTR);
 
 		// Set up the new method state for the called method
-		INCREMENT_NESTED_LEVEL();
-		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
+		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
+
 		// Fill in the parameters
-		POP(pConstructorDef->parameterStackSize);
-		CopyParameters(pCallMethodState->pParamsLocals, pConstructorDef, pCurEvalStack, pMem);
-		PUSH(sizeof(PTR));
+		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pConstructorDef, pCurEvalStack, pMem);
+		POP(paramSize);
 
 		// Set the stack state so it's correct for the constructor return
 		if (!isInternalConstructor) {
@@ -2739,45 +2687,38 @@ JIT_NEWOBJECT_VALUETYPE_start:
 	GO_NEXT_CHECK();
 
 JIT_IS_INSTANCE_start:
-	op = JIT_IS_INSTANCE;
-	goto jitCastClass;
+	SET_OP(JIT_IS_INSTANCE, jitCastClass);
 JIT_CAST_CLASS_start:
-	op = JIT_CAST_CLASS;
+	SET_OP(JIT_CAST_CLASS, jitCastClass);
 jitCastClass:
-	OPCODE_USE(op);
+	OPCODE_USE(curr_op);
 	{
-		tMD_TypeDef *pToType, *pTestType;
-		HEAP_PTR heapPtr;
-
-		pToType = (tMD_TypeDef*)GET_OP();
-		heapPtr = POP_O();
+		tMD_TypeDef *pToType = (tMD_TypeDef*)GET_OP();
+		POP_O(heapPtr);
 		if (heapPtr == NULL) {
 			PUSH_O(NULL);
-			goto JIT_IS_INSTANCE_end;
-		}
-		pTestType = Heap_GetType(heapPtr);
-		if (TYPE_ISARRAY(pTestType) && TYPE_ISARRAY(pToType)) {
+		} else {
+			tMD_TypeDef *pTestType = Heap_GetType(heapPtr);
 			// Arrays are handled specially - check if the element type is compatible (or exact match for value types)
-
-			if (pTestType->pArrayElementType->isValueType ?
-				pToType->pArrayElementType == pTestType->pArrayElementType :
-				Type_IsAssignableFrom(pToType->pArrayElementType, pTestType->pArrayElementType)) {
-				PUSH_O(heapPtr);
-				goto JIT_IS_INSTANCE_end;
+			if (TYPE_ISARRAY(pTestType) && TYPE_ISARRAY(pToType)) {
+				if (pTestType->pArrayElementType->isValueType ?
+					pToType->pArrayElementType == pTestType->pArrayElementType :
+					Type_IsAssignableFrom(pToType->pArrayElementType, pTestType->pArrayElementType)) {
+					PUSH_O(heapPtr);
+				} else {
+					if (curr_op == JIT_IS_INSTANCE) { PUSH_O(NULL); }
+					else { THROW(types[TYPE_SYSTEM_INVALIDCASTEXCEPTION]); }
+				}
 			}
-		} else {
-			if (Type_IsAssignableFrom(pToType, pTestType) ||
-				(pToType->pGenericDefinition == types[TYPE_SYSTEM_NULLABLE] &&
-				pToType->ppClassTypeArgs[0] == pTestType)) {
-				// If derived class, interface, or nullable type compatible.
-				PUSH_O(heapPtr);
-				goto JIT_IS_INSTANCE_end;
+			// If derived class, interface, or nullable type compatible.
+			else if (Type_IsAssignableFrom(pToType, pTestType) ||
+					(pToType->pGenericDefinition == types[TYPE_SYSTEM_NULLABLE] &&
+						pToType->ppClassTypeArgs[0] == pTestType)) {
+					PUSH_O(heapPtr);
+			} else {
+				if (curr_op == JIT_IS_INSTANCE) { PUSH_O(NULL); }
+				else { THROW(types[TYPE_SYSTEM_INVALIDCASTEXCEPTION]); }
 			}
-		}
-		if (op == JIT_IS_INSTANCE) {
-			PUSH_O(NULL);
-		} else {
-			THROW(types[TYPE_SYSTEM_INVALIDCASTEXCEPTION]);
 		}
 	}
 JIT_IS_INSTANCE_end:
@@ -2787,13 +2728,9 @@ JIT_IS_INSTANCE_end:
 JIT_NEW_VECTOR_start: // Array with 1 dimension, zero-based
 	OPCODE_USE(JIT_NEW_VECTOR);
 	{
-		tMD_TypeDef *pArrayTypeDef;
-		U32 numElements;
-		HEAP_PTR heapPtr;
-
-		pArrayTypeDef = (tMD_TypeDef*)GET_OP();
-		numElements = POP_U32();
-		heapPtr = SystemArray_NewVector(pArrayTypeDef, numElements);
+		tMD_TypeDef *pArrayTypeDef = (tMD_TypeDef*)GET_OP();
+		POP_U32(numElements);
+		HEAP_PTR heapPtr = SystemArray_NewVector(pArrayTypeDef, numElements);
 		PUSH_O(heapPtr);
 		// Run any pending Finalizers
 		RUN_FINALIZER();
@@ -2804,7 +2741,7 @@ JIT_NEW_VECTOR_start: // Array with 1 dimension, zero-based
 JIT_LOAD_VECTOR_LEN_start: // Load the length of a vector array
 	OPCODE_USE(JIT_LOAD_VECTOR_LEN);
 	{
-		PTR heapPtr = POP_O();
+		POP_O(heapPtr);
 		U32 value = SystemArray_GetLength(heapPtr);
 		PUSH_U32(value);
 	}
@@ -2814,8 +2751,9 @@ JIT_LOAD_VECTOR_LEN_start: // Load the length of a vector array
 JIT_LOAD_ELEMENT_I8_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I8);
 	{
-		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		U32 value;
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((I8)value);
 	}
@@ -2825,8 +2763,9 @@ JIT_LOAD_ELEMENT_I8_start:
 JIT_LOAD_ELEMENT_U8_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_U8);
 	{
-		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		U32 value;
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((U8)value);
 	}
@@ -2836,8 +2775,9 @@ JIT_LOAD_ELEMENT_U8_start:
 JIT_LOAD_ELEMENT_I16_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I16);
 	{
-		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		U32 value;
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((I16)value);
 	}
@@ -2847,8 +2787,9 @@ JIT_LOAD_ELEMENT_I16_start:
 JIT_LOAD_ELEMENT_U16_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_U16);
 	{
-		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		U32 value;
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32((U16)value);
 	}
@@ -2860,8 +2801,9 @@ JIT_LOAD_ELEMENT_U32_start:
 JIT_LOAD_ELEMENT_R32_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I32);
 	{
-		U32 value, idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O();
+		U32 value;
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U32(value);
 	}
@@ -2874,9 +2816,9 @@ JIT_LOAD_ELEMENT_I64_start:
 JIT_LOAD_ELEMENT_R64_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I64);
 	{
-		U32 idx = POP_U32(); // array index
-		HEAP_PTR heapPtr = POP_O();
 		U64 value;
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_LoadElement(heapPtr, idx, (PTR)&value);
 		PUSH_U64(value);
 	}
@@ -2887,8 +2829,8 @@ JIT_LOAD_ELEMENT_R64_start:
 JIT_LOAD_ELEMENT_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT);
 	{
-		U32 idx = POP_U32(); // Array index
-		HEAP_PTR heapPtr = POP_O(); // array object
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		U32 size = GET_OP(); // size of type on stack
 		*(U32*)pCurEvalStack = 0; // This is required to zero out the stack for types that are stored in <4 bytes in arrays
 		SystemArray_LoadElement(heapPtr, idx, pCurEvalStack);
@@ -2900,8 +2842,8 @@ JIT_LOAD_ELEMENT_start:
 JIT_LOAD_ELEMENT_ADDR_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_ADDR);
 	{
-		U32 idx = POP_U32(); // Array index
-		PTR heapPtr = POP_O();
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		PTR pMem = SystemArray_LoadElementAddress(heapPtr, idx);
 		PUSH_PTR(pMem);
 	}
@@ -2911,9 +2853,9 @@ JIT_LOAD_ELEMENT_ADDR_start:
 JIT_STORE_ELEMENT_32_start:
 	OPCODE_USE(JIT_STORE_ELEMENT_32);
 	{
-		U32 value = POP_U32(); // Value
-		U32 idx = POP_U32(); // Array index
-		PTR heapPtr = POP_O();
+		POP_U32(value); // Value
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
 	}
 //JIT_STORE_ELEMENT_32_end:
@@ -2922,9 +2864,9 @@ JIT_STORE_ELEMENT_32_start:
 JIT_STORE_ELEMENT_64_start:
 	OPCODE_USE(JIT_STORE_ELEMENT_64);
 	{
-		U64 value = POP_U64(); // Value
-		U32 idx = POP_U32(); // Array index
-		PTR heapPtr = POP_O();
+		POP_U64(value); // Value
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
 	}
 //JIT_STORE_ELEMENT_64_end:
@@ -2933,13 +2875,11 @@ JIT_STORE_ELEMENT_64_start:
 JIT_STORE_ELEMENT_start:
 	OPCODE_USE(JIT_STORE_ELEMENT);
 	{
-		HEAP_PTR heapPtr;
-		PTR pMem;
-		U32 idx, size = GET_OP(); // Size in bytes of value on stack
+		U32 size = GET_OP(); // Size in bytes of value on stack
 		POP(size);
-		pMem = pCurEvalStack;
-		idx = POP_U32(); // Array index
-		heapPtr = POP_O(); // Array on heap
+		PTR pMem = pCurEvalStack;
+		POP_U32(idx);   // Array index
+		POP_O(heapPtr); // Array object
 		SystemArray_StoreElement(heapPtr, idx, pMem);
 	}
 //JIT_STORE_ELEMENT_end:
@@ -2952,15 +2892,10 @@ JIT_STOREFIELD_PTR_start: // only for 32-bit
 JIT_STOREFIELD_F32_start:
 	OPCODE_USE(JIT_STOREFIELD_INT32);
 	{
-		tMD_FieldDef *pFieldDef;
-		PTR pMem;
-		U32 value;
-		HEAP_PTR heapPtr;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
-		value = POP_U32();
-		heapPtr = POP_O();
-		pMem = heapPtr + pFieldDef->memOffset;
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+		POP_U32(value);
+		POP_O(heapPtr);
+		PTR pMem = heapPtr + pFieldDef->memOffset;
 		*(U32*)pMem = value;
 	}
 //JIT_STOREFIELD_INT32_end:
@@ -2974,15 +2909,10 @@ JIT_STOREFIELD_INT64_start:
 JIT_STOREFIELD_F64_start:
 	OPCODE_USE(JIT_STOREFIELD_F64);
 	{
-		tMD_FieldDef *pFieldDef;
-		PTR pMem;
-		U64 value;
-		HEAP_PTR heapPtr;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
-		value = POP_U64();
-		heapPtr = POP_O();
-		pMem = heapPtr + pFieldDef->memOffset;
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+		POP_U64(value);
+		POP_O(heapPtr);
+		PTR pMem = heapPtr + pFieldDef->memOffset;
 		*(U64*)pMem = value;
 	}
 //JIT_STOREFIELD_INT64_end:
@@ -2992,13 +2922,10 @@ JIT_STOREFIELD_F64_start:
 JIT_STOREFIELD_VALUETYPE_start:
 	OPCODE_USE(JIT_STOREFIELD_VALUETYPE);
 	{
-		tMD_FieldDef *pFieldDef;
-		PTR pMem;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
 		POP(pFieldDef->memSize);
-		pMem = pCurEvalStack;
-		heapPtr = POP_O();
+		PTR pMem = pCurEvalStack;
+		POP_O(heapPtr);
 		memcpy(heapPtr + pFieldDef->memOffset, pMem, pFieldDef->memSize);
 	}
 //JIT_STOREFIELD_VALUETYPE_end:
@@ -3008,10 +2935,8 @@ JIT_LOADFIELD_start:
 	OPCODE_USE(JIT_LOADFIELD);
 	// TODO: Optimize into LOADFIELD of different types O, INT32, INT64, F, etc...)
 	{
-		tMD_FieldDef *pFieldDef;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
-		heapPtr = POP_O();
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+		POP_O(heapPtr);
 		PTR pMem = heapPtr + pFieldDef->memOffset;
 		// It may not be a value-type, but this'll work anyway
 		PUSH_VALUETYPE(pMem, pFieldDef->memSize, pFieldDef->memSize);
@@ -3023,7 +2948,7 @@ JIT_LOADFIELD_4_start:
 	OPCODE_USE(JIT_LOADFIELD_4);
 	{
 		U32 ofs = GET_OP();
-		heapPtr = POP_O();
+		POP_O(heapPtr);
 		PUSH_U32(*(U32*)(heapPtr + ofs));
 	}
 //JIT_LOADFIELD_4_end:
@@ -3033,7 +2958,7 @@ JIT_LOADFIELD_8_start:
 	OPCODE_USE(JIT_LOADFIELD_8);
 	{
 		U32 ofs = GET_OP();
-		heapPtr = POP_O();
+		POP_O(heapPtr);
 		PUSH_U64(*(U64*)(heapPtr + ofs));
 	}
 //JIT_LOADFIELD_8_end:
@@ -3042,10 +2967,8 @@ JIT_LOADFIELD_8_start:
 JIT_LOADFIELD_VALUETYPE_start:
 	OPCODE_USE(JIT_LOADFIELD_VALUETYPE);
 	{
-		tMD_FieldDef *pFieldDef;
-
-		u32Value = GET_OP(); // Get the size of the value-type on the eval stack
-		pFieldDef = (tMD_FieldDef*)GET_OP();
+		U32 u32Value = GET_OP(); // Get the size of the value-type on the eval stack
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
 
 		// [Steve edit] The following line used to be:
 		//     pCurrentMethodState->stackOfs -= u32Value;
@@ -3067,7 +2990,7 @@ JIT_LOAD_FIELD_ADDR_start:
 	OPCODE_USE(JIT_LOAD_FIELD_ADDR);
 	{
 		U32 ofs = GET_OP();
-		HEAP_PTR heapPtr = POP_O();
+		POP_O(heapPtr);
 		PTR pMem = heapPtr + ofs;
 		PUSH_PTR(pMem);
 	}
@@ -3081,13 +3004,9 @@ JIT_STORESTATICFIELD_INTNATIVE_start: // only for 32-bit
 JIT_STORESTATICFIELD_PTR_start: // only for 32-bit
 	OPCODE_USE(JIT_STORESTATICFIELD_INT32);
 	{
-		tMD_FieldDef *pFieldDef;
-		PTR pMem;
-		U32 value;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
-		value = POP_U32();
-		pMem = pFieldDef->pMemory;
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+		POP_U32(value);
+		PTR pMem = pFieldDef->pMemory;
 		*(U32*)pMem = value;
 	}
 //JIT_STORESTATICFIELD_INT32_end:
@@ -3101,14 +3020,9 @@ JIT_STORESTATICFIELD_F64_start:
 JIT_STORESTATICFIELD_INT64_start:
 	OPCODE_USE(JIT_STORESTATICFIELD_INT64);
 	{
-		tMD_FieldDef *pFieldDef;
-		PTR pMem;
-		U64 value;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
-		value = POP_U64();
-		//pMem = pFieldDef->pParentType->pStaticFields + pFieldDef->memOffset;
-		pMem = pFieldDef->pMemory;
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+		POP_U64(value);
+		PTR pMem = pFieldDef->pMemory;
 		*(U64*)pMem = value;
 	}
 //JIT_STORESTATICFIELD_F64_end:
@@ -3118,40 +3032,36 @@ JIT_STORESTATICFIELD_INT64_start:
 JIT_STORESTATICFIELD_VALUETYPE_start:
 	OPCODE_USE(JIT_STORESTATICFIELD_VALUETYPE);
 	{
-		tMD_FieldDef *pFieldDef;
-		PTR pMem;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
-		pMem = pFieldDef->pMemory;
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+		PTR pMem = pFieldDef->pMemory;
 		POP_VALUETYPE(pMem, pFieldDef->memSize, pFieldDef->memSize);
 	}
 //JIT_STORESTATICFIELD_VALUETYPE_end:
 	GO_NEXT();
 
 JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT_start:
-	op = JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT;
-	goto loadStaticFieldStart;
+	SET_OP(JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT, loadStaticFieldStart);
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE_start:
-	op = JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE;
-	goto loadStaticFieldStart;
-JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64_start:
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE, loadStaticFieldStart);
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64_start:
-	op = JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64;
-	goto loadStaticFieldStart;
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64, loadStaticFieldStart);
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64_start:
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64, loadStaticFieldStart);
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32_start:
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32, loadStaticFieldStart);
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_F32_start:
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_F32, loadStaticFieldStart);
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_O_start: // Only for 32-bit
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_O, loadStaticFieldStart);
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE_start: // Only for 32-bit
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE, loadStaticFieldStart);
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR_start: // Only for 32-bit
-	op = 0;
+	SET_OP(JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR, loadStaticFieldStart);
 loadStaticFieldStart:
-	OPCODE_USE(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32);
+	OPCODE_USE(curr_op);
 	{
-		tMD_FieldDef *pFieldDef;
-		tMD_TypeDef *pParentType;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
-		pParentType = pFieldDef->pParentType;
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+		tMD_TypeDef *pParentType = pFieldDef->pParentType;
 		// Check that any type (static) constructor has been called
 		if (pParentType->isTypeInitialised == 0) {
 			// Set the state to initialised
@@ -3164,27 +3074,33 @@ loadStaticFieldStart:
 				// Need to re-run this instruction when we return from static constructor call
 				//pCurrentMethodState->ipOffset -= 2;
 				pCurOp -= 2;
-				INCREMENT_NESTED_LEVEL();
-				pCallMethodState = MethodState_Direct(pThread, pParentType->pStaticConstructor, pCurrentMethodState, 0);
+				pCallMethodState = MethodState_Direct(pThread, pParentType->pStaticConstructor, pCurrentMethodState, 0, 0);
 				// There can be no parameters, so don't need to set them up
 				CHANGE_METHOD_STATE(pCallMethodState);
 				GO_NEXT_CHECK();
 			}
 		}
-		if (op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64) {
-			U64 value;
-			value = *(U64*)(pFieldDef->pMemory);
-			PUSH_U64(value);
-		} else if (op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE) {
-			PUSH_VALUETYPE(pFieldDef->pMemory, pFieldDef->memSize, pFieldDef->memSize);
-		} else {
-			size_t value;
-			if (op == JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT) {
-				value = (size_t)(pFieldDef->pMemory);
-			} else {
-				value = *(size_t*)pFieldDef->pMemory;
+		switch (curr_op) {
+			case JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64:
+			case JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64: {
+				U64 value = *(U64*)(pFieldDef->pMemory);
+				PUSH_U64(value);
+				break;
 			}
-			PUSH_SIZET(value);
+			case JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE: {
+				PUSH_VALUETYPE(pFieldDef->pMemory, pFieldDef->memSize, pFieldDef->memSize);
+				break;
+			}
+			case JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT: {
+				U32 value = (U32)(pFieldDef->pMemory);
+				PUSH_U32(value);
+				break;
+			}
+			default: {
+				U32 value = *(U32*)pFieldDef->pMemory;
+				PUSH_U32(value);
+				break;
+			}
 		}
 	}
 //JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT_end:
@@ -3201,10 +3117,8 @@ loadStaticFieldStart:
 JIT_INIT_VALUETYPE_start:
 	OPCODE_USE(JIT_INIT_VALUETYPE);
 	{
-		tMD_TypeDef *pTypeDef;
-
-		pTypeDef = (tMD_TypeDef*)GET_OP();
-		PTR pMem = POP_PTR();
+		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
+		POP_PTR(pMem);
 		memset(pMem, 0, pTypeDef->instanceMemSize);
 	}
 //JIT_INIT_VALUETYPE_end:
@@ -3213,7 +3127,7 @@ JIT_INIT_VALUETYPE_start:
 JIT_INIT_OBJECT_start:
 	OPCODE_USE(JIT_INIT_OBJECT);
 	{
-		PTR pMem = POP_PTR();
+		POP_PTR(pMem);
 		*(void**)pMem = NULL;
 	}
 //JIT_INIT_OBJECT_end:
@@ -3224,12 +3138,10 @@ JIT_BOX_F32_start:
 JIT_BOX_INTNATIVE_start:
 	OPCODE_USE(JIT_BOX_INT32);
 	{
-		tMD_TypeDef *pTypeDef;
-
-		pTypeDef = (tMD_TypeDef*)GET_OP();
-		heapPtr = Heap_AllocType(pTypeDef);
-		u32Value = POP_U32();
-		*(U32*)heapPtr = u32Value;
+		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
+		HEAP_PTR heapPtr = Heap_AllocType(pTypeDef);
+		POP_U32(value);
+		*(U32*)heapPtr = value;
 		PUSH_O(heapPtr);
 	}
 //JIT_BOX_INT32_end:
@@ -3239,11 +3151,12 @@ JIT_BOX_INTNATIVE_start:
 
 JIT_BOX_INT64_start:
 JIT_BOX_F64_start:
-OPCODE_USE(JIT_BOX_INT64);
+	OPCODE_USE(JIT_BOX_INT64);
 	{
 		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
-		heapPtr = Heap_AllocType(pTypeDef);
-		*(U64*)heapPtr = POP_U64();
+		HEAP_PTR heapPtr = Heap_AllocType(pTypeDef);
+		POP_U64(value);
+		*(U64*)heapPtr = value;
 		PUSH_O(heapPtr);
 	}
 //JIT_BOX_INT64_end:
@@ -3253,10 +3166,8 @@ OPCODE_USE(JIT_BOX_INT64);
 JIT_BOX_VALUETYPE_start:
 	OPCODE_USE(JIT_BOX_VALUETYPE);
 	{
-		tMD_TypeDef *pTypeDef;
-
-		pTypeDef = (tMD_TypeDef*)GET_OP();
-		heapPtr = Heap_AllocType(pTypeDef);
+		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
+		HEAP_PTR heapPtr = Heap_AllocType(pTypeDef);
 		POP_VALUETYPE(heapPtr, pTypeDef->stackSize, pTypeDef->stackSize);
 		PUSH_O(heapPtr);
 	}
@@ -3284,8 +3195,7 @@ JIT_BOX_NULLABLE_start:
 		// If .HasValue
 		if (*(U32*)pCurEvalStack) {
 			// Box the underlying type
-			HEAP_PTR boxed;
-			boxed = Heap_Box(pType, pCurEvalStack + 4);
+			HEAP_PTR boxed = Heap_Box(pType, pCurEvalStack + 4);
 			PUSH_O(boxed);
 		} else {
 			// Put a NULL pointer on the stack
@@ -3298,11 +3208,8 @@ JIT_BOX_NULLABLE_start:
 JIT_UNBOX2VALUETYPE_start:
 	OPCODE_USE(JIT_UNBOX2VALUETYPE);
 	{
-		tMD_TypeDef *pTypeDef;
-		HEAP_PTR heapPtr;
-
-		heapPtr = POP_O();
-		pTypeDef = Heap_GetType(heapPtr);
+		POP_O(heapPtr);
+		tMD_TypeDef *pTypeDef = Heap_GetType(heapPtr);
 		PUSH_VALUETYPE(heapPtr, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
 //JIT_UNBOX2VALUETYPE_end:
@@ -3312,8 +3219,7 @@ JIT_UNBOX_NULLABLE_start:
 	OPCODE_USE(JIT_UNBOX_NULLABLE);
 	{
 		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
-		HEAP_PTR heapPtr;
-		heapPtr = POP_O();
+		POP_O(heapPtr);
 		if (heapPtr == NULL) {
 			// Push .HasValue (= false)
 			PUSH_U32(0);
@@ -3333,9 +3239,7 @@ JIT_UNBOX_NULLABLE_start:
 JIT_LOADTOKEN_TYPE_start:
 	OPCODE_USE(JIT_LOADTOKEN_TYPE);
 	{
-		tMD_TypeDef *pTypeDef;
-
-		pTypeDef = (tMD_TypeDef*)GET_OP();
+		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
 		// Push new valuetype onto evaluation stack
 		PUSH_PTR((PTR)pTypeDef);
 	}
@@ -3345,9 +3249,7 @@ JIT_LOADTOKEN_TYPE_start:
 JIT_LOADTOKEN_FIELD_start:
 	OPCODE_USE(JIT_LOADTOKEN_FIELD);
 	{
-		tMD_FieldDef *pFieldDef;
-
-		pFieldDef = (tMD_FieldDef*)GET_OP();
+		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
 		// Push new valuetype onto evaluation stack - only works on static fields.
 		PUSH_PTR(pFieldDef->pMemory);
 	}
@@ -3355,33 +3257,25 @@ JIT_LOADTOKEN_FIELD_start:
 	GO_NEXT();
 
 JIT_RETHROW_start:
-	op = JIT_RETHROW;
-	goto throwStart;
+	SET_OP(JIT_RETHROW, throwStart);
 JIT_THROW_start:
-	op = JIT_THROW;
+	SET_OP(JIT_THROW, throwStart);
 throwStart:
-	OPCODE_USE(JIT_THROW);
+	OPCODE_USE(curr_op);
 	{
-		U32 i;
-		tExceptionHeader *pCatch;
-		tMethodState *pCatchMethodState;
-		tMD_TypeDef *pExType;
-
 		// Get the exception object
-		if (op == JIT_RETHROW) {
-			heapPtr = pThread->pCurrentExceptionObject;
-		} else {
-			heapPtr = POP_O();
-throwHeapPtr:
+		if (curr_op == JIT_THROW) {
+			POP_O(heapPtr);
 			pThread->pCurrentExceptionObject = heapPtr;
 		}
 		SAVE_METHOD_STATE();
-		pExType = Heap_GetType(heapPtr);
+		tMD_TypeDef *pExType = Heap_GetType(pThread->pCurrentExceptionObject);
+
 		// Find any catch exception clauses; look in the complete call stack
-		pCatch = NULL;
-		pCatchMethodState = pCurrentMethodState;
-		for(;;) {
-			for (i=0; i<pCatchMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
+		tExceptionHeader *pCatch = NULL;
+		tMethodState *pCatchMethodState = pCurrentMethodState;
+		while (pCatchMethodState != NULL) {
+			for (U32 i = 0; i<pCatchMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
 				tExceptionHeader *pEx = &pCatchMethodState->pMethod->pJITted->pExceptionHeaders[i];
 				if (pEx->flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION &&
 					pCatchMethodState->ipOffset - 1 >= pEx->tryStart &&
@@ -3398,12 +3292,13 @@ throwHeapPtr:
 				break;
 			}
 			pCatchMethodState = pCatchMethodState->pCaller;
-			if (pCatchMethodState == NULL) {
-				Crash("Unhandled exception in %s.%s(): %s.%s",
-					pCurrentMethodState->pMethod->pParentType->name,
-					pCurrentMethodState->pMethod->name, pExType->nameSpace, pExType->name);
-			}
 		}
+		if (pCatchMethodState == NULL) {
+			Crash("Unhandled exception in %s.%s(): %s.%s",
+				pCurrentMethodState->pMethod->pParentType->name,
+				pCurrentMethodState->pMethod->name, pExType->nameSpace, pExType->name);
+		}
+
 		// Unwind the stack down to the exception handler's stack frame (MethodState)
 		// Run all finally clauses during unwinding
 		pThread->pCatchMethodState = pCatchMethodState;
@@ -3413,10 +3308,8 @@ throwHeapPtr:
 			tMethodState *pPrevState;
 
 finallyUnwindStack:
-			for (i=pThread->nextFinallyUnwindStack; i<pCurrentMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
-				tExceptionHeader *pEx;
-
-				pEx = &pCurrentMethodState->pMethod->pJITted->pExceptionHeaders[i];
+			for (U32 i = pThread->nextFinallyUnwindStack; i<pCurrentMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
+				tExceptionHeader *pEx = &pCurrentMethodState->pMethod->pJITted->pExceptionHeaders[i];
 				if (pEx->flags == COR_ILEXCEPTION_CLAUSE_FINALLY &&
 					pCurrentMethodState->ipOffset - 1 >= pEx->tryStart &&
 					pCurrentMethodState->ipOffset - 1 < pEx->tryEnd) {
@@ -3454,12 +3347,10 @@ throwEnd:
 JIT_LEAVE_start:
 	OPCODE_USE(JIT_LEAVE);
 	{
-		U32 i;
-		tExceptionHeader *pFinally;
-
 		// Find any finally exception clauses
-		pFinally = NULL;
-		for (i=0; i<pJIT->numExceptionHandlers; i++) {
+		tExceptionHeader *pFinally = NULL;
+		tJITted *pJIT = pCurrentMethodState->pJIT;
+		for (U32 i = 0; i < pJIT->numExceptionHandlers; i++) {
 			if (pJIT->pExceptionHeaders[i].flags == COR_ILEXCEPTION_CLAUSE_FINALLY &&
 				pCurrentMethodState->ipOffset - 1 >= pJIT->pExceptionHeaders[i].tryStart &&
 				pCurrentMethodState->ipOffset - 1 < pJIT->pExceptionHeaders[i].tryEnd) {
@@ -3507,10 +3398,3 @@ void JIT_Execute_Init() {
 	// Initialise the JIT code addresses
 	JIT_Execute(NULL, 0);
 }
-
-#ifdef DIAG_CALL_STACK
-void PrintCallStackBuffer() {
-	printf(pNextChar + 1);
-	printf(callBuffer);
-}
-#endif

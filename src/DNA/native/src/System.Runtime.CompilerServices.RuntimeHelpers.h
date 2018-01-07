@@ -24,6 +24,7 @@
 #include "MetaData.h"
 #include "Types.h"
 
-tAsyncCall* System_Runtime_CompilerServices_InitializeArray(PTR pThis_, PTR pParams, PTR pReturnValue);
+tAsyncCall* System_Runtime_CompilerServices_RuntimeHelpers_InitializeArray(PTR pThis_, PTR pParams, PTR pReturnValue);
+tAsyncCall* System_Runtime_CompilerServices_RuntimeHelpers_GetHashCode(PTR pThis_, PTR pParams, PTR pReturnValue);
 
 #endif

@@ -364,7 +364,7 @@ namespace System.Collections.Generic {
 		}
 
 		private int GetSlot(TKey key) {
-			uint hash = (uint)key.GetHashCode();
+			uint hash = (uint)this.comparer.GetHashCode(key);
 			return (int)(hash % (uint)this.capacity);
 		}
 

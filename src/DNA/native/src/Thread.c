@@ -61,6 +61,9 @@ tThread* Thread() {
 	pThis->nextFinallyUnwindStack = 0;
 	pThis->pAsync = NULL;
 	pThis->hasParam = 0;
+#ifdef DIAG_CALL_HISTORY
+	pThis->nestedLevel = 0;
+#endif
 
 	pThis->startDelegate = NULL;
 	pThis->param = NULL;
@@ -97,16 +100,16 @@ tThread* Thread() {
 PTR Thread_StackAlloc(tThread *pThread, U32 size) {
 	tThreadStack *pStack = pThread->pThreadStack;
 	PTR pAddr = pStack->memory + pStack->ofs;
-#if _DEBUG
+#ifdef _DEBUG
 	*(U32*)pAddr = 0xabababab;
 	((U32*)pAddr)++;
 	pStack->ofs += sizeof(U32);
 #endif
 	pStack->ofs += size;
 	if (pStack->ofs > THREADSTACK_CHUNK_SIZE) {
-		Crash("Thread-local stack is too large: size = %lu", pStack->ofs);
+		Crash("Thread-local stack is too large: size = %u", pStack->ofs);
 	}
-#if _DEBUG
+#ifdef _DEBUG
 	memset(pAddr, 0xcd, size);
 	*(U32*)(pAddr + size) = 0xfbfbfbfb;
 	pStack->ofs += sizeof(U32);
@@ -116,7 +119,7 @@ PTR Thread_StackAlloc(tThread *pThread, U32 size) {
 
 void Thread_StackFree(tThread *pThread, PTR pAddr) {
 	tThreadStack *pStack = pThread->pThreadStack;
-#if _DEBUG
+#ifdef _DEBUG
 	((U32*)pAddr)--;
 	Assert(pAddr >= pStack->memory);
 	Assert(pStack->ofs >= (U32)(pAddr - pStack->memory));
@@ -127,10 +130,13 @@ void Thread_StackFree(tThread *pThread, PTR pAddr) {
 
 void Thread_SetEntryPoint(tThread *pThis, tMetaData *pMetaData, IDX_TABLE entryPointToken, PTR params, U32 paramBytes) {
 	// Set up the initial MethodState
-	pThis->pCurrentMethodState = MethodState(pThis, pMetaData, entryPointToken, NULL);
+	tMethodState *pMethodState = MethodState(pThis, pMetaData, entryPointToken, NULL);
+	pThis->pCurrentMethodState = pMethodState;
 	// Insert initial parameters (if any)
 	if (paramBytes > 0) {
-		memcpy(pThis->pCurrentMethodState->pParamsLocals, params, paramBytes);
+		PTR pEvalStack = (PTR)pMethodState + sizeof(tMethodState);
+		PTR pParamsLocals = pEvalStack + pMethodState->pMethod->pJITted->maxStack;
+		memcpy(pParamsLocals, params, paramBytes);
 	}
 }
 
@@ -146,7 +152,6 @@ static void Thread_Delete(tThread *pThis) {
 
 I32 Thread_Execute() {
 	tThread *pThread, *pPrevThread;
-	U32 status;
 
 	pThread = pAllThreads;
 	// Set the initial thread to the RUNNING state.
@@ -159,7 +164,7 @@ I32 Thread_Execute() {
 		I32 threadExitValue;
 
         log_f(1, "Executing thread %d.\n", (int)pThread->threadID);
-        status = JIT_Execute(pThread, 100);
+        U32 status = JIT_Execute(pThread, 100);
 
 		switch (status) {
 		case THREAD_STATUS_EXIT:
@@ -264,18 +269,19 @@ I32 Thread_Execute() {
                 else {
 					// This is blocking IO, or a lock
 					tMethodState *pMethodState = pThread->pCurrentMethodState;
+					PTR pEvalStack = (PTR)pMethodState + sizeof(tMethodState);
+					PTR pParamsLocals = pEvalStack + pMethodState->pMethod->pJITted->maxStack;
 					PTR pThis;
 					U32 thisOfs;
-					U32 unblocked;
 
 					if (METHOD_ISSTATIC(pMethodState->pMethod)) {
 						pThis = NULL;
 						thisOfs = 0;
 					} else {
-						pThis = *(PTR*)pMethodState->pParamsLocals;
+						pThis = *(PTR*)pParamsLocals;
 						thisOfs = 4;
 					}
-					unblocked = pAsync->checkFn(pThis, pMethodState->pParamsLocals + thisOfs, pMethodState->pEvalStack, pAsync);
+					U32 unblocked = pAsync->checkFn(pThis, pParamsLocals + thisOfs, pEvalStack, pAsync);
 					if (unblocked) {
 						// The IO has unblocked, and the return value is ready.
 						// So delete the async object.
@@ -310,23 +316,30 @@ tThread* Thread_GetCurrent() {
 }
 
 void Thread_GetHeapRoots(tHeapRoots *pHeapRoots) {
-	tThread *pThread;
-
-	pThread = pAllThreads;
+	tThread *pThread = pAllThreads;
 	while (pThread != NULL) {
-		tMethodState *pMethodState;
-
-		pMethodState = pThread->pCurrentMethodState;
+		tMethodState *pMethodState = pThread->pCurrentMethodState;
 		while (pMethodState != NULL) {
+			PTR pEvalStack = (PTR)pMethodState + sizeof(tMethodState);
+			PTR pParamsLocals = pEvalStack + pMethodState->pMethod->pJITted->maxStack;
 			// Put the evaluation stack on the roots
-			Heap_SetRoots(pHeapRoots, pMethodState->pEvalStack, pMethodState->pMethod->pJITted->maxStack);
+			Heap_SetRoots(pHeapRoots, pEvalStack, pMethodState->pMethod->pJITted->maxStack);
 			// Put the params/locals on the roots
-			Heap_SetRoots(pHeapRoots, pMethodState->pParamsLocals,
-				pMethodState->pMethod->parameterStackSize+pMethodState->pMethod->pJITted->localsStackSize);
+			Heap_SetRoots(pHeapRoots, pParamsLocals,
+				pMethodState->pMethod->parameterStackSize + pMethodState->pMethod->pJITted->localsStackSize);
 
 			pMethodState = pMethodState->pCaller;
 		}
 
 		pThread = pThread->pNextThread;
+	}
+}
+
+void Thread_PrintCallStack(tThread *pThread) {
+	tMethodState *pCallMethodState = pThread->pCurrentMethodState;
+	dprintfn("Call stack:");
+	while (pCallMethodState != NULL) {
+		dprintfn("  at %s.%s", pCallMethodState->pMethod->pParentType->nameSpace, pCallMethodState->pMethod->name);
+		pCallMethodState = pCallMethodState->pCaller;
 	}
 }

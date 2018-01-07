@@ -65,7 +65,7 @@ struct tTypeStack_ {
 #define InitOps(ops_, initialCapacity) ops_.capacity = initialCapacity; ops_.ofs = 0; ops_.p = TMALLOC(initialCapacity, size_t); ops_.pSequencePoints = TMALLOC(initialCapacity, size_t);
 #define DeleteOps(ops_) free(ops_.p); free(ops_.pSequencePoints)
 
-#ifdef SWITCH_ON_JIT_OP
+#ifdef SWITCH_ON_JIT_OPS
 #define Translate(op, getDynamic) op
 #else
 // Turn this into a MACRO at some point?
@@ -297,6 +297,8 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 	tDebugMetaData* pDebugMetadata;
 	tDebugMetaDataEntry* pDebugMetadataEntry = NULL;
 	int sequencePointIndex;
+
+	//dprintfn("JIT-ting method: %s.%s", pMethodDef->pParentType->nameSpace, pMethodDef->name);
 
 	pMetaData = pMethodDef->pMetaData;
 	pDebugMetadata = pMetaData->debugMetadata;
@@ -708,9 +710,10 @@ cilCallAll:
 					}
 					MetaData_Fill_TypeDef(pStackType, NULL, NULL);
 
-					if (TYPE_ISINTERFACE(pCallMethod->pParentType) && op == CIL_CALLVIRT) {
-						PushOp(JIT_CALL_INTERFACE);
-					} else if (pCallMethod->pParentType->pParent == types[TYPE_SYSTEM_MULTICASTDELEGATE]) {
+					//if (TYPE_ISINTERFACE(pCallMethod->pParentType) && op == CIL_CALLVIRT) {
+					//	PushOp(JIT_CALL_INTERFACE);
+					//} else 
+					if (pCallMethod->pParentType->pParent == types[TYPE_SYSTEM_MULTICASTDELEGATE]) {
 						PushOp(JIT_INVOKE_DELEGATE);
 					} else if (pCallMethod->pParentType == types[TYPE_SYSTEM_REFLECTION_METHODBASE] && strcmp(pCallMethod->name, "Invoke") == 0) {
 						PushOp(JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE);
@@ -1618,9 +1621,9 @@ cilLeave:
 					break;
 
 				case CILX_TAIL:
-					// Do nothing. TODO: implement
+					PushOp(JIT_TAILCALL_PREFIX);
 					break;
-
+					
 				default:
 					Crash("JITit(): JITter cannot handle extended op-code: 0x%02x", op);
 
@@ -1788,7 +1791,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 	IDX_TABLE localsToken;
 	U8 *pCIL;
 	SIG sig;
-	U32 i, sigLength, numLocals;
+	U32 sigLength;
 	tParameter *pLocals;
 
 	log_f(2, "JIT:   %s\n", Sys_GetMethodDesc(pMethodDef));
@@ -1894,7 +1897,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 			//pExHeaders = pJITted->pExceptionHeaders = TMALLOCFOREVER(numClauses, tExceptionHeader);
 			pExHeaders = pJITted->pExceptionHeaders =
 				(tExceptionHeader*)(genCombinedOpcodes ? malloc(exSize) : mallocForever(exSize));
-			for (i=0; i<numClauses; i++) {
+			for (U32 i=0; i<numClauses; i++) {
 				pExHeaders[i].flags = ((U16*)pMethodHeader)[0];
 				pExHeaders[i].tryStart = ((U16*)pMethodHeader)[1];
 				pExHeaders[i].tryEnd = ((U8*)pMethodHeader)[4];
@@ -1907,7 +1910,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		}
 		pJITted->numExceptionHandlers = numClauses;
 		// replace all classToken's with the actual tMD_TypeDef*
-		for (i=0; i<numClauses; i++) {
+		for (U32 i=0; i<numClauses; i++) {
 			if (pJITted->pExceptionHeaders[i].flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION) {
 				pJITted->pExceptionHeaders[i].u.pCatchTypeDef =
 					MetaData_GetTypeDefFromDefRefOrSpec(pMethodDef->pMetaData, pJITted->pExceptionHeaders[i].u.classToken, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
@@ -1925,7 +1928,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		pLocals = NULL;
 	} else {
 		tMD_StandAloneSig *pStandAloneSig;
-		U32 i, totalSize;
+		U32 totalSize, numLocals;
 
 		pStandAloneSig = (tMD_StandAloneSig*)MetaData_GetTableRow(pMethodDef->pMetaData, localsToken);
 		sig = MetaData_GetBlob(pStandAloneSig->signature, &sigLength);
@@ -1933,7 +1936,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		numLocals = MetaData_DecodeSigEntry(&sig);
 		pLocals = TMALLOC(numLocals, tParameter);
 		totalSize = 0;
-		for (i=0; i<numLocals; i++) {
+		for (U32 i=0; i<numLocals; i++) {
 			tMD_TypeDef *pTypeDef;
 
 			pTypeDef = Type_GetTypeFromSig(pMethodDef->pMetaData, &sig, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);

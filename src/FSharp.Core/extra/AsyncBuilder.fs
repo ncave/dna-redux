@@ -10,14 +10,18 @@
 // You should have received a copy of the CC0 Public Domain Dedication along with this software.
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-namespace FSharp.Control.Tasks
+namespace Microsoft.FSharp.Control
 open System
 open System.Threading.Tasks
 open System.Runtime.CompilerServices
+open Microsoft.FSharp.Collections
+open Microsoft.FSharp.Core
+open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
 
 // Represents the state of a computation:
 // either awaiting something with a continuation,
 // or completed with a return value.
+[<NoEquality; NoComparison>]
 type Step<'a> =
     | Await of ICriticalNotifyCompletion * (unit -> Step<'a>)
     | Return of 'a
@@ -227,7 +231,9 @@ module private TaskBuilderImpl =
 
 open TaskBuilderImpl
 
-type TaskBuilder() =
+[<Sealed>]
+[<CompiledName("FSharpAsyncBuilder")>]
+type AsyncBuilder() =
     member __.Delay(f : unit -> Step<_>) = f //fun () -> f ()
     member __.Run(f : unit -> Step<'m>) = f () //runAsTask f
     member __.Zero() = zero
@@ -243,32 +249,23 @@ type TaskBuilder() =
 
     member __.Bind(step : Step<'a>, continuation : 'a -> Step<'b>) : Step<'b> = bindStep step continuation
 
-    // // // We have to have a dedicated overload for Task<'a> so the compiler doesn't get confused.
-    // // // Everything else can use bindGenericAwaitable via an extension member (defined later).
-    // member inline __.Bind(task : Task<'a>, continuation : 'a -> Step<'b>) : Step<'b> =
-    //     bindTask task continuation
+// // Builds a `System.Threading.Tasks.Task<'a>` similarly to a C# async/await method.
+// // Use this like `async { let! taskResult = someTask(); return taskResult.ToString(); }`.
+// module AsyncImpl = 
+//     let async = AsyncBuilder()
 
-    // // These are fallbacks when the Bind and ReturnFrom on the builder object itself don't apply.
-    // // This is how we support binding arbitrary task-like types.
-    // member inline __.ReturnFrom(taskLike) =
-    //     Binder<_>.GenericAwait(taskLike, ret)
-    // member inline __.Bind(taskLike, continuation : _ -> Step<'a>) : Step<'a> =
-    //     Binder<'a>.GenericAwait(taskLike, continuation)
+[<CompiledName("FSharpAsync`1")>]
+type Async<'T> = Step<'T>
 
-// Builds a `System.Threading.Tasks.Task<'a>` similarly to a C# async/await method.
-// Use this like `task { let! taskResult = someTask(); return taskResult.ToString(); }`.
-[<AutoOpen>]
-module ContextSensitive =
-    // let task = TaskBuilder()
-
-    type Async<'T> = Step<'T>
-    let async = TaskBuilder()
-
-module Async =
-    let Start (t: Async<unit>): unit = runAsTask (fun () -> t) |> ignore
-    // let StartChild (t: Async<'T>): Async<Async<'T>> = async { return t }
-    let StartImmediate (t: Async<unit>): unit = runAsTask (fun () -> t) |> ignore
-    let StartAsTask (t: Async<'T>): Task<'T> = runAsTask (fun () -> t)
-    // let StartChildAsTask (t: Async<'T>): Async<Task<'T>> = async { return StartAsTask t }
-    let RunSynchronously (t: Async<'T>): 'T = StartAsTask(t).Result
-    // let Sleep (dueTime: int): Async<unit> = Task.Delay(dueTime).ContinueWith(ignore) |> ReturnFrom
+[<Sealed>]
+[<CompiledName("FSharpAsync")>]
+type Async() =
+    static member RunSynchronously (computation: Async<'T>): 'T = Async.StartAsTask(computation).Result
+    static member Start (computation: Async<unit>): unit = runAsTask (fun () -> computation) |> ignore
+    static member StartAsTask (computation: Async<'T>): Task<'T> = runAsTask (fun () -> computation)
+    // static member StartChild (computation: Async<'T>): Async<Async<'T>> = async { return computation }
+    // static member StartChildAsTask (computation: Async<'T>): Async<Task<'T>> = async { return StartAsTask computation }
+    // static member AwaitTask (task: Task<'T>): Async<'T> = async { return ReturnFrom task }
+    // static member AwaitTask (task: Task): Async<unit> = async { return ReturnFrom task }
+    static member Sleep (millisecondsDueTime: int): Async<unit> = Task.Delay(millisecondsDueTime).ContinueWith(ignore) |> ReturnFrom
+    static member StartImmediate (computation: Async<unit>): unit = runAsTask (fun () -> computation) |> ignore

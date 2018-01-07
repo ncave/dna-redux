@@ -40,16 +40,14 @@ void Diag_Init() {
 
 #ifdef DIAG_OPCODE_TIMES
 #ifdef _WIN32
-	{
-		HANDLE hProcess = GetCurrentProcess();
-		SetProcessAffinityMask(hProcess, 1);
-	}
+	HANDLE hProcess = GetCurrentProcess();
+	SetProcessAffinityMask(hProcess, 1);
 #endif
-	memset(opcodeTimes, 0, sizeof(opcodeTimes));
+	memset(opcodeTicks, 0, sizeof(opcodeTicks));
 #endif
 
 #ifdef DIAG_OPCODE_USES
-	memset(opcodeNumUses, 0, sizeof(opcodeNumUses));
+	memset(opcodeCounts, 0, sizeof(opcodeCounts));
 #endif
 
 #ifdef DIAG_TOTAL_TIME
@@ -59,9 +57,9 @@ void Diag_Init() {
 
 void Diag_Print() {
 
-#ifdef DIAG_CALL_STACK
-	printf("\nCall stack buffer:\n\n");
-	PrintCallStackBuffer();
+#ifdef DIAG_CALL_HISTORY
+	printf("\nCall history buffer:\n\n");
+	PrintBufferContents();
 	printf("\n");
 #endif
 
@@ -77,7 +75,7 @@ void Diag_Print() {
 // The default sort is by method call counts, unless redefined below:
 //#define SORT_BY_TOTAL_TIME   // sort by method total time (inclusive)
 //#define SORT_BY_START_TIME   // sort by method start time (call order)
-//#define SORT_BY_HEAP_ALLOC   // sort by method heap alloc count
+//#define SORT_BY_HEAP_ALLOCS  // sort by method heap allocs (total)
 //#define SORT_BY_PARAMS_STACK // sort by method params stack size
 //#define SORT_BY_LOCALS_STACK // sort by method locals stack size
 //#define SORT_BY_EVAL_STACK   // sort by method eval stack size
@@ -87,7 +85,7 @@ void Diag_Print() {
 		for (U32 t = 0; t < numTop; t++) { topMethods[t] = NULL; }
 
 		// Report on most-used methods
-		printf("\nTop %d methods:\n\n", numTop);
+		printf("\nTop %u methods:\n\n", numTop);
 
 		// enumerate and sort all methods in all assemblies
 		tFilesLoaded *pFiles = CLIFile_GetLoadedAssemblies();
@@ -104,8 +102,8 @@ void Diag_Print() {
 					if (topMethods[t]->totalTime < pMethod->totalTime) {
 #elif defined(SORT_BY_START_TIME)
 					if (topMethods[t]->startTime < pMethod->startTime) {
-#elif defined(SORT_BY_HEAP_ALLOC)
-					if (topMethods[t]->heapAlloc < pMethod->heapAlloc) {
+#elif defined(SORT_BY_HEAP_ALLOCS)
+					if (topMethods[t]->heapAllocs < pMethod->heapAllocs) {
 #elif defined(SORT_BY_PARAMS_STACK)
 					if (topMethods[t]->parameterStackSize < pMethod->parameterStackSize) {
 #elif defined(SORT_BY_LOCALS_STACK)
@@ -128,11 +126,11 @@ void Diag_Print() {
 		for (U32 t = 0; t < numTop; t++) {
 			tMD_MethodDef *pMethod = topMethods[t];
 			char* methodName = pMethod->isFilled ? Sys_GetMethodDesc(pMethod) : (char*)pMethod->name;
-			printf("%02d: %s\n    : calls: %llu", t+1, methodName, pMethod->callCount);
+			printf("%02u - %s\n     calls: %llu", t+1, methodName, pMethod->callCount);
 			printf(", total: %.3f sec", pMethod->totalTime / 1000000.0);
 			printf(", max: %f sec", pMethod->maxTime / 1000000.0);
 			printf(", avg: %f sec", pMethod->totalTime / max(pMethod->callCount, 1) / 1000000.0);
-			printf(", alloc: %llu", pMethod->heapAlloc);
+			printf(", allocs: %llu", pMethod->heapAllocs);
 			printf(", params: %u bytes", pMethod->parameterStackSize);
 			printf(", locals: %u bytes", pMethod->pJITted == NULL ? 0 : pMethod->pJITted->localsStackSize);
 			printf(", eval stack: %u bytes", pMethod->pJITted == NULL ? 0 : pMethod->pJITted->maxStack);
@@ -145,46 +143,48 @@ void Diag_Print() {
 
 #ifdef DIAG_OPCODE_TIMES
 	{
-		I32 howMany = 25;
-		U32 i;
-		printf("\nJIT OpCodes execution time:\n");
-		for (; howMany > 0; howMany--) {
-			U64 maxTime = 0;
+		I32 howMany = 50;
+		printf("\n--- JIT OpCode times:\n");
+		for (U32 j=1; howMany > 0; howMany--, j++) {
+			U64 maxTicks = 0;
 			U32 maxIndex = 0;
-			for (i=0; i<JIT_OPCODE_MAXNUM; i++) {
-				if (opcodeTimes[i] > maxTime) {
-					maxTime = opcodeTimes[i];
+			for (U32 i=0; i<JIT_OPCODE_MAXNUM; i++) {
+				if (opcodeTicks[i] > maxTicks) {
+					maxTicks = opcodeTicks[i];
 					maxIndex = i;
 				}
 			}
-			printf("0x%03x: %llu ms", maxIndex, maxTime / 1000);
+			printf("%02u - op: 0x%03x, time: %f sec", j, maxIndex, TicksToSeconds(maxTicks));
 #ifdef DIAG_OPCODE_USES
-			printf(" (used %u times) (avg time = %llu)\n", opcodeNumUses[maxIndex], maxTime / opcodeNumUses[maxIndex]);
+			printf(", count: %llu", opcodeCounts[maxIndex]);
 #endif
-			printf("\n");
-			opcodeTimes[maxIndex] = 0;
+			printf(" (%s)\n", Sys_JIT_OpCodeName(maxIndex));
+			opcodeTicks[maxIndex] = 0;
 		}
 	}
-#endif
-
+#else
 #ifdef DIAG_OPCODE_USES
 	{
-		I32 howMany = 25;
-		U32 i, j;
-		printf("\nOpcode use:\n");
-		for (j=1; howMany>0; howMany--, j++) {
-			U32 maxUse = 0;
+		I32 howMany = 50;
+		printf("\n--- JIT OpCode usage:\n");
+		for (U32 j=1; howMany > 0; howMany--, j++) {
+			U64 maxCount = 0;
 			U32 maxIndex = 0;
-			for (i=0; i<JIT_OPCODE_MAXNUM; i++) {
-				if (opcodeNumUses[i] > maxUse) {
-					maxUse = opcodeNumUses[i];
+			for (U32 i=0; i<JIT_OPCODE_MAXNUM; i++) {
+				if (opcodeCounts[i] > maxCount) {
+					maxCount = opcodeCounts[i];
 					maxIndex = i;
 				}
 			}
-			printf("%02d 0x%03x: %d\n", j, maxIndex, maxUse);
-			opcodeNumUses[maxIndex] = 0;
+			printf("%02u - op: 0x%03x, count: %llu", j, maxIndex, maxCount);
+#ifdef DIAG_OPCODE_TIMES
+			printf(", time: %f sec", TicksToSeconds(opcodeTicks[maxIndex]));
+#endif
+			printf(" (%s)\n", Sys_JIT_OpCodeName(maxIndex));
+			opcodeCounts[maxIndex] = 0;
 		}
 	}
+#endif
 #endif
 }
 

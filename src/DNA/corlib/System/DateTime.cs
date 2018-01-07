@@ -144,6 +144,12 @@ namespace System {
 			}
 		}
 
+		public static DateTime Now {
+			get {
+				return UtcNow; //TODO: implement local time
+			}
+		}
+
 		private enum Which {
 			Day,
 			DayYear,
