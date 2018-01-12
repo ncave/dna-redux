@@ -16,9 +16,12 @@ set emccOptions=%sourceFiles% ^
 	-s WASM=1 ^
 	-s MODULARIZE=1 ^
 	-s EXPORT_NAME='ModuleFunc' ^
-	--pre-js pre.js ^
-	--post-js post.js ^
+	-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE="['$Browser']" ^
+	-s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall', 'FS_createPreloadedFile']" ^
 	--js-library js-interop.js
+
+REM --pre-js pre.js ^
+REM --post-js post.js ^
 
 REM set emccOptions=%emccOptions% -DDEBUG_PRINT
 

@@ -2,6 +2,7 @@
 // what works: browser (wasm, asmjs), node (wasm only)
 import { ModuleFunc } from "../js/wasm/dna";
 // import { ModuleFunc } from "../js/asmjs/dna";
+const isWasm = true;
 
 let callbackIdGen = 0;
 const callbackMap = new Map<number, any>();
@@ -132,9 +133,10 @@ export function StartApplication(entryPoint: string, references: string[]) {
     const preloadAssemblies = ["corlib", "JS.Interop", entryPoint].concat(references);
     const root = isNode ? "./wwwroot/" : "/";
     const moduleArgs: any = {
-      wasmBinaryFile: root + "js/wasm/dna.wasm",
-      asmjsCodeFile: root + "js/asmjs/dna.asm.js",
-      memoryInitializerPrefixURL: root + "js/asmjs/",
+      locateFile: (fileName: string) => root + (isWasm ? "js/wasm/" : "js/asmjs/") + fileName,
+      // wasmBinaryFile: root + "js/wasm/dna.wasm",
+      // asmjsCodeFile: root + "js/asmjs/dna.asm.js",
+      // memoryInitializerPrefixURL: root + "js/asmjs/",
       arguments: [entryPoint + ".dll"],
       preloadPlugins: [],
       preRun: () => {

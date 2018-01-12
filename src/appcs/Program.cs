@@ -13,14 +13,14 @@ namespace AppCS {
         static void Main(string[] args) {
             hello("World");
             TestGeneric();
-            TestFib(30);
+            TestFib(31);
             TestNBody(50_000);
             TestSort(50_000);
         }
 
         static void TestFib(int N) {
-            long slowFib(long n) => (n <= 1) ? 1 : slowFib(n - 1) + slowFib(n - 2);
-            var fib = slowFib(N);
+            long slowFib(long n) => (n <= 1) ? n : slowFib(n - 1) + slowFib(n - 2);
+            long fib = N < 0 ? 0 : slowFib(N);
             System.Console.WriteLine("slowFib({0}) = {1}", N, fib);
         }
 

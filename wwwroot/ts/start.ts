@@ -1,7 +1,7 @@
 import * as interop from "./interop";
 
 // F#
-export async function runFsAppAsync() {
+export async function runFSharpAppAsync() {
     console.log("--- F# assembly output starts here ---");
     const entrypoint: string = "appfs";
     const references: string[] = ["FSharp.Core", "libfs"];
@@ -14,7 +14,7 @@ export async function runFsAppAsync() {
 }
 
 // C#
-export async function runCsAppAsync() {
+export async function runCSharpAppAsync() {
     console.log("--- C# assembly output starts here ---");
     const entrypoint: string = "appcs";
     const references: string[] = ["libcs"];
@@ -31,4 +31,6 @@ export async function runCsAppAsync() {
     console.log("--- C# output ends here ---");
 }
 
-runCsAppAsync().then(runFsAppAsync);
+runCSharpAppAsync()
+    .then(runFSharpAppAsync)
+    .catch((reason) => console.log("Error: %o", reason));

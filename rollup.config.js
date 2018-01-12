@@ -3,6 +3,6 @@ export default {
   output: {
     file: './wwwroot/out/bundle.js',
     format: 'iife', // 'amd', 'cjs', 'es', 'iife', 'umd'
+    name: 'Bundle',
   },
-  name: 'Bundle',
 };
