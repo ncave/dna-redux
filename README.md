@@ -10,7 +10,7 @@ Based on the excellent works of:
 - @SteveSanderson https://github.com/SteveSanderson/Blazor
 - and contributors
 
-Notes:
+Features:
 - Supports both C# and F#.
 - Runs in Node.js, Browsers or Native (x86/ARM).
 - Uses .NET Core 2.0 (targeting netstandard1.3 and above).
@@ -36,5 +36,8 @@ Running:
 - Running in Browser: `npm run server` to start a web server, then go to localhost:5000 (hint: look in the Console output)
 - Running as Native: see src/DNA/native
 
-You can open/run it in VS Code, just select a debug config and hit F5.
-The C#, C/C++, Ionide-fsharp, Debugger for Chrome and TSLint extensions for VS Code are highly recommended, but optional.
+- You can run it in VS Code, just select a debug config and hit F5.
+- The C#, C/C++, Ionide-fsharp, Debugger for Chrome and TSLint extensions for VS Code are highly recommended, but optional.
+
+Further reading:
+- [DotNetAnywhere: An Alternative .NET Runtime](http://mattwarren.org/2017/10/19/DotNetAnywhere-an-Alternative-.NET-Runtime/).
