@@ -111,6 +111,8 @@ tThread* Thread();
 void Thread_SetEntryPoint(tThread *pThis, tMetaData *pMetaData, IDX_TABLE entryPointToken, PTR params, U32 paramBytes);
 I32 Thread_Execute();
 tThread* Thread_GetCurrent();
+
+void Thread_StackReAlloc(tThread *pThread, PTR pAddr, U32 size);
 PTR Thread_StackAlloc(tThread *pThread, U32 size);
 void Thread_StackFree(tThread *pThread, PTR pAddr);
 

@@ -31,7 +31,7 @@
 //#define DIAG_METHOD_CALLS
 
 // prints the call stack on crash
-//#define DIAG_CALL_STACK
+#define DIAG_CALL_STACK
 
 // Maintain and print a call history buffer
 //#define DIAG_CALL_HISTORY

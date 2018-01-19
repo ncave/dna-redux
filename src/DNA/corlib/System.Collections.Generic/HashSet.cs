@@ -96,6 +96,10 @@ namespace System.Collections.Generic {
 			return this.dict.ContainsKey(item);
 		}
 
+		public void UnionWith(IEnumerable<T> other) {
+			foreach (T item in other) { Add(item); }
+		}
+
 		public void CopyTo(T[] array) {
 			throw new NotImplementedException();
 		}

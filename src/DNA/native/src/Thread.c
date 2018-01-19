@@ -97,13 +97,31 @@ tThread* Thread() {
 	return pThis;
 }
 
+#ifdef _DEBUG
+const size_t paddingSize = 8;
+const size_t alignSize = 4;
+#endif
+
+// resize the top stack frame
+void Thread_StackReAlloc(tThread *pThread, PTR pAddr, U32 size) {
+#ifdef _DEBUG
+	size = size + (alignSize - size % alignSize);
+#endif
+	tThreadStack *pStack = pThread->pThreadStack;
+	PTR pOldStackEnd = pStack->memory + pStack->ofs;
+	PTR pNewStackEnd = pAddr + sizeof(tMethodState) + size;
+	I32 offsetDiff = (pNewStackEnd - pOldStackEnd);
+	pStack->ofs += offsetDiff;
+}
+
 PTR Thread_StackAlloc(tThread *pThread, U32 size) {
 	tThreadStack *pStack = pThread->pThreadStack;
 	PTR pAddr = pStack->memory + pStack->ofs;
 #ifdef _DEBUG
-	*(U32*)pAddr = 0xabababab;
-	((U32*)pAddr)++;
-	pStack->ofs += sizeof(U32);
+	size = size + (alignSize - size % alignSize);
+	memset(pAddr, 0xab, paddingSize);
+	pAddr += paddingSize;
+	pStack->ofs += paddingSize;
 #endif
 	pStack->ofs += size;
 	if (pStack->ofs > THREADSTACK_CHUNK_SIZE) {
@@ -111,8 +129,8 @@ PTR Thread_StackAlloc(tThread *pThread, U32 size) {
 	}
 #ifdef _DEBUG
 	memset(pAddr, 0xcd, size);
-	*(U32*)(pAddr + size) = 0xfbfbfbfb;
-	pStack->ofs += sizeof(U32);
+	memset(pAddr + size, 0xfb, paddingSize);
+	pStack->ofs += paddingSize;
 #endif
 	return pAddr;
 }
@@ -120,7 +138,7 @@ PTR Thread_StackAlloc(tThread *pThread, U32 size) {
 void Thread_StackFree(tThread *pThread, PTR pAddr) {
 	tThreadStack *pStack = pThread->pThreadStack;
 #ifdef _DEBUG
-	((U32*)pAddr)--;
+	pAddr -= paddingSize;
 	Assert(pAddr >= pStack->memory);
 	Assert(pStack->ofs >= (U32)(pAddr - pStack->memory));
 	memset(pAddr, 0xfe, pStack->ofs - (U32)(pAddr - pStack->memory));

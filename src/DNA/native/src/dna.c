@@ -221,6 +221,11 @@ void almost_c99_signal_handler(int sig) {
 		break;
 	}
 
+#ifdef DIAG_CALL_STACK
+	tThread *pThread = Thread_GetCurrent();
+	Thread_PrintCallStack(pThread);
+#endif
+
 	Diag_Print();
 }
 

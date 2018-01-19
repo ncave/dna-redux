@@ -41,12 +41,7 @@ void Crash(char *pMsg, ...) {
 
 	printf("\n\n");
 
-#ifdef DIAG_CALL_STACK
-	tThread *pThread = Thread_GetCurrent();
-	Thread_PrintCallStack(pThread);
-#endif
-
-#if defined(DIAG_METHOD_CALLS) || defined(DIAG_CALL_HISTORY)
+#if defined(DIAG_METHOD_CALLS) || defined(DIAG_CALL_STACK) || defined(DIAG_CALL_HISTORY)
 	abort();
 #endif
 	

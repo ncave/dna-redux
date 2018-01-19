@@ -146,11 +146,8 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	if (isTailCall) {
 		// reuse the caller stack frame, and keep the original caller
 		pThis = pCaller;
-		// if the new stack frame size is different, correct for it
-		PTR pOldStackEnd = (PTR)pThread->pThreadStack->memory + pThread->pThreadStack->ofs;
-		PTR pNewStackEnd = (PTR)pCaller + sizeof(tMethodState) + stackFrameSize;
-		I32 ofsDiff = (pNewStackEnd - pOldStackEnd);
-		pThread->pThreadStack->ofs += ofsDiff;
+		// resize the caller stack frame size to match the new stack frame size
+		Thread_StackReAlloc(pThread, (PTR)pThis, sizeof(tMethodState) + stackFrameSize);
 	} else
 #endif
 	{

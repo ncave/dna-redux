@@ -667,7 +667,8 @@ cilCallVirtConstrained:
 						if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
 							// Find the interface that we're dealing with
 							for (i=0; i<pConstrainedType->numInterfaces; i++) {
-								if (pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
+								if (pConstrainedType->pInterfaceMaps[i].pVTableLookup != NULL &&
+									pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
 									U32 vTableOfs = pConstrainedType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
 									// if method is implemented on this class, make it a normal CALL op
 									if (pConstrainedType->pVTable[vTableOfs]->pParentType == pConstrainedType) {
