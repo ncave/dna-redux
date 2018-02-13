@@ -190,12 +190,15 @@ module private TaskBuilderImpl =
         | ReturnFrom t ->
             let awaitable = t.GetAwaiter()
             Await(awaitable, fun () ->
-                try
-                    awaitable.GetResult() |> Return
-                with
-                | _ ->
-                    fin()
-                    reraise())
+                let result =
+                    try
+                        awaitable.GetResult() |> Return
+                    with
+                    | _ ->
+                        fin()
+                        reraise()
+                fin() // if we got here we haven't run fin(), because we would've reraised after doing so
+                result)
         | Await (awaitable, next) ->
             Await (awaitable, fun () -> tryFinally next fin)
 
