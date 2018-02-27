@@ -1,8 +1,6 @@
-// switch between these two lines if need to run asmjs
-// what works: browser (wasm, asmjs), node (wasm only)
-import { ModuleFunc } from "../js/wasm/dna";
 // import { ModuleFunc } from "../js/asmjs/dna";
-const isWasm = true;
+import { ModuleFunc } from "../js/wasm/dna";
+const isWasm = true; // typeof WebAssembly !== "undefined" && WebAssembly.validate;
 
 let callbackIdGen = 0;
 const callbackMap = new Map<number, any>();
@@ -23,7 +21,6 @@ function runCallback(callbackId: number, args: any) {
   }
 }
 
-// const isWasm = typeof WebAssembly !== "undefined" && WebAssembly.validate;
 const isNode = typeof process === "object" && typeof require === "function";
 const globalRef: any = isNode ? global : window;
 
