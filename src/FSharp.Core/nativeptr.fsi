@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 namespace Microsoft.FSharp.NativeInterop
 
@@ -81,3 +81,11 @@ namespace Microsoft.FSharp.NativeInterop
         [<NoDynamicInvocation>]
         [<CompiledName("StackAllocate")>]
         val inline stackalloc : count:int -> nativeptr<'T>
+
+        /// <summary>Converts a given typed native pointer to a managed pointer.</summary>
+        /// <param name="address">The input pointer.</param>
+        /// <returns>The managed pointer.</returns>
+        [<Unverifiable>]
+        [<NoDynamicInvocation>]
+        [<CompiledName("ToByRefInlined")>]
+        val inline toByRef : nativeptr<'T> -> byref<'T>        

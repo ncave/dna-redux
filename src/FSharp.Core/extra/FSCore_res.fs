@@ -261,7 +261,7 @@ let res_pairs = [|
         "ill formed expression: AppOp or LetOp" );
     ( "QtypeArgumentOutOfRange",
         "type argument out of range" );
-    ( "ThisValueCannotBeMutated",
+    ( "thisValueCannotBeMutated",
         "This value cannot be mutated" );
     ( "optionValueWasNone",
         "The option value was None" );

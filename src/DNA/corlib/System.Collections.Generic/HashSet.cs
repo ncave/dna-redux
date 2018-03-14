@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2009 DotNetAnywhere
+// Copyright (c) 2009 DotNetAnywhere
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,135 +25,135 @@ using System.Text;
 
 namespace System.Collections.Generic {
 
-	public class HashSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable {
+    public class HashSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable, IReadOnlyCollection<T> {
 
-		public struct Enumerator : IEnumerator<T>, IEnumerator, IDisposable {
+        public struct Enumerator : IEnumerator<T>, IEnumerator, IDisposable {
 
-			internal Enumerator(HashSet<T> hashSet) {
-				this.en = hashSet.dict.Keys.GetEnumerator();
-			}
+            internal Enumerator(HashSet<T> hashSet) {
+                this.en = hashSet.dict.Keys.GetEnumerator();
+            }
 
-			private IEnumerator<T> en;
+            private IEnumerator<T> en;
 
-			public T Current {
-				get {
-					return this.en.Current;
-				}
-			}
+            public T Current {
+                get {
+                    return this.en.Current;
+                }
+            }
 
-			public void Dispose() {
-			}
+            public void Dispose() {
+            }
 
-			object IEnumerator.Current {
-				get {
-					return this.en.Current;
-				}
-			}
+            object IEnumerator.Current {
+                get {
+                    return this.en.Current;
+                }
+            }
 
-			public bool MoveNext() {
-				return this.en.MoveNext();
-			}
+            public bool MoveNext() {
+                return this.en.MoveNext();
+            }
 
-			public void Reset() {
-				this.en.Reset();
-			}
+            public void Reset() {
+                this.en.Reset();
+            }
 
-		}
+        }
 
-		private Dictionary<T, object> dict;
+        private Dictionary<T, object> dict;
 
-		public HashSet() {
-			this.dict = new Dictionary<T, object>();
-		}
+        public HashSet() {
+            this.dict = new Dictionary<T, object>();
+        }
 
-		public HashSet(IEnumerable<T> collection) : this(collection, null) { }
+        public HashSet(IEnumerable<T> collection) : this(collection, null) { }
 
-		public HashSet(IEqualityComparer<T> comparer) {
-			this.dict = new Dictionary<T, object>(comparer);
-		}
+        public HashSet(IEqualityComparer<T> comparer) {
+            this.dict = new Dictionary<T, object>(comparer);
+        }
 
-		public HashSet(IEnumerable<T> collection, IEqualityComparer<T> comparer) {
-			if (collection == null) {
-				throw new ArgumentNullException();
-			}
-			this.dict = new Dictionary<T, object>(comparer);
-			foreach (T item in collection) {
-				this.dict[item] = null;
-			}
-		}
+        public HashSet(IEnumerable<T> collection, IEqualityComparer<T> comparer) {
+            if (collection == null) {
+                throw new ArgumentNullException();
+            }
+            this.dict = new Dictionary<T, object>(comparer);
+            foreach (T item in collection) {
+                this.dict[item] = null;
+            }
+        }
 
-		public bool Add(T item) {
-			bool ret = !this.dict.ContainsKey(item);
-			this.dict[item] = null;
-			return ret;
-		}
+        public bool Add(T item) {
+            bool ret = !this.dict.ContainsKey(item);
+            this.dict[item] = null;
+            return ret;
+        }
 
-		public void Clear() {
-			this.dict.Clear();
-		}
+        public void Clear() {
+            this.dict.Clear();
+        }
 
-		public bool Contains(T item) {
-			return this.dict.ContainsKey(item);
-		}
+        public bool Contains(T item) {
+            return this.dict.ContainsKey(item);
+        }
 
-		public void UnionWith(IEnumerable<T> other) {
-			foreach (T item in other) { Add(item); }
-		}
+        public void UnionWith(IEnumerable<T> other) {
+            foreach (T item in other) { Add(item); }
+        }
 
-		public void CopyTo(T[] array) {
-			throw new NotImplementedException();
-		}
+        public void CopyTo(T[] array) {
+            throw new NotImplementedException();
+        }
 
-		public void CopyTo(T[] array, int arrayIndex) {
-			throw new NotImplementedException();
-		}
+        public void CopyTo(T[] array, int arrayIndex) {
+            throw new NotImplementedException();
+        }
 
-		public void CopyTo(T[] array, int arrayIndex, int count) {
-			throw new NotImplementedException();
-		}
+        public void CopyTo(T[] array, int arrayIndex, int count) {
+            throw new NotImplementedException();
+        }
 
-		public Enumerator GetEnumerator() {
-			return new Enumerator(this);
-		}
+        public Enumerator GetEnumerator() {
+            return new Enumerator(this);
+        }
 
-		public bool Remove(T item) {
-			return this.dict.Remove(item);
-		}
+        public bool Remove(T item) {
+            return this.dict.Remove(item);
+        }
 
-		public IEqualityComparer<T> Comparer {
-			get {
-				return this.dict.Comparer;
-			}
-		}
+        public IEqualityComparer<T> Comparer {
+            get {
+                return this.dict.Comparer;
+            }
+        }
 
-		public int Count {
-			get {
-				return this.dict.Count;
-			}
-		}
+        public int Count {
+            get {
+                return this.dict.Count;
+            }
+        }
 
 
-		#region Interface Members
+        #region Interface Members
 
-		void ICollection<T>.Add(T item) {
-			this.Add(item);
-		}
+        void ICollection<T>.Add(T item) {
+            this.Add(item);
+        }
 
-		bool ICollection<T>.IsReadOnly {
-			get {
-				return false;
-			}
-		}
+        bool ICollection<T>.IsReadOnly {
+            get {
+                return false;
+            }
+        }
 
-		IEnumerator<T> IEnumerable<T>.GetEnumerator() {
-			return new Enumerator(this);
-		}
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() {
+            return new Enumerator(this);
+        }
 
-		IEnumerator IEnumerable.GetEnumerator() {
-			return new Enumerator(this);
-		}
+        IEnumerator IEnumerable.GetEnumerator() {
+            return new Enumerator(this);
+        }
 
-		#endregion
-	}
+        #endregion
+    }
 
 }

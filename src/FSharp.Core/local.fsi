@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 namespace Microsoft.FSharp.Core
 open Microsoft.FSharp.Core
@@ -63,6 +63,7 @@ module internal List =
     val toArray : 'T list -> 'T[]
     val inline ofSeq : seq<'T> -> 'T List
     val splitAt : int -> 'T list -> ('T list * 'T list)
+    val transpose : 'T list list -> 'T list list
     val truncate : int -> 'T list -> 'T list
 
 module internal Array =

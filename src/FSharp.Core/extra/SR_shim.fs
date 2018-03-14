@@ -73,7 +73,7 @@ module internal SR =
     let notARecordType = "notARecordType"
     let nullsNotAllowedInArray = "nullsNotAllowedInArray"
     let objIsNotARecord = "objIsNotARecord"
-    let keyNotFoundAlt = "keyNotFoundAltMessage"
+    let keyNotFoundAlt = "keyNotFoundAlt"
     let firstClassUsesOfSplice = "firstClassUsesOfSplice"
     let printfNotAFunType = "printfNotAFunType"
     let printfMissingFormatSpecifier = "printfMissingFormatSpecifier"
@@ -159,10 +159,3 @@ module internal SR =
         let ok, value = SR.Resources.resources.TryGetValue(name)
         if ok then value
         else "Missing FSCore string resource for: " + name
-
-    let GetString1(name:String, arg1:String) = 
-        String.Format(GetString(name), arg1)
-    let GetString2(name:String, arg1:String, arg2:String) = 
-        String.Format(GetString(name), arg1, arg2)
-    let GetString3(name:String, arg1:String, arg2:String, arg3:String) = 
-        String.Format(GetString(name), arg1, arg2, arg3)

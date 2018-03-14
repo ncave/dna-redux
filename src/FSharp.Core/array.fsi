@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 namespace Microsoft.FSharp.Collections
 
@@ -985,6 +985,14 @@ namespace Microsoft.FSharp.Collections
         [<CompiledName("ToSeq")>]
         val toSeq: array:'T[] -> seq<'T>
 
+        /// <summary>Returns the transpose of the given sequence of arrays.</summary>
+        /// <param name="arrays">The input sequence of arrays.</param>
+        /// <returns>The transposed array.</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the input sequence is null.</exception>
+        /// <exception cref="System.ArgumentException">Thrown when the input arrays differ in length.</exception>
+        [<CompiledName("Transpose")>]
+        val transpose: arrays:seq<'T[]> -> 'T[][]
+
         /// <summary>Returns at most N elements in a new array.</summary>
         /// <param name="count">The maximum number of items to return.</param>
         /// <param name="array">The input array.</param>
@@ -1198,4 +1206,4 @@ namespace Microsoft.FSharp.Collections
             /// <exception cref="System.ArgumentNullException">Thrown when the input array is null.</exception>
             [<CompiledName("Partition")>]
             val partition : predicate:('T -> bool) -> array:'T[] -> 'T[] * 'T[]
-#endif            
+#endif
