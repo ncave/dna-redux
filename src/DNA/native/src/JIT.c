@@ -575,7 +575,8 @@ cilStLoc:
 			case CIL_LDLOCA_S:
 				// Get the local number to load the address of
 				u32Value = pCIL[cilOfs++];
-				PushOpParam(JIT_LOAD_PARAMLOCAL_ADDR, pMethodDef->parameterStackSize + pLocals[u32Value].offset);
+				ofs = pMethodDef->parameterStackSize + pLocals[u32Value].offset;
+				PushOpParam(JIT_LOAD_PARAMLOCAL_ADDR, ofs);
 				PushStackType(types[TYPE_SYSTEM_INTPTR]);
 				break;
 
@@ -657,33 +658,14 @@ cilCallVirtConstrained:
 						MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 					}
 
+					// if there is a 'constrained' prefix
 					if (u32Value2 != 0) {
-						// There is a 'constrained' prefix
 						tMD_TypeDef *pConstrainedType;
-
 						pConstrainedType = MetaData_GetTypeDefFromDefRefOrSpec(pMetaData, u32Value2, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
 						MetaData_Fill_TypeDef(pConstrainedType, NULL, NULL);
 
-						if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
-							// Find the interface that we're dealing with
-							for (i=0; i<pConstrainedType->numInterfaces; i++) {
-								if (pConstrainedType->pInterfaceMaps[i].pVTableLookup != NULL &&
-									pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
-									U32 vTableOfs = pConstrainedType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
-									// if method is implemented on this class, make it a normal CALL op
-									if (pConstrainedType->pVTable[vTableOfs]->pParentType == pConstrainedType) {
-										op = CIL_CALL;
-										pCallMethod = pConstrainedType->pVTable[vTableOfs];
-										//dprintfn("Calling interface method: %s", pCallMethod->name);
-										goto cilCallAll;
-									}
-								}
-							}
-						}
-
 						if (pConstrainedType->isValueType) {
-							// If pConstrainedType directly implements the call then don't do anything
-							// otherwise the 'this' pointer must be boxed (BoxedCall)
+							// if pConstrainedType directly implements the method then just call it
 							if (pCallMethod->vTableOfs != 0xffffffff) {
 								tMD_MethodDef *pImplMethod = pConstrainedType->pVTable[pCallMethod->vTableOfs];
 								if (pImplMethod->pParentType == pConstrainedType) {
@@ -692,10 +674,29 @@ cilCallVirtConstrained:
 									goto cilCallAll;
 								}
 							}
+							// otherwise the 'this' pointer must be dereferenced and boxed
 							pBoxCallType = pConstrainedType;
 						} else {
 							// Reference-type, so dereference the PTR to 'this' and use that for the 'this' for the call.
 							derefRefType = 1;
+
+							//// interface call optimization
+							//if (TYPE_ISINTERFACE(pCallMethod->pParentType)) {
+							//	// Find the interface that we're dealing with
+							//	for (i = 0; i<pConstrainedType->numInterfaces; i++) {
+							//		if (pConstrainedType->pInterfaceMaps[i].pVTableLookup != NULL &&
+							//			pConstrainedType->pInterfaceMaps[i].pInterface == pCallMethod->pParentType) {
+							//			U32 vTableOfs = pConstrainedType->pInterfaceMaps[i].pVTableLookup[pCallMethod->vTableOfs];
+							//			// if method is implemented on this class, make it a normal CALL op
+							//			if (pConstrainedType->pVTable[vTableOfs]->pParentType == pConstrainedType) {
+							//				op = CIL_CALL;
+							//				pCallMethod = pConstrainedType->pVTable[vTableOfs];
+							//				//dprintfn("Calling interface method: %s", pCallMethod->name);
+							//				goto cilCallAll;
+							//			}
+							//		}
+							//	}
+							//}
 						}
 					}
 cilCallAll:
@@ -705,6 +706,7 @@ cilCallAll:
 					for (i=0; i<pCallMethod->numberOfParameters; i++) {
 						pStackType = PopStackType();
 					}
+
 					// the stack type of the 'this' object will now be in stackType (if there is one)
 					if (METHOD_ISSTATIC(pCallMethod)) {
 						pStackType = types[TYPE_SYSTEM_OBJECT];
