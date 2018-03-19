@@ -54,7 +54,7 @@ struct tMethodState_ {
 	void *pDelegateParams;
 
 	// When a leave instruction has to run a 'finally' bit of code, store the leave jump address here
-	size_t *pOpEndFinally;
+	U32 *pOpEndFinally;
 
 	// Link to caller methodstate
 	tMethodState *pCaller;

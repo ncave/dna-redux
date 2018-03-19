@@ -3273,19 +3273,10 @@ throwStart:
 		// Find any catch exception clauses; look in the complete call stack
 		tExceptionHeader *pCatch = NULL;
 		tMethodState *pCatchMethodState = pCurrentMethodState;
+		U32 ipOffset;
 		while (pCatchMethodState != NULL) {
-			for (U32 i = 0; i<pCatchMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
-				tExceptionHeader *pEx = &pCatchMethodState->pMethod->pJITted->pExceptionHeaders[i];
-				if (pEx->flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION &&
-					pCatchMethodState->ipOffset - 1 >= pEx->tryStart &&
-					pCatchMethodState->ipOffset - 1 < pEx->tryEnd &&
-					Type_IsDerivedFromOrSame(pEx->u.pCatchTypeDef, pExType)) {
-
-					// Found the correct catch clause to jump to
-					pCatch = pEx;
-					break;
-				}
-			}
+			ipOffset = pCatchMethodState->ipOffset - 1;
+			pCatch = JIT_FindExceptionHeader(pCatchMethodState, ipOffset, pExType);
 			if (pCatch != NULL) {
 				// Found a suitable exception handler
 				break;
@@ -3305,23 +3296,35 @@ throwStart:
 		// Have to use the pThread->pCatchMethodState, as we could be getting here from END_FINALLY
 		while (pCurrentMethodState != pThread->pCatchMethodState) {
 			tMethodState *pPrevState;
+			tExceptionHeader *pFinally;
 
 finallyUnwindStack:
-			for (U32 i = pThread->nextFinallyUnwindStack; i<pCurrentMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
-				tExceptionHeader *pEx = &pCurrentMethodState->pMethod->pJITted->pExceptionHeaders[i];
-				if (pEx->flags == COR_ILEXCEPTION_CLAUSE_FINALLY &&
-					pCurrentMethodState->ipOffset - 1 >= pEx->tryStart &&
-					pCurrentMethodState->ipOffset - 1 < pEx->tryEnd) {
-
-					// Found a finally handler
-					POP_ALL();
-					CHANGE_METHOD_STATE(pCurrentMethodState);
-					pCurrentMethodState->ipOffset = pEx->handlerStart;
-					// Keep track of which finally clause should be executed next
-					pThread->nextFinallyUnwindStack = i + 1;
-					goto throwEnd;
-				}
+			ipOffset = pCurrentMethodState->ipOffset - 1;
+			pFinally = JIT_FindExceptionHeader(pCurrentMethodState, ipOffset, NULL);
+			if (pFinally != NULL) {
+				POP_ALL();
+				CHANGE_METHOD_STATE(pCurrentMethodState);
+				pCurrentMethodState->ipOffset = pFinally->handlerStart;
+				// Keep track of which finally clause should be executed next
+				pThread->nextFinallyUnwindStack = 1;
+				goto throwEnd;
 			}
+
+			// for (U32 i = pThread->nextFinallyUnwindStack; i<pCurrentMethodState->pMethod->pJITted->numExceptionHandlers; i++) {
+			// 	tExceptionHeader *pEx = &pCurrentMethodState->pMethod->pJITted->pExceptionHeaders[i];
+			// 	if (pEx->flags == COR_ILEXCEPTION_CLAUSE_FINALLY &&
+			// 		pCurrentMethodState->ipOffset - 1 >= pEx->tryStart &&
+			// 		pCurrentMethodState->ipOffset - 1 < pEx->tryEnd) {
+
+			// 		// Found a finally handler
+			// 		POP_ALL();
+			// 		CHANGE_METHOD_STATE(pCurrentMethodState);
+			// 		pCurrentMethodState->ipOffset = pEx->handlerStart;
+			// 		// Keep track of which finally clause should be executed next
+			// 		pThread->nextFinallyUnwindStack = i + 1;
+			// 		goto throwEnd;
+			// 	}
+			// }
 
 			pPrevState = pCurrentMethodState->pCaller;
 			MethodState_Delete(pThread, &pCurrentMethodState);
@@ -3346,24 +3349,17 @@ throwEnd:
 JIT_LEAVE_start:
 	OPCODE_USE(JIT_LEAVE);
 	{
-		// Find any finally exception clauses
-		tExceptionHeader *pFinally = NULL;
-		tJITted *pJIT = pCurrentMethodState->pJIT;
-		for (U32 i = 0; i < pJIT->numExceptionHandlers; i++) {
-			if (pJIT->pExceptionHeaders[i].flags == COR_ILEXCEPTION_CLAUSE_FINALLY &&
-				pCurrentMethodState->ipOffset - 1 >= pJIT->pExceptionHeaders[i].tryStart &&
-				pCurrentMethodState->ipOffset - 1 < pJIT->pExceptionHeaders[i].tryEnd) {
-				// Found the correct finally clause to jump to
-				pFinally = &pJIT->pExceptionHeaders[i];
-				break;
-			}
-		}
+		// Find the innermost try-finally clause header
+		U32 ipOffset = (U32)(pCurOp - pOps) - 1;
+		tExceptionHeader *pFinally = JIT_FindExceptionHeader(pCurrentMethodState, ipOffset, NULL);
+
 		POP_ALL();
 		U32 ofs = GET_OP();
 		if (pFinally != NULL) {
 			// Jump to 'finally' section
 			pCurOp = pOps + pFinally->handlerStart;
-			pCurrentMethodState->pOpEndFinally = pOps + ofs;
+			pCurrentMethodState->pOpEndFinally += 1;
+			*pCurrentMethodState->pOpEndFinally = ofs; // push leave offset on stack
 		} else {
 			// just branch
 			pCurOp = pOps + ofs;
@@ -3382,7 +3378,11 @@ JIT_END_FINALLY_start:
 		// (finally blocks are always after catch blocks, so execution can just continue)
 		POP_ALL();
 		// And jump to the correct instruction, as specified in the leave instruction
-		pCurOp = pCurrentMethodState->pOpEndFinally;
+		U32 ofs = *pCurrentMethodState->pOpEndFinally; // pop leave offset from stack
+		if (ofs > 0) {
+			pCurrentMethodState->pOpEndFinally -= 1;
+			pCurOp = pOps + ofs;
+		}
 	}
 //JIT_END_FINALLY_end:
 	GO_NEXT_CHECK();
@@ -3396,4 +3396,24 @@ done:
 void JIT_Execute_Init() {
 	// Initialise the JIT code addresses
 	JIT_Execute(NULL, 0);
+}
+
+// Find the innermost enclosing try-catch or try-finally header by IP offset in try block
+tExceptionHeader * JIT_FindExceptionHeader(tMethodState *pMethodState, U32 ipOffset, tMD_TypeDef *pExType) {
+	tExceptionHeader *pFound = NULL;
+	U32 flags = (pExType == NULL) ? COR_ILEXCEPTION_CLAUSE_FINALLY : COR_ILEXCEPTION_CLAUSE_EXCEPTION;
+	for (U32 i = 0; i < pMethodState->pJIT->numExceptionHandlers; i++) {
+		tExceptionHeader *pExHeader = &pMethodState->pJIT->pExceptionHeaders[i];
+		if (pExHeader->flags == flags &&
+			ipOffset >= pExHeader->tryStart &&
+			ipOffset  < pExHeader->tryEnd &&
+			(pExType == NULL || Type_IsDerivedFromOrSame(pExHeader->u.pCatchTypeDef, pExType)) &&
+			(pFound == NULL || (
+				pFound->tryStart < pExHeader->tryStart &&
+				pFound->tryEnd > pExHeader->tryEnd))
+		) {
+			pFound = pExHeader;
+		}
+	}
+	return pFound;
 }

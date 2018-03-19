@@ -174,6 +174,14 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	pThis->pOpEndFinally = NULL;
 	pThis->pReflectionInvokeReturnType = NULL;
 
+	// storage for protected block 'leave' jump offsets
+	U32 numClauses = pThis->pJIT->numExceptionHandlers;
+	if (numClauses > 0) {
+		// stack allocated, will be freed with the whole frame
+		pThis->pOpEndFinally = (U32*)Thread_StackAlloc(pThread, sizeof(U32) * (numClauses + 1));
+		*(pThis->pOpEndFinally) = 0; // value zero means stack bottom
+	}
+
 #ifdef GEN_COMBINED_OPCODES
 	AddCall(pMethod);
 

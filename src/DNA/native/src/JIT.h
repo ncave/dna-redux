@@ -136,6 +136,8 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes);
 
 U32 JIT_Execute(tThread *pThread, U32 numInst);
 
+tExceptionHeader* JIT_FindExceptionHeader(tMethodState *pMethodState, U32 ipOffset, tMD_TypeDef *pExType);
+
 #ifdef DIAG_OPCODE_TIMES
 #include "JIT_OpCodes.h"
 extern U64 opcodeTicks[JIT_OPCODE_MAXNUM];
