@@ -78,6 +78,6 @@
 #define SWITCH_ON_JIT_OPS
 
 // disable GC completely (for perf testing/tuning)
-//#define NO_GC_WHATSOEVER
+#define NO_GC_WHATSOEVER
 
 #endif

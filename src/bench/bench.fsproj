@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Fable/src/dotnet/Fable.JS/Fable.JS.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="app.fs"/>
+  </ItemGroup>
+
+  <Target Name="CopyToBuiltBin" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="../../wwwroot/bin" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyToBuiltBin2" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)fcs-fable.dll" DestinationFolder="../../wwwroot/bin" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyToBuiltBin3" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)Fable.JS.dll" DestinationFolder="../../wwwroot/bin" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>
