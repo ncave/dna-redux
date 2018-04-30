@@ -15,6 +15,7 @@ set emccOptions=%sourceFiles% ^
 	-s EXPORTED_FUNCTIONS="['_main', '_JSInterop_CallDotNet', '_Debugger_Continue', '_Debugger_SetBreakPoint', '_Debugger_Step', '_Debugger_Reset', '_Debugger_Clear_BreakPoints']" ^
 	-s WASM=1 ^
 	-s MODULARIZE=1 ^
+	-s ALLOW_MEMORY_GROWTH=1 ^
 	-s EXPORT_NAME='ModuleFunc' ^
 	-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE="['$Browser']" ^
 	-s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall', 'FS_createPreloadedFile']" ^
