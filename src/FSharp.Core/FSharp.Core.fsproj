@@ -28,7 +28,6 @@
       FX_NO_EVENTWAITHANDLE_IDISPOSABLE;
       FX_NO_EXIT;
       FX_NO_EXIT_CONTEXT_FLAGS;
-      <!-- FX_NO_ICLONEABLE; -->
       FX_NO_MONITOR_REPORTS_LOCKTAKEN;
       FX_NO_PARAMETERIZED_THREAD_START;
       FX_NO_REFLECTION_METADATA_TOKENS;
@@ -41,7 +40,6 @@
       FX_NO_WEB_CLIENT;
       FX_PORTABLE_OR_NETSTANDARD;
       FX_RESHAPED_REFLECTION;
-      <!-- NAN_INFINITY_MEASURES; -->
     </DefineConstants>
     <OtherFlags>$(OtherFlags) --warnon:1182 --compiling-fslib --compiling-fslib-40 --maxerrors:20 --extraoptimizationloops:1</OtherFlags>
     <!-- <OtherFlags>$(OtherFlags) - -nointerfacedata</OtherFlags> -->
@@ -158,12 +156,6 @@
     <Compile Include="reflect.fs">
       <Link>Reflection/reflect.fs</Link>
     </Compile>
-    <Compile Include="event.fsi">
-      <Link>Event/event.fsi</Link>
-    </Compile>
-    <Compile Include="event.fs">
-      <Link>Event/event.fs</Link>
-    </Compile>
     <Compile Include="math/n.fsi">
       <Link>Numerics/n.fsi</Link>
     </Compile>
@@ -200,12 +192,39 @@
     <Compile Include="nativeptr.fs">
       <Link>NativeInterop/nativeptr.fs</Link>
     </Compile>
+    <Compile Include="event.fsi">
+      <Link>Control/event.fsi</Link>
+    </Compile>
+    <Compile Include="event.fs">
+      <Link>Control/event.fs</Link>
+    </Compile>
+
+    <!-- task-based async builder -->
     <Compile Include="extra/AsyncBuilder.fs"/>
-    <!-- <Compile Include="control.fsi">
-      <Link>Async/control.fsi</Link>
+
+    <!-- <Compile Include="async.fsi">
+      <Link>Control/async.fsi</Link>
     </Compile> -->
-    <!-- <Compile Include="control.fs">
-      <Link>Async/control.fs</Link>
+    <!-- <Compile Include="async.fs">
+      <Link>Control/async.fs</Link>
+    </Compile> -->
+    <!-- <Compile Include="eventmodule.fsi">
+      <Link>Control/eventmodule.fsi</Link>
+    </Compile> -->
+    <!-- <Compile Include="eventmodule.fs">
+      <Link>Control/eventmodule.fs</Link>
+    </Compile> -->
+    <!-- <Compile Include="observable.fsi">
+      <Link>Control/observable.fsi</Link>
+    </Compile> -->
+    <!-- <Compile Include="observable.fs">
+      <Link>Control/observable.fs</Link>
+    </Compile> -->
+    <!-- <Compile Include="mailbox.fsi">
+      <Link>MailboxProcessor/mailbox.fsi</Link>
+    </Compile> -->
+    <!-- <Compile Include="mailbox.fs">
+      <Link>MailboxProcessor/mailbox.fs</Link>
     </Compile> -->
     <Compile Include="Linq.fsi">
       <Link>Queries/Linq.fsi</Link>
