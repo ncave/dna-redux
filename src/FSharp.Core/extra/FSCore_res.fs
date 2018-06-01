@@ -192,7 +192,7 @@ let res_pairs = [|
     ( "QinvalidFuncType",
         "Invalid function type" );
     ( "QnonStaticNoReceiverObject",
-        "The member is non-static {instance), but no receiver object was supplied" );
+        "The member is non-static (instance), but no receiver object was supplied" );
     ( "QparentCannotBeNull",
         "Parent type cannot be null" );
     ( "QreadingSetOnly",
@@ -204,7 +204,7 @@ let res_pairs = [|
     ( "QtmmFunTypeNotMatchDelegate",
         "Type mismatch when building '{0}': function type doesn't match delegate type. Expected '{1}', but received type '{2}'." );
     ( "QtmmRaw",
-        "Type mismatch when splicing expression into quotation literal. The type of the expression tree being inserted doesn't match the type expected by the splicing operation. Expected '{0}', but received type '{1}'. Consider type-annotating with the expected expression type, e.g., {%% x : {0}) or {%x : {0})." );
+        "Type mismatch when splicing expression into quotation literal. The type of the expression tree being inserted doesn't match the type expected by the splicing operation. Expected '{0}', but received type '{1}'. Consider type-annotating with the expected expression type, e.g., (%% x : {0}) or (%x : {0})." );
     ( "QtupleAccessOutOfRange",
         "Tuple access out of range" );
     ( "QtupleLengthsDiffer",
@@ -242,11 +242,11 @@ let res_pairs = [|
     ( "printfNotAFunType",
         "Not a function type" );
     ( "printfPrecisonSpecifierIllegal",
-        "Bad format specifier {precision)" );
+        "Bad format specifier (precision)" );
     ( "printfSpecifierAfterIllegal",
-        "Bad format specifier {after {0})" );
+        "Bad format specifier (after {0})" );
     ( "printfWidthSpecifierIllegal",
-        "Bad format specifier {width)" );
+        "Bad format specifier (width)" );
     ( "QcannotBindFunction",
         "Could not bind function {0} in type {1}" );
     ( "QcannotBindProperty",

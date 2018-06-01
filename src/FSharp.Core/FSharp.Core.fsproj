@@ -7,8 +7,9 @@
     <TargetFramework>netstandard1.3</TargetFramework>
     <AssemblyName>FSharp.Core</AssemblyName>
     <NoWarn>$(NoWarn);45;55;62;75;1204</NoWarn>
+    <BaseAddress>0x05000000</BaseAddress>
+    <CompilingFsLib>true</CompilingFsLib>
     <AllowCrossTargeting>true</AllowCrossTargeting>
-    <FX_NO_LOADER>true</FX_NO_LOADER>
     <DefineConstants>$(DefineConstants);
       <!-- new symbols -->
       INLINE_STRING_RESOURCES;
