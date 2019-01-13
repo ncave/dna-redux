@@ -21,11 +21,12 @@ module Program =
         cw "memoFib({0}) = {1}" memoFib n
         cw "seq_Fib({0}) = {1}" seq_Fib n
 
-        // this is a bit slower, but it works without blowing the stack, because TCO
+        // these are much slower, but work without blowing the stack, because TCO
         // cw "cps_Fib({0}) = {1}" cps_Fib n
+        // cw "contFib({0}) = {1}" contFib n
 
         let x,y = 100,100
-        cw "RayTrace {0} = {1}" (fun (x,y) -> RayTrace.computeScene x y) (x,y)
+        cw "RayTrace {0} = {1}" (fun (x,y) -> RayTracer.computeScene x y) (x,y)
 
         GC.Collect()
         Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))

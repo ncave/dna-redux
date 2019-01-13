@@ -61,3 +61,26 @@ module Library =
                 |> Seq.map (fun (prev, next) -> prev + next)
         }
         fib_seq |> Seq.item n
+
+    type ContinuationBuilder() =
+        member __.Bind(x, f) = fun k -> x (fun a -> f a k)
+        member __.Return x = fun k -> k x
+        // member __.ReturnFrom x = x
+        // member __.Combine(c1, c2) = __.Bind(c1, (fun () -> c2))
+        // member __.Delay f = fun k -> f () k
+        // member __.TryWith(r, f) = try r() with | e -> f e
+        // member __.TryFinally(r, f) = try r() finally f()
+        // member __.Zero() = fun k -> k ()
+
+    let cont = ContinuationBuilder()
+
+    let contFib n =
+        let rec fib_cont a = cont {
+            if a <= 2 then
+                return 1
+            else
+                let! x = fib_cont (a - 2)
+                let! y = fib_cont (a - 1)
+                return x + y
+        }
+        fib_cont n id
