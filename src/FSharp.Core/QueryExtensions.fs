@@ -54,10 +54,10 @@ module internal Adapters =
             finally
                 System.Threading.Monitor.Exit(d)
 
-#else    
+#else
          let d = new System.Collections.Concurrent.ConcurrentDictionary<Type,'b>(HashIdentity.Structural)        
          fun x -> d.GetOrAdd(x, fun r -> f r)
-#endif               
+#endif
 
     let isPartiallyImmutableRecord : Type -> bool = 
         memoize (fun t -> 

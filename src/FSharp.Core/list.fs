@@ -48,6 +48,10 @@ namespace Microsoft.FSharp.Collections
         let concat lists = Microsoft.FSharp.Primitives.Basics.List.concat lists
 
         let inline countByImpl (comparer:IEqualityComparer<'SafeKey>) (projection:'T->'SafeKey) (getKey:'SafeKey->'Key) (list:'T list) =
+            match list with
+            | [] -> []
+            | _ ->
+
             let dict = Dictionary comparer
             let rec loop srcList  =
                 match srcList with
@@ -666,6 +670,12 @@ namespace Microsoft.FSharp.Collections
             | [x] -> x
             | []  -> invalidArg "source" LanguagePrimitives.ErrorStrings.InputSequenceEmptyString            
             | _   -> invalidArg "source" (SR.GetString(SR.inputSequenceTooLong))
+
+        [<CompiledName("TryExactlyOne")>]
+        let tryExactlyOne (list : list<_>) =
+            match list with
+            | [x] -> Some x
+            | _   -> None
 
         [<CompiledName("Transpose")>]
         let transpose (lists : seq<'T list>) =

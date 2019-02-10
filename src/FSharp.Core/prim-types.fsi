@@ -800,6 +800,55 @@ namespace Microsoft.FSharp.Core
     /// <c>System.Int64</c>.</summary>
     type int64<[<Measure>] 'Measure> = int64
 
+    /// <summary>Represents a managed pointer in F# code.</summary>
+#if BUILDING_WITH_LKG || BUILD_FROM_SOURCE
+    [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true)>]
+#else
+    [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true, IsError=true)>]
+#endif
+    type byref<'T, 'Kind> = (# "!0&" #)
+
+    // /// <summary>Represents a managed pointer in F# code. For F# 4.5+ this is considered equivalent to <c>byref&lt;'T, ByRefKinds.InOut&gt;</c></summary>
+    // type byref<'T> = (# "!0&" #)
+
+    /// Represents the types of byrefs in F# 4.5+
+#if BUILDING_WITH_LKG || BUILD_FROM_SOURCE
+    [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true)>]
+#else
+    [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true, IsError=true)>]
+#endif
+    module ByRefKinds = 
+
+        /// Represents a byref that can be written
+#if BUILDING_WITH_LKG || BUILD_FROM_SOURCE
+        [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true)>]
+#else
+        [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true, IsError=true)>]
+#endif
+        type Out
+
+        /// Represents a byref that can be read
+#if BUILDING_WITH_LKG || BUILD_FROM_SOURCE
+        [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true)>]
+#else
+        [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true, IsError=true)>]
+#endif
+        type In
+
+        /// Represents a byref that can be both read and written
+#if BUILDING_WITH_LKG || BUILD_FROM_SOURCE
+        [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true)>]
+#else
+        [<CompilerMessage("This construct is for use in the FSharp.Core library and should not be used directly", 1204, IsHidden=true, IsError=true)>]
+#endif
+        type InOut
+
+    /// <summary>Represents a in-argument or readonly managed pointer in F# code. This type should only be used with F# 4.5+.</summary>
+    type inref<'T> = byref<'T, ByRefKinds.In>
+
+    /// <summary>Represents a out-argument managed pointer in F# code. This type should only be used with F# 4.5+.</summary>
+    type outref<'T> = byref<'T, ByRefKinds.Out>
+
     /// <summary>Language primitives associated with the F# language</summary>
     module LanguagePrimitives =
 
@@ -1097,7 +1146,7 @@ namespace Microsoft.FSharp.Core
             /// <param name="obj">The input object.</param>
             /// <returns>The managed pointer.</returns>
             [<NoDynamicInvocation>]
-            val inline ( ~& ) : obj:'T -> 'T byref
+            val inline ( ~& ) : obj:'T -> byref<'T>
 
             /// <summary>Address-of. Uses of this value may result in the generation of unverifiable code.</summary>
             /// <param name="obj">The input object.</param>
@@ -1445,16 +1494,17 @@ namespace Microsoft.FSharp.Core
     [<AbstractClass>]
     type FSharpFunc<'T,'U> = 
 
-        /// <summary>Construct an instance of an F# first class function value </summary>
-        /// <returns>The created F# function.</returns>
+        /// <summary>Construct an instance of an F# first class function value </summary> 
+        /// <returns>The created F# function.</returns> 
         new : unit ->  FSharpFunc<'T,'U>
-
+ 
         /// <summary>Invoke an F# first class function value with one argument</summary>
         /// <param name="func"></param>
         /// <returns>'U</returns>
         abstract member Invoke : func:'T -> 'U
 
 #if !FX_NO_CONVERTER
+
         /// <summary>Convert an F# first class function value to a value of type <c>System.Converter</c></summary>
         /// <param name="func">The input function.</param>
         /// <returns>A System.Converter of the function type.</returns>
@@ -1469,6 +1519,7 @@ namespace Microsoft.FSharp.Core
         /// <param name="func">The input function.</param>
         /// <returns>System.Converter&lt;'T,'U&gt;</returns>
         static member ToConverter : func:('T -> 'U) -> System.Converter<'T,'U>
+
         /// <summary>Convert an value of type <c>System.Converter</c> to a F# first class function value </summary>
         /// <param name="converter">The input System.Converter.</param>
         /// <returns>An F# function of the same type.</returns>
@@ -1520,36 +1571,96 @@ namespace Microsoft.FSharp.Core
     type FuncConvert = 
 
         /// <summary>Convert the given Action delegate object to an F# function value</summary>
-        /// <param name="action">The input action.</param>
+        /// <param name="action">The input Action delegate.</param>
         /// <returns>The F# function.</returns>
-        static member  ToFSharpFunc       : action:Action<'T>            -> ('T -> unit)
+        static member  inline ToFSharpFunc       : action:Action<'T>            -> ('T -> unit)
 
 #if !FX_NO_CONVERTER
         /// <summary>Convert the given Converter delegate object to an F# function value</summary>
-        /// <param name="converter">The input Converter.</param>
+        /// <param name="converter">The input Converter delegate.</param>
         /// <returns>The F# function.</returns>
-        static member  ToFSharpFunc       : converter:Converter<'T,'U>          -> ('T -> 'U)
+        static member  inline ToFSharpFunc       : converter:Converter<'T,'U>          -> ('T -> 'U)
 #endif
+
+        /// <summary>Convert the given Action delegate object to an F# function value</summary>
+        /// <param name="func">The input Action delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromAction       : action:Action          -> (unit -> unit)
+
+        /// <summary>Convert the given Action delegate object to an F# function value</summary>
+        /// <param name="func">The input Action delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromAction       : action:Action<'T>          -> ('T -> unit)
+
+        /// <summary>Convert the given Action delegate object to an F# function value</summary>
+        /// <param name="func">The input Action delegate.</param>
+        /// <returns>The F#funcfunction.</returns>
+        static member  inline FromAction       : action:Action<'T1,'T2>          -> ('T1 -> 'T2 -> unit)
+
+        /// <summary>Convert the given Action delegate object to an F# function value</summary>
+        /// <param name="func">The input Action delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromAction       : action:Action<'T1,'T2,'T3>          -> ('T1 -> 'T2 -> 'T3 -> unit)
+
+        /// <summary>Convert the given Action delegate object to an F# function value</summary>
+        /// <param name="func">The input Action delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromAction       : action:Action<'T1,'T2,'T3,'T4>          -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> unit)
+
+        /// <summary>Convert the given Action delegate object to an F# function value</summary>
+        /// <param name="func">The input Action delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromAction       : action:Action<'T1,'T2,'T3,'T4,'T5>          -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> 'T5 -> unit)
+
+        /// <summary>Convert the given Func delegate object to an F# function value</summary>
+        /// <param name="func">The input Func delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromFunc       : func:Func<'T>          -> (unit -> 'T)
+
+        /// <summary>Convert the given Func delegate object to an F# function value</summary>
+        /// <param name="func">The input Func delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromFunc       : func:Func<'T,'U>          -> ('T -> 'U)
+
+        /// <summary>Convert the given Func delegate object to an F# function value</summary>
+        /// <param name="func">The input Func delegate.</param>
+        /// <returns>The F#funcfunction.</returns>
+        static member  inline FromFunc       : func:Func<'T1,'T2,'U>          -> ('T1 -> 'T2 -> 'U)
+
+        /// <summary>Convert the given Func delegate object to an F# function value</summary>
+        /// <param name="func">The input Func delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromFunc       : func:Func<'T1,'T2,'T3,'U>          -> ('T1 -> 'T2 -> 'T3 -> 'U)
+
+        /// <summary>Convert the given Func delegate object to an F# function value</summary>
+        /// <param name="func">The input Func delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromFunc       : func:Func<'T1,'T2,'T3,'T4,'U>          -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> 'U)
+
+        /// <summary>Convert the given Func delegate object to an F# function value</summary>
+        /// <param name="func">The input Func delegate.</param>
+        /// <returns>The F# function.</returns>
+        static member  inline FromFunc       : func:Func<'T1,'T2,'T3,'T4,'T5,'U>          -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> 'T5 -> 'U)
 
         /// <summary>A utility function to convert function values from tupled to curried form</summary>
         /// <param name="func">The input tupled function.</param>
         /// <returns>The output curried function.</returns>
-        static member FuncFromTupled : func:('T1 * 'T2 -> 'U) -> ('T1 -> 'T2 -> 'U)
+        static member inline FuncFromTupled : func:('T1 * 'T2 -> 'U) -> ('T1 -> 'T2 -> 'U)
         
         /// <summary>A utility function to convert function values from tupled to curried form</summary>
         /// <param name="func">The input tupled function.</param>
         /// <returns>The output curried function.</returns>
-        static member FuncFromTupled : func:('T1 * 'T2 * 'T3 -> 'U) -> ('T1 -> 'T2 -> 'T3 -> 'U)
+        static member inline FuncFromTupled : func:('T1 * 'T2 * 'T3 -> 'U) -> ('T1 -> 'T2 -> 'T3 -> 'U)
         
         /// <summary>A utility function to convert function values from tupled to curried form</summary>
         /// <param name="func">The input tupled function.</param>
         /// <returns>The output curried function.</returns>
-        static member FuncFromTupled : func:('T1 * 'T2 * 'T3 * 'T4 -> 'U) -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> 'U)
+        static member inline FuncFromTupled : func:('T1 * 'T2 * 'T3 * 'T4 -> 'U) -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> 'U)
         
         /// <summary>A utility function to convert function values from tupled to curried form</summary>
         /// <param name="func">The input tupled function.</param>
         /// <returns>The output curried function.</returns>
-        static member FuncFromTupled : func:('T1 * 'T2 * 'T3 * 'T4 * 'T5 -> 'U) -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> 'T5 -> 'U)
+        static member inline FuncFromTupled : func:('T1 * 'T2 * 'T3 * 'T4 * 'T5 -> 'U) -> ('T1 -> 'T2 -> 'T3 -> 'T4 -> 'T5 -> 'U)
 
     /// <summary>An implementation module used to hold some private implementations of function
     /// value invocation.</summary>
@@ -1584,6 +1695,7 @@ namespace Microsoft.FSharp.Core
         /// typically used directly from either F# code or from other CLI languages.</summary>
         [<AbstractClass>]
         type FSharpFunc<'T1,'T2,'T3,'U> = 
+
             inherit  FSharpFunc<'T1,('T2 -> 'T3 -> 'U)>
 
             /// <summary>Invoke an F# first class function value that accepts three curried arguments 
@@ -1626,6 +1738,7 @@ namespace Microsoft.FSharp.Core
             /// <param name="func">The input function.</param>
             /// <returns>The optimized function.</returns>
             static member Adapt : func:('T1 -> 'T2 -> 'T3 -> 'T4 -> 'U) -> FSharpFunc<'T1,'T2,'T3,'T4,'U>
+
             /// <summary>Construct an optimized function value that can accept four curried 
             /// arguments without intervening execution.</summary>
             /// <returns>The optimized function.</returns>
@@ -1737,7 +1850,7 @@ namespace Microsoft.FSharp.Core
     ///
     /// <remarks>Use the constructors <c>ValueSome</c> and <c>ValueNone</c> to create values of this type.
     /// Use the values in the <c>ValueOption</c> module to manipulate values of this type,
-    /// or pattern match against the values directly.
+    /// or pattern match against the values directly.</remarks>
     [<StructuralEquality; StructuralComparison>]
     [<CompiledName("FSharpValueOption`1")>]
     [<Struct>]
@@ -1753,11 +1866,25 @@ namespace Microsoft.FSharp.Core
         /// <summary>Get the value of a 'ValueSome' option. An InvalidOperationException is raised if the option is 'ValueNone'.</summary>
         member Value : 'T
 
+        /// <summary>Create a value option value that is a 'ValueNone' value.</summary>
+        static member None : 'T voption
+
+        /// <summary>Create a value option value that is a 'Some' value.</summary>
+        /// <param name="value">The input value</param>
+        /// <returns>A value option representing the value.</returns>
+        static member Some : value:'T -> 'T voption
+        
+        /// <summary>Return 'true' if the value option is a 'ValueSome' value.</summary>
+        member IsSome : bool
+
+        /// <summary>Return 'true' if the value option is a 'ValueNone' value.</summary>
+        member IsNone : bool
+
     /// <summary>The type of optional values, represented as structs.</summary>
     ///
     /// <remarks>Use the constructors <c>ValueSome</c> and <c>ValueNone</c> to create values of this type.
     /// Use the values in the <c>ValueOption</c> module to manipulate values of this type,
-    /// or pattern match against the values directly.
+    /// or pattern match against the values directly.</remarks>
     and 'T voption = ValueOption<'T>
 
     /// <summary>Helper type for error handling without exceptions.</summary>
@@ -3197,6 +3324,7 @@ namespace Microsoft.FSharp.Core
             [<CompiledName("ToChar")>]
             val inline char        : value:^T -> char      when ^T : (static member op_Explicit : ^T -> char)        and default ^T : int
 
+
 namespace Microsoft.FSharp.Control
 
     open Microsoft.FSharp.Core
@@ -3206,6 +3334,7 @@ namespace Microsoft.FSharp.Control
     module LazyExtensions =
 
         type System.Lazy<'T> with
+
             /// <summary>Creates a lazy computation that evaluates to the result of the given function when forced.</summary>
             /// <param name="creator">The function to provide the value when needed.</param>
             /// <returns>The created Lazy object.</returns>

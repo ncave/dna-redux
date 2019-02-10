@@ -1,16 +1,16 @@
 // Source: http://www.tryfsharp.org/create/cpoulain/shared/raytracer.fsx
 // slightly modified to avoid some allocations
 
-module AppFS.RayTracer
+module RayTracer
 
 open System
 
 [<Struct>]
 type Vector =
     { X: float; Y: float; Z: float }
-    static member (*) (k, v: Vector) = { X = k * v.X; Y = k * v.Y; Z = k * v.Z }
-    static member (-) (v1: Vector, v2: Vector) = { X = v1.X - v2.X; Y = v1.Y - v2.Y; Z = v1.Z - v2.Z }
-    static member (+) (v1: Vector, v2: Vector) = { X = v1.X + v2.X; Y = v1.Y + v2.Y; Z = v1.Z + v2.Z }
+    static member ( * ) (k, v: Vector) = { X = k * v.X; Y = k * v.Y; Z = k * v.Z }
+    static member ( - ) (v1: Vector, v2: Vector) = { X = v1.X - v2.X; Y = v1.Y - v2.Y; Z = v1.Z - v2.Z }
+    static member ( + ) (v1: Vector, v2: Vector) = { X = v1.X + v2.X; Y = v1.Y + v2.Y; Z = v1.Z + v2.Z }
     static member Dot (v1: Vector, v2: Vector) = v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z
     static member Mag (v: Vector) = sqrt (v.X * v.X + v.Y * v.Y + v.Z * v.Z)
     static member Norm (v: Vector) =
@@ -26,8 +26,8 @@ type Vector =
 type Color =
     { R: float; G: float; B: float }
     static member Scale (k, v: Color) = { R = k * v.R; G = k * v.G; B = k * v.B }
-    static member (+) (v1: Color, v2: Color) = { R = v1.R + v2.R; G = v1.G + v2.G; B = v1.B + v2.B }
-    static member (*) (v1: Color, v2: Color) = { R = v1.R * v2.R; G = v1.G * v2.G; B = v1.B * v2.B }
+    static member ( + ) (v1: Color, v2: Color) = { R = v1.R + v2.R; G = v1.G + v2.G; B = v1.B + v2.B }
+    static member ( * ) (v1: Color, v2: Color) = { R = v1.R * v2.R; G = v1.G * v2.G; B = v1.B * v2.B }
     static member White = { R = 1.0; G = 1.0; B = 1.0 }
     static member Grey = { R = 0.5; G = 0.5; B = 0.5 }
     static member Black = { R = 0.0; G = 0.0; B = 0.0 }

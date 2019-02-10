@@ -163,6 +163,9 @@ namespace Microsoft.FSharp.Collections
                 Microsoft.FSharp.Primitives.Basics.Array.subUnchecked 0 count array
 
         let inline countByImpl (comparer:IEqualityComparer<'SafeKey>) (projection:'T->'SafeKey) (getKey:'SafeKey->'Key) (array:'T[]) =
+            let length = array.Length
+            if length = 0 then Microsoft.FSharp.Primitives.Basics.Array.zeroCreateUnchecked 0 else
+
             let dict = Dictionary comparer
 
             // Build the groupings
@@ -279,6 +282,9 @@ namespace Microsoft.FSharp.Collections
         [<CompiledName("DistinctBy")>]
         let distinctBy projection (array:'T[]) =
             checkNonNull "array" array
+            let length = array.Length
+            if length = 0 then Microsoft.FSharp.Primitives.Basics.Array.zeroCreateUnchecked 0 else
+
             let temp = Microsoft.FSharp.Primitives.Basics.Array.zeroCreateUnchecked array.Length
             let mutable i = 0 
             let hashSet = HashSet<_>(HashIdentity.Structural<_>)
@@ -405,10 +411,12 @@ namespace Microsoft.FSharp.Collections
             loop 0
 
         let inline groupByImpl (comparer:IEqualityComparer<'SafeKey>) (keyf:'T->'SafeKey) (getKey:'SafeKey->'Key) (array: 'T[]) =
+            let length = array.Length
+            if length = 0 then Microsoft.FSharp.Primitives.Basics.Array.zeroCreateUnchecked 0 else
             let dict = Dictionary<_,ResizeArray<_>> comparer
 
             // Build the groupings
-            for i = 0 to (array.Length - 1) do
+            for i = 0 to length - 1 do
                 let v = array.[i]
                 let safeKey = keyf v
                 let mutable prev = Unchecked.defaultof<_>
@@ -1235,6 +1243,12 @@ namespace Microsoft.FSharp.Collections
             elif array.Length = 0 then invalidArg "array" LanguagePrimitives.ErrorStrings.InputSequenceEmptyString
             else invalidArg "array" (SR.GetString(SR.inputSequenceTooLong))
 
+        [<CompiledName("TryExactlyOne")>]
+        let tryExactlyOne (array:'T[]) =
+            checkNonNull "array" array
+            if array.Length = 1 then Some array.[0]
+            else None
+
         let transposeArrays (array:'T[][]) =
             let len = array.Length
             if len = 0 then Microsoft.FSharp.Primitives.Basics.Array.zeroCreateUnchecked 0 else
@@ -1377,4 +1391,4 @@ namespace Microsoft.FSharp.Collections
                         iFalse <- iFalse + 1
 
                 res1, res2
-#endif
+#endif //!FX_NO_TPL_PARALLEL
