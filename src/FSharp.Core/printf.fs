@@ -1529,22 +1529,9 @@ module internal PrintfImpl =
     /// 2nd level is global dictionary that maps format string to the corresponding PrintfFactory
     type Cache<'T, 'State, 'Residue, 'Result>() =
         static let generate(fmt) = PrintfBuilder<'State, 'Residue, 'Result>().Build<'T>(fmt)        
-#if FX_NO_CONCURRENT_DICTIONARY
-        static let mutable map = Dictionary<string, CachedItem<'T, 'State, 'Residue, 'Result>>()
-        static let get(key : string) = 
-            lock map (fun () ->
-                let mutable res = Unchecked.defaultof<_>
-                if map.TryGetValue(key, &res) then res
-                else
-                let v = generate(key)
-                map.Add(key, v)
-                v
-            )
-#else
         static let mutable map = System.Collections.Concurrent.ConcurrentDictionary<string, CachedItem<'T, 'State, 'Residue, 'Result>>()
         static let getOrAddFunc = Func<_, _>(generate)
         static let get(key : string) = map.GetOrAdd(key, getOrAddFunc)
-#endif
 
         [<DefaultValue>]
         [<ThreadStatic>]

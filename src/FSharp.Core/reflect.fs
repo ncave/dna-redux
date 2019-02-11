@@ -15,11 +15,7 @@ open Microsoft.FSharp.Primitives.Basics
 
 module internal ReflectionUtils = 
 
-#if FX_NO_SYSTEM_BINDINGFLAGS
-    type BindingFlags = Microsoft.FSharp.Core.ReflectionAdapters.BindingFlags
-#else
     type BindingFlags = System.Reflection.BindingFlags
-#endif
 
     let toBindingFlags allowAccessToNonPublicMembers =
         if allowAccessToNonPublicMembers then

@@ -28,44 +28,12 @@ module internal ReflectionAdapters =
     open Microsoft.FSharp.Collections
     open PrimReflectionAdapters
 
-#if FX_NO_SYSTEM_BINDINGFLAGS
-    [<System.FlagsAttribute>]
-    type BindingFlags =
-    | DeclaredOnly = 2
-    | Instance = 4 
-    | Static = 8
-    | Public = 16
-    | NonPublic = 32
-    | InvokeMethod = 0x100
-#endif
-
     let inline hasFlag (flag : BindingFlags) f  = (f &&& flag) = flag
     let isDeclaredFlag  f    = hasFlag BindingFlags.DeclaredOnly f
     let isPublicFlag    f    = hasFlag BindingFlags.Public f
     let isStaticFlag    f    = hasFlag BindingFlags.Static f
     let isInstanceFlag  f    = hasFlag BindingFlags.Instance f
     let isNonPublicFlag f    = hasFlag BindingFlags.NonPublic f
-
-#if FX_NO_EXIT
-    let exit (_n:int) = failwith "System.Environment.Exit does not exist!"
-#endif
-
-#if FX_NO_TYPECODE
-    [<System.Flags>]
-    type TypeCode = 
-        | Int32     = 0
-        | Int64     = 1
-        | Byte      = 2
-        | SByte     = 3
-        | Int16     = 4
-        | UInt16    = 5
-        | UInt32    = 6
-        | UInt64    = 7
-        | Single    = 8
-        | Double    = 9
-        | Decimal   = 10
-        | Object    = 11
-#endif
 
     let isAcceptable bindingFlags isStatic isPublic =
         // 1. check if member kind (static\instance) was specified in flags
@@ -83,75 +51,6 @@ module internal ReflectionAdapters =
 
     let canUseAccessor (accessor : MethodInfo) nonPublic = 
         (not (isNull (box accessor))) && (accessor.IsPublic || nonPublic)
-
-    type System.Reflection.EventInfo with
-
-        member this.GetAddMethod() =
-            this.AddMethod
-
-        member this.GetRemoveMethod() =
-            this.RemoveMethod
-
-        member this.MetadataToken =
-            // TODO: is this an adequate replacement for MetadataToken
-            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
-            s.GetHashCode()
-
-    type System.Reflection.FieldInfo with
-        member this.GetRawConstantValue() =
-            this.GetValue(null)
-
-        member this.MetadataToken =
-            // TODO: is this an adequate replacement for MetadataToken
-            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
-            s.GetHashCode()
-
-    type System.Reflection.MemberInfo with
-        member this.GetCustomAttributes(attrTy, inherits) : obj[] = downcast box(CustomAttributeExtensions.GetCustomAttributes(this, attrTy, inherits) |> Seq.toArray)
-
-        // TODO: is this an adequate replacement for MetadataToken
-        member this.MetadataToken =
-            // TODO: is this an adequate replacement for MetadataToken
-            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
-            s.GetHashCode()
-
-    type System.Reflection.MethodInfo with
-
-        member this.GetCustomAttributes(inherits : bool) : obj[] = downcast box(CustomAttributeExtensions.GetCustomAttributes(this, inherits) |> Seq.toArray)
-
-        member this.Invoke(obj, _bindingFlags, _binder, args, _ci) =
-            this.Invoke(obj, args)
-
-        member this.MetadataToken =
-            // TODO: is this an adequate replacement for MetadataToken
-            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
-            s.GetHashCode()
-
-    type System.Reflection.ParameterInfo with
-
-        member this.RawDefaultValue = this.DefaultValue
-
-        member this.MetadataToken =
-            // TODO: is this an adequate replacement for MetadataToken
-            // I really do not understand why: sprintf "%s,%s" (this.ReflectedType.ToString()) (this.ToString()) did not work
-            let s = String.Format("{0},{0},{0}", this.Member.DeclaringType.ToString(),this.Member.ToString(), this.ToString())
-            s.GetHashCode()
-
-    type System.Reflection.PropertyInfo with
-
-        member this.GetGetMethod(nonPublic) =
-            let mi = this.GetMethod
-            if canUseAccessor mi nonPublic then mi
-            else null
-
-        member this.GetSetMethod(nonPublic) =
-            let mi = this.SetMethod
-            if canUseAccessor mi nonPublic then mi
-            else null
-
-        member this.GetGetMethod() = this.GetMethod
-
-        member this.GetSetMethod() = this.SetMethod
 
     type System.Type with
         member this.GetTypeInfo() = IntrospectionExtensions.GetTypeInfo(this)
@@ -204,7 +103,7 @@ module internal ReflectionAdapters =
             let bindingFlags = defaultArg bindingFlags publicFlags
             (if isDeclaredFlag bindingFlags then this.GetTypeInfo().DeclaredEvents else this.GetRuntimeEvents())
             |> Seq.filter (fun ei-> 
-                let m = ei.GetAddMethod()
+                let m = ei.GetAddMethod(true)
                 if m = null then false
                 else isAcceptable bindingFlags m.IsStatic m.IsPublic
                 )
@@ -358,6 +257,75 @@ module internal ReflectionAdapters =
             // TODO: is this an adequate replacement for MetadataToken
             let s = String.Format("{0}", this.ToString())
             s.GetHashCode()
+
+    type System.Reflection.EventInfo with
+
+        member this.GetAddMethod() =
+            this.AddMethod
+
+        member this.GetRemoveMethod() =
+            this.RemoveMethod
+
+        member this.MetadataToken =
+            // TODO: is this an adequate replacement for MetadataToken
+            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
+            s.GetHashCode()
+
+    type System.Reflection.FieldInfo with
+        member this.GetRawConstantValue() =
+            this.GetValue(null)
+
+        member this.MetadataToken =
+            // TODO: is this an adequate replacement for MetadataToken
+            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
+            s.GetHashCode()
+
+    type System.Reflection.MemberInfo with
+        member this.GetCustomAttributes(attrTy, inherits) : obj[] = downcast box(CustomAttributeExtensions.GetCustomAttributes(this, attrTy, inherits) |> Seq.toArray)
+
+        // TODO: is this an adequate replacement for MetadataToken
+        member this.MetadataToken =
+            // TODO: is this an adequate replacement for MetadataToken
+            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
+            s.GetHashCode()
+
+    type System.Reflection.MethodInfo with
+
+        member this.GetCustomAttributes(inherits : bool) : obj[] = downcast box(CustomAttributeExtensions.GetCustomAttributes(this, inherits) |> Seq.toArray)
+
+        member this.Invoke(obj, _bindingFlags, _binder, args, _ci) =
+            this.Invoke(obj, args)
+
+        member this.MetadataToken =
+            // TODO: is this an adequate replacement for MetadataToken
+            let s = String.Format("{0},{0}", this.DeclaringType.ToString(), this.ToString())
+            s.GetHashCode()
+
+    type System.Reflection.ParameterInfo with
+
+        member this.RawDefaultValue = this.DefaultValue
+
+        member this.MetadataToken =
+            // TODO: is this an adequate replacement for MetadataToken
+            // I really do not understand why: sprintf "%s,%s" (this.ReflectedType.ToString()) (this.ToString()) did not work
+            let s = String.Format("{0},{0},{0}", this.Member.DeclaringType.ToString(),this.Member.ToString(), this.ToString())
+            s.GetHashCode()
+
+    type System.Reflection.PropertyInfo with
+
+        member this.GetGetMethod(nonPublic) =
+            let mi = this.GetMethod
+            if canUseAccessor mi nonPublic then mi
+            else null
+
+        member this.GetSetMethod(nonPublic) =
+            let mi = this.SetMethod
+            if canUseAccessor mi nonPublic then mi
+            else null
+
+        member this.GetGetMethod() = this.GetMethod
+
+        member this.GetSetMethod() = this.SetMethod
 
     type System.Reflection.Assembly with
 
