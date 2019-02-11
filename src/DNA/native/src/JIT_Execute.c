@@ -135,8 +135,8 @@ tJITCodeInfo jitCodeGoNext;
 	pCurrentMethodState = pThread->pCurrentMethodState; \
 	pParamsLocals = PARAMETERS_PTR(pCurrentMethodState); \
 	pCurEvalStack = EVAL_STACK_PTR + pCurrentMethodState->stackOfs; \
-	pOps = pCurrentMethodState->pJIT->pOps; \
-	pOpSequencePoints = pCurrentMethodState->pJIT->pOpSequencePoints; \
+	pOps = (U32*)pCurrentMethodState->pJIT->pOps; \
+	pOpSequencePoints = (U32*)pCurrentMethodState->pJIT->pOpSequencePoints; \
 	pCurOp = pOps + pCurrentMethodState->ipOffset
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \

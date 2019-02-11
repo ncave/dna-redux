@@ -13,7 +13,6 @@ set emccOptions=%sourceFiles% ^
 	-s RESERVED_FUNCTION_POINTERS=20 ^
 	-s ASSERTIONS=1 ^
 	-s EXPORTED_FUNCTIONS="['_main', '_JSInterop_CallDotNet', '_Debugger_Continue', '_Debugger_SetBreakPoint', '_Debugger_Step', '_Debugger_Reset', '_Debugger_Clear_BreakPoints']" ^
-	-s WASM=1 ^
 	-s MODULARIZE=1 ^
 	-s ALLOW_MEMORY_GROWTH=1 ^
 	-s EXPORT_NAME='ModuleFunc' ^
@@ -30,10 +29,10 @@ set outputRoot=..\..\..\wwwroot\js
 
 echo -------------------------------------------
 echo --- Starting native web assembly build
-call emcc %emccOptions% -s "BINARYEN_METHOD='native-wasm'" -o %outputRoot%\wasm\dna.js
+call emcc %emccOptions% -s WASM=1 -o %outputRoot%\wasm\dna.js
 echo export { ModuleFunc }; >> %outputRoot%\wasm\dna.js
 
 echo -------------------------------------------
 echo --- Starting asm.js build
-call emcc %emccOptions% -s "BINARYEN_METHOD='asmjs'" -o %outputRoot%\asmjs\dna.js
+call emcc %emccOptions% -s WASM=0 -o %outputRoot%\asmjs\dna.js
 echo export { ModuleFunc }; >> %outputRoot%\asmjs\dna.js
