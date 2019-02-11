@@ -4,69 +4,33 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>netstandard1.3</TargetFramework>
+    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
     <AssemblyName>FSharp.Core</AssemblyName>
-    <!-- <PackageId>FSharp.Core</PackageId> -->
-    <!-- <PackageVersion>$(FSCorePackageVersion)</PackageVersion> -->
-    <!-- <NuspecFile>FSharp.Core.nuspec</NuspecFile> -->
+    <PackageId>FSharp.Core</PackageId>
+    <PackageVersion>$(FSCorePackageVersion)</PackageVersion>
+    <NuspecFile>FSharp.Core.nuspec</NuspecFile>
     <NoWarn>$(NoWarn);45;55;62;75;1204</NoWarn>
-    <!-- <CompilingFsLib>true</CompilingFsLib> -->
     <AllowCrossTargeting>true</AllowCrossTargeting>
-    <DefineConstants>$(DefineConstants);
-      <!-- new symbols -->
-      INLINE_STRING_RESOURCES;
-      <!-- NO_ASYNC_BUILDER; -->
-      <!-- NO_ASYNC_READWRITE; -->
-      NO_QUERY_BUILDER;
-
-      <!-- existing symbols -->
-      FSHARP_CORE;
-      FX_NO_ARRAY_LONG_LENGTH;
-      <!-- FX_NO_BIGINT; -->
-      FX_NO_BINARY_SERIALIZATION;
-      FX_NO_CONCURRENT_DICTIONARY;
-      FX_NO_CONVERTER;
-      FX_NO_CUSTOMATTRIBUTEDATA;
-      FX_NO_DEFAULT_DEPENDENCY_TYPE;
-      FX_NO_EVENTWAITHANDLE_IDISPOSABLE;
-      FX_NO_EXIT;
-      FX_NO_EXIT_CONTEXT_FLAGS;
-      FX_NO_MONITOR_REPORTS_LOCKTAKEN;
-      FX_NO_PARAMETERIZED_THREAD_START;
-      FX_NO_REFLECTION_METADATA_TOKENS;
-      FX_NO_REFLECTION_ONLY;
-      FX_NO_SECURITY_PERMISSIONS;
-      FX_NO_SYSTEM_BINDINGFLAGS;
-      FX_NO_THREAD;
-      FX_NO_TPL_PARALLEL;
-      FX_NO_TYPECODE;
-      FX_NO_WEB_CLIENT;
-      FX_RESHAPED_REFLECTION;
-    </DefineConstants>
-    <!-- <DefineConstants Condition="'$(Configuration)' == 'Proto'">BUILDING_WITH_LKG;$(DefineConstants)</DefineConstants> -->
+    <DefineConstants>$(DefineConstants);FSHARP_CORE</DefineConstants>
+    <DefineConstants Condition="'$(Configuration)' == 'Proto'">BUILDING_WITH_LKG;$(DefineConstants)</DefineConstants>
     <OtherFlags>$(OtherFlags) --warnon:1182 --compiling-fslib --compiling-fslib-40 --maxerrors:20 --extraoptimizationloops:1</OtherFlags>
     <Tailcalls>true</Tailcalls> <!-- .tail annotations always emitted for this binary, even in debug mode -->
-
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
-    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- <EmbeddedResource Update="FSCore.resx">
+    <EmbeddedResource Update="FSCore.resx">
       <GenerateSource>true</GenerateSource>
       <GenerateLegacyCode>true</GenerateLegacyCode>
       <GenerateLiterals>false</GenerateLiterals>
       <GeneratedModuleName>Microsoft.FSharp.Core.SR</GeneratedModuleName>
       <Link>FSCore.resx</Link>
-    </EmbeddedResource> -->
+    </EmbeddedResource>
     <CompileBefore Include="prim-types-prelude.fsi">
       <Link>Primitives/prim-types-prelude.fsi</Link>
     </CompileBefore>
     <CompileBefore Include="prim-types-prelude.fs">
       <Link>Primitives/prim-types-prelude.fs</Link>
     </CompileBefore>
-    <Compile Include="extra/FSCore_resx.fs" />
-    <Compile Include="extra/SR_shim.fs" />
     <Compile Include="prim-types.fsi">
       <Link>Primitives/prim-types.fsi</Link>
     </Compile>
@@ -151,7 +115,7 @@
     <Compile Include="set.fs">
       <Link>Collections/set.fs</Link>
     </Compile>
-    <Compile Include="utils/reshapedreflection.fs">
+    <Compile Include="..\..\utils\reshapedreflection.fs">
       <Link>Reflection/reshapedreflection.fs</Link>
     </Compile>
     <Compile Include="reflect.fsi">
@@ -160,22 +124,22 @@
     <Compile Include="reflect.fs">
       <Link>Reflection/reflect.fs</Link>
     </Compile>
-    <Compile Include="math/n.fsi">
+    <Compile Include="math\n.fsi">
       <Link>Numerics/n.fsi</Link>
     </Compile>
-    <Compile Include="math/n.fs">
+    <Compile Include="math\n.fs">
       <Link>Numerics/n.fs</Link>
     </Compile>
-    <Compile Include="math/z.fsi">
+    <Compile Include="math\z.fsi">
       <Link>Numerics/z.fsi</Link>
     </Compile>
-    <Compile Include="math/z.fs">
+    <Compile Include="math\z.fs">
       <Link>Numerics/z.fs</Link>
     </Compile>
-    <Compile Include="utils/sformat.fsi">
+    <Compile Include="..\..\utils\sformat.fsi">
       <Link>Printf/sformat.fsi</Link>
     </Compile>
-    <Compile Include="utils/sformat.fs">
+    <Compile Include="..\..\utils\sformat.fs">
       <Link>Printf/sformat.fs</Link>
     </Compile>
     <Compile Include="printf.fsi">
@@ -202,11 +166,7 @@
     <Compile Include="event.fs">
       <Link>Control/event.fs</Link>
     </Compile>
-
-    <!-- task-based async builder -->
-    <Compile Include="extra/AsyncBuilder.fs"/>
-
-    <!-- <Compile Include="async.fsi">
+    <Compile Include="async.fsi">
       <Link>Control/async.fsi</Link>
     </Compile>
     <Compile Include="async.fs">
@@ -229,7 +189,7 @@
     </Compile>
     <Compile Include="mailbox.fs">
       <Link>MailboxProcessor/mailbox.fs</Link>
-    </Compile> -->
+    </Compile>
     <Compile Include="Linq.fsi">
       <Link>Queries/Linq.fsi</Link>
     </Compile>
@@ -242,12 +202,12 @@
     <Compile Include="QueryExtensions.fs">
       <Link>Queries/QueryExtensions.fs</Link>
     </Compile>
-    <!-- <Compile Include="Query.fsi">
+    <Compile Include="Query.fsi">
       <Link>Queries/Query.fsi</Link>
     </Compile>
     <Compile Include="Query.fs">
       <Link>Queries/Query.fs</Link>
-    </Compile> -->
+    </Compile>
     <Compile Include="SI.fs">
       <Link>Units/SI.fs</Link>
     </Compile>
@@ -259,32 +219,28 @@
     </Compile>
   </ItemGroup>
 
-  <!-- <ItemGroup>
+  <ItemGroup>
     <PackageReference Include="System.Linq.Queryable" Version="$(SystemLinqQueryablePackageVersion)" />
     <PackageReference Include="System.Net.Requests" Version="$(SystemNetRequestsPackageVersion)" />
     <PackageReference Include="System.Threading.Tasks.Parallel" Version="$(SystemThreadingTasksParallelPackageVersion)" />
-  </ItemGroup> -->
+  </ItemGroup>
 
-  <!-- <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.6'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.6'">
     <PackageReference Include="System.Threading.Thread" Version="$(SystemThreadingThreadPackageVersion)" />
     <PackageReference Include="System.Threading.ThreadPool" Version="$(SystemThreadingThreadPoolPackageVersion)" />
-  </ItemGroup> -->
+  </ItemGroup>
 
   <!-- Hook compilation phase to do custom work -->
   <!-- NOTE: The optdata and sigdata files are no longer needed by the F# compiler (the information is -->
   <!-- integrated as resources into more recent FSharp.Core.dll's. However they are still produced to -->
   <!-- allow older versions of the F# compiler to reference more recent FSharp.Core packages -->
-  <!-- <Target Name="CopyToBuiltBin" BeforeTargets="AfterCompile" AfterTargets="CoreCompile" >
+  <Target Name="CopyToBuiltBin" BeforeTargets="AfterCompile" AfterTargets="CoreCompile" >
     <ItemGroup>
       <BuiltProjectOutputGroupKeyOutput Include="$(IntermediateOutputPath)\FSharp.Core.sigdata" />
       <BuiltProjectOutputGroupKeyOutput Include="$(IntermediateOutputPath)\FSharp.Core.optdata" />
     </ItemGroup>
     <Copy SourceFiles="$(IntermediateOutputPath)\FSharp.Core.sigdata" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(IntermediateOutputPath)\FSharp.Core.optdata" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
-  </Target> -->
-
-  <Target Name="CopyToBuiltBin" AfterTargets="Build">
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="../../wwwroot/bin" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

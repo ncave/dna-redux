@@ -347,8 +347,8 @@ namespace Microsoft.FSharp.Core
     [<MeasureAnnotatedAbbreviation>] type int16<[<Measure>] 'Measure> = int16
     [<MeasureAnnotatedAbbreviation>] type int64<[<Measure>] 'Measure> = int64
 
-    /// <summary>Represents a managed pointer in F# code.</c></summary>
-    type byref<'T> = (# "!0&" #)
+    // /// <summary>Represents a managed pointer in F# code.</c></summary>
+    // type byref<'T> = (# "!0&" #)
 
     /// <summary>Represents a managed pointer in F# code.</summary>
     type byref<'T, 'Kind> = (# "!0&" #)
@@ -500,6 +500,15 @@ namespace Microsoft.FSharp.Core
     // code for each new datatype.
 
     module LanguagePrimitives =  
+
+#if INLINE_STRING_RESOURCES
+        //-------------------------------------------------------------------------
+        // Load string resources
+        
+        for pair in SR.Resources.res_pairs do
+            SR.Resources.resources.Add(pair)
+        //-------------------------------------------------------------------------
+#endif
 
         module (* internal *) ErrorStrings =
             // inline functions cannot call GetString, so we must make these bits public 
@@ -3684,10 +3693,10 @@ namespace Microsoft.FSharp.Core
 
         [<CompiledName("Decrement")>]
         let decr cell = cell.contents <- cell.contents - 1
-
+#if !FX_NO_EXIT
         [<CompiledName("Exit")>]
         let exit (exitcode:int) = System.Environment.Exit(exitcode); failwith "System.Environment.Exit did not exit!"
-
+#endif
         let inline parseByte (s:string)       = (# "conv.ovf.u1" (ParseUInt32 s) : byte #)
         let inline ParseSByte (s:string)      = (# "conv.ovf.i1" (ParseInt32 s)  : sbyte #)
         let inline ParseInt16 (s:string)      = (# "conv.ovf.i2" (ParseInt32 s)  : int16 #)

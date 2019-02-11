@@ -808,8 +808,8 @@ namespace Microsoft.FSharp.Core
 #endif
     type byref<'T, 'Kind> = (# "!0&" #)
 
-    /// <summary>Represents a managed pointer in F# code. For F# 4.5+ this is considered equivalent to <c>byref&lt;'T, ByRefKinds.InOut&gt;</c></summary>
-    type byref<'T> = (# "!0&" #)
+    // /// <summary>Represents a managed pointer in F# code. For F# 4.5+ this is considered equivalent to <c>byref&lt;'T, ByRefKinds.InOut&gt;</c></summary>
+    // type byref<'T> = (# "!0&" #)
 
     /// Represents the types of byrefs in F# 4.5+
 #if BUILDING_WITH_LKG || BUILD_FROM_SOURCE
@@ -2337,12 +2337,14 @@ namespace Microsoft.FSharp.Core
         [<CompiledName("CreateSequence")>]
         val seq : sequence:seq<'T> -> seq<'T>
 
+#if !FX_NO_EXIT
         /// <summary>Exit the current hardware isolated process, if security settings permit,
         /// otherwise raise an exception. Calls <c>System.Environment.Exit</c>.</summary>
         /// <param name="exitcode">The exit code to use.</param>
         /// <returns>The result value.</returns>
         [<CompiledName("Exit")>]
         val exit: exitcode:int -> 'T   when default 'T : obj
+#endif
 
         /// <summary>Equivalent to <c>System.Double.PositiveInfinity</c></summary>
         [<CompiledName("Infinity")>]

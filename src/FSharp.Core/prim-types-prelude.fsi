@@ -228,6 +228,10 @@ namespace Microsoft.FSharp.Core
     /// values.</remarks>   
     type 'T array = 'T[]
             
+           
+    /// <summary>Represents a managed pointer in F# code.</summary>
+    type byref<'T> = (# "!0&" #)
+
     /// <summary>Represents an unmanaged pointer in F# code.</summary>
     ///
     /// <remarks>This type should only be used when writing F# code that interoperates

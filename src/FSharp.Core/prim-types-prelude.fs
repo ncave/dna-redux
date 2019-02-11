@@ -64,6 +64,8 @@ namespace Microsoft.FSharp.Core
 
     type array<'T> = 'T[]
 
+    type byref<'T> = (# "!0&" #)
+
     type nativeptr<'T when 'T : unmanaged> = (# "native int" #)
 
     type voidptr = (# "void*" #)
